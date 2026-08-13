@@ -1,0 +1,406 @@
+{
+  "departments": [
+    "내과",
+    "외과",
+    "정형외과",
+    "소아청소년과"
+  ],
+  "doctors": [
+    {
+      "id": 1,
+      "name": "박지은",
+      "dept": "내과"
+    },
+    {
+      "id": 2,
+      "name": "김철수",
+      "dept": "외과"
+    }
+  ],
+  "diagnoses": [
+    {
+      "id": 1,
+      "code": "K35.8",
+      "name_ko": "급성 충수염",
+      "name_en": "Acute appendicitis",
+      "category": "외과"
+    }
+  ],
+  "drugs": [
+    {
+      "id": 1,
+      "code": "M001",
+      "name": "아세트아미노펜",
+      "dose": "500mg",
+      "route": "PO"
+    },
+    {
+      "id": 1786581723965,
+      "code": "R05CB01",
+      "name": "뮤코스텐주15% Mucosten Injection 15%",
+      "dose": "300mg/2ml",
+      "route": "IV"
+    }
+  ],
+  "patients": [
+    {
+      "chartNo": "P53944",
+      "name": "이국현",
+      "birth": "19960205",
+      "age": "30",
+      "bloodType": "A+",
+      "dept": "내과",
+      "doctor": "박지은",
+      "room": "외래/미배정",
+      "diagCode": "KCD-",
+      "diagnosis": "일반 진료",
+      "cc": "특이사항 없음",
+      "memo": "",
+      "bodyMarks": [
+        {
+          "x": 46,
+          "y": 7,
+          "side": "front",
+          "type": "OP",
+          "note": "Rt. 스컬머시기텍토미dd"
+        },
+        {
+          "x": 59,
+          "y": 28,
+          "side": "front",
+          "type": "SORE",
+          "note": "ㅁㄴㅇ"
+        }
+      ],
+      "records": {
+        "vs": [
+          {
+            "time": "2026-08-11 11:16",
+            "bp": "120/80",
+            "hr": 70,
+            "rr": 20,
+            "bt": 36.5
+          },
+          {
+            "time": "2026-08-11 11:17",
+            "bp": "130/90",
+            "hr": 80,
+            "rr": 18,
+            "bt": 37.2
+          },
+          {
+            "time": "2026-08-11 11:18",
+            "bp": "130/90",
+            "hr": 82,
+            "rr": 22,
+            "bt": 36.3
+          },
+          {
+            "time": "2026-08-11 11:18",
+            "bp": "120/70",
+            "hr": 78,
+            "rr": 18,
+            "bt": 36.7
+          },
+          {
+            "time": "2026-08-11 12:18",
+            "bp": "120/70",
+            "hr": 83,
+            "rr": 22,
+            "bt": 36.7
+          },
+          {
+            "time": "2026-08-11 12:21",
+            "bp": "125/75",
+            "hr": 78,
+            "rr": 19,
+            "bt": 36.5
+          },
+          {
+            "time": "2026-08-11 12:21",
+            "bp": "125/75",
+            "hr": 71,
+            "rr": 17,
+            "bt": 36.3
+          }
+        ],
+        "io": [
+          {
+            "time": "2026-08-07 16:58",
+            "intake": 200,
+            "output": 100
+          },
+          {
+            "time": "2026-08-07 17:05",
+            "intake": 2000,
+            "output": 1500
+          },
+          {
+            "time": "2026-08-07 17:05",
+            "intake": 1500,
+            "output": 800
+          },
+          {
+            "time": "2026-08-11 12:17",
+            "intake": 2500,
+            "output": 2000
+          },
+          {
+            "time": "2026-08-11 12:18",
+            "intake": 1500,
+            "output": 2500
+          }
+        ],
+        "med": [
+          {
+            "time": "2026-08-10 15:40",
+            "code": "-",
+            "name": "힘들어죽겠네",
+            "count": "1",
+            "dose": "-",
+            "route": "IV",
+            "doctor": "박지은",
+            "status": "미투약",
+            "nurse": ""
+          },
+          {
+            "time": "2026-08-10 15:40",
+            "code": "12323123",
+            "name": "룰루랄라",
+            "count": "1",
+            "dose": "2",
+            "route": "123",
+            "doctor": "박지은",
+            "status": "미투약",
+            "nurse": ""
+          }
+        ],
+        "doc": [],
+        "nurse": [
+          {
+            "time": "2026-08-13 11:48",
+            "note": "hhhhhhhhhhhhhhh\nhhhhhhhhhhh",
+            "nurse": "이다은"
+          },
+          {
+            "time": "2026-08-13 11:50",
+            "note": "jjjjjjjjjjjjjjjjjjjjjjjj\njjjjjjjjj\nj\nj\nj\nj",
+            "nurse": "이다은"
+          },
+          {
+            "time": "2026-08-13 11:56",
+            "note": "f\nf\nf\nf\nf\nf\nf\nf\nf\nf\nf",
+            "nurse": "이다은"
+          },
+          {
+            "time": "2026-08-13 11:57",
+            "note": "ddddddddddddddddddddddddddddddddddddddddddddd",
+            "nurse": "이다은"
+          }
+        ],
+        "surg": [],
+        "blood": [],
+        "lab": [
+          {
+            "time": "2026-08-10 15:35",
+            "category": "혈액/진단검사",
+            "item": "CBC (Hb)",
+            "result": "11",
+            "refRange": "12.0-16.0",
+            "unit": "g/dL"
+          },
+          {
+            "time": "2026-08-11 14:56",
+            "category": "혈액/진단",
+            "item": "CBC (Hb)",
+            "result": "18",
+            "refRange": "12-16",
+            "unit": "g/dL"
+          }
+        ],
+        "prescriptions": [
+          {
+            "time": "2026-08-13 09:42",
+            "category": "약물",
+            "code": "R05CB01",
+            "note": "뮤코스텐주15% Mucosten Injection 15% 300mg/2ml",
+            "issuer": "박지은",
+            "status": "미수행",
+            "nurse": "-"
+          },
+          {
+            "time": "2026-08-13 11:08",
+            "category": "약물",
+            "code": "R05CB01",
+            "note": "뮤코스텐주15% Mucosten Injection 15% (1, 1, 1)",
+            "issuer": "박지은",
+            "status": "미수행",
+            "nurse": "-"
+          },
+          {
+            "time": "2026-08-13 11:08",
+            "category": "약물",
+            "code": "R05CB01",
+            "note": "뮤코스텐주15% Mucosten Injection 15% (300ng, 1, IV)",
+            "issuer": "박지은",
+            "status": "미수행",
+            "nurse": "-"
+          },
+          {
+            "time": "2026-08-13 11:55",
+            "category": "루틴",
+            "code": "-",
+            "note": "f\nf\nf\nf\nf\nf\nf\nf\nf\nff\nf\n\nf",
+            "issuer": "박지은",
+            "status": "미수행",
+            "nurse": "-"
+          }
+        ],
+        "medication": []
+      },
+      "chart": {
+        "s": "",
+        "o": "",
+        "a": "",
+        "p": ""
+      },
+      "gender": "M",
+      "hd": "0",
+      "pod": "0"
+    },
+    {
+      "chartNo": "P23565",
+      "name": "똥덩어리",
+      "birth": "010909",
+      "age": "24",
+      "bloodType": "O-",
+      "dept": "내과",
+      "doctor": "박지은",
+      "room": "1",
+      "diagCode": "KCD-",
+      "diagnosis": "일반 진료",
+      "cc": "1",
+      "memo": "",
+      "bodyMarks": [],
+      "records": {
+        "vs": [
+          {
+            "time": "2026-08-13 09:33",
+            "bp": "120/80",
+            "hr": 100,
+            "rr": 20,
+            "bt": 36.7
+          },
+          {
+            "time": "2026-08-13 09:33",
+            "bp": "120/75",
+            "hr": 103,
+            "rr": 20,
+            "bt": 36.9
+          }
+        ],
+        "io": [],
+        "med": [],
+        "doc": [],
+        "nurse": [],
+        "surg": [],
+        "blood": [],
+        "lab": [],
+        "prescriptions": [
+          {
+            "time": "2026-08-13 09:31",
+            "category": "PRN",
+            "code": "M001",
+            "note": "아세트아미노펜 500mg PO",
+            "issuer": "박지은",
+            "status": "미수행",
+            "nurse": "-",
+            "execTime": "2026-08-13 09:31"
+          }
+        ],
+        "medication": []
+      }
+    },
+    {
+      "chartNo": "P66406",
+      "name": "이국현",
+      "birth": "20010205",
+      "age": "25",
+      "gender": "M",
+      "bloodType": "B+",
+      "dept": "외과",
+      "doctor": "김철수",
+      "room": "8002호",
+      "hd": "2",
+      "pod": "1",
+      "diagCode": "K35.8",
+      "diagnosis": "급성 충수염 (Acute appendicitis)",
+      "cc": "우측 하복부 압통",
+      "memo": "",
+      "bodyMarks": [],
+      "records": {
+        "vs": [],
+        "io": [],
+        "prescriptions": [],
+        "nurse": [],
+        "surg": [],
+        "blood": [],
+        "lab": []
+      }
+    },
+    {
+      "chartNo": "P04817",
+      "name": "이국현",
+      "birth": "20000101",
+      "age": "26",
+      "gender": "M",
+      "bloodType": "A-",
+      "dept": "내과",
+      "doctor": "박지은",
+      "room": "외래/미배정",
+      "hd": "0",
+      "pod": "-",
+      "diagCode": "KCD-",
+      "diagnosis": "일반 진료",
+      "cc": "특이사항 없음",
+      "memo": "",
+      "bodyMarks": [],
+      "records": {
+        "vs": [],
+        "io": [],
+        "prescriptions": [],
+        "nurse": [],
+        "surg": [],
+        "blood": [],
+        "lab": []
+      }
+    },
+    {
+      "chartNo": "P95878",
+      "name": "홍길동",
+      "birth": "19190505",
+      "age": "107",
+      "gender": "M",
+      "bloodType": "A+",
+      "dept": "내과",
+      "doctor": "박지은",
+      "room": "외래/미배정",
+      "hd": "0",
+      "pod": "-",
+      "diagCode": "KCD-",
+      "diagnosis": "일반 진료",
+      "cc": "특이사항 없음",
+      "memo": "",
+      "bodyMarks": [],
+      "records": {
+        "vs": [],
+        "io": [],
+        "prescriptions": [],
+        "nurse": [],
+        "surg": [],
+        "blood": [],
+        "lab": []
+      }
+    }
+  ]
+}

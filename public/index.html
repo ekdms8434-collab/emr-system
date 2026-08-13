@@ -1,0 +1,2152 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>전자의무기록 (EMR Chart) 및 환자 관리 시스템</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-blue: #3b82f6;
+            --primary-blue-hover: #2563eb;
+            --bg-light-blue: #ebf1f6;
+            --panel-header-bg: #e2ebf3;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+        }
+
+        * { box-sizing: border-box; font-family: '맑은 고딕', 'Malgun Gothic', sans-serif; }
+        html, body { width: 100vw; height: 100vh; margin: 0; padding: 0; background-color: var(--bg-light-blue); color: var(--text-dark); font-size: 11px; overflow-x: hidden; }
+
+        .app-container { width: 100vw; height: calc(100vh - 50px); padding: 8px; display: flex; flex-direction: column; gap: 12px; }
+
+        /* 상단 헤더 */
+        .header-bar { display: flex; justify-content: space-between; align-items: center; background: white; padding: 8px 16px; border-radius: 4px; border: 1px solid var(--border-color); width: 100%; }
+        .header-bar h1 { margin: 0; font-size: 15px; color: #1e3a8a; display: flex; align-items: center; gap: 6px; }
+
+        /* 공통 버튼 및 입력폼 */
+        input, select, textarea { padding: 4px 6px; border: 1px solid var(--border-color); border-radius: 3px; font-size: 11px; outline: none; }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary-blue); }
+        
+        button { padding: 5px 10px; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold; font-size: 11px; }
+        .btn-blue { background-color: var(--primary-blue); } .btn-blue:hover { background-color: var(--primary-blue-hover); }
+        .btn-green { background-color: #10b981; } .btn-green:hover { background-color: #059669; }
+        .btn-slate { background-color: #64748b; } .btn-slate:hover { background-color: #475569; }
+        .btn-red { background-color: #ef4444; } .btn-red:hover { background-color: #dc2626; }
+        .btn-purple { background-color: #8b5cf6; }
+        .btn-orange { background-color: #f97316; } .btn-orange:hover { background-color: #ea580c; }
+
+        /* 테이블 기본 및 고정 헤더(Sticky Header) 설정 */
+        table { width: 100%; border-collapse: separate; border-spacing: 0; background: white; }
+        th { background-color: #f8fafc; color: var(--text-muted); padding: 6px; border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); text-align: center; font-weight: bold; font-size: 11px; position: sticky; top: 0; z-index: 10; }
+        td { border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 5px 6px; text-align: center; font-size: 11px; white-space: pre-wrap; word-break: break-word; }
+        tr:hover { background-color: #f1f5f9; }
+
+        /* 처방 테이블 테마 */
+        .prescription-table-theme th { background-color: #2b364a !important; color: #ffffff; font-weight: bold; padding: 4px 6px; border-bottom: 1px solid #4a5568; font-size: 11px; }
+        .prescription-table-theme td { padding: 3px 5px; font-size: 10.5px; line-height: 1.3; white-space: pre-wrap; word-break: break-word; }
+
+        /* V/S 및 I/O 피벗 테이블 전용 스타일 */
+        .vs-pivot-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; background: white; }
+        .vs-pivot-table th.vs-header-title { background-color: #edf2f7; color: #1a202c; width: 120px; text-align: center; font-weight: bold; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; position: sticky; left: 0; top: 0; z-index: 20; }
+        .vs-pivot-table th.vs-header-time { background-color: #3a4a5d; color: white; padding: 5px 12px; font-weight: bold; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; white-space: nowrap; position: sticky; top: 0; z-index: 10; }
+        .vs-pivot-table td.vs-label { background-color: #f0f4f8; color: #2d3748; font-weight: bold; text-align: center; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; position: sticky; left: 0; z-index: 15; white-space: nowrap; }
+        .vs-pivot-table td.vs-val { border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; text-align: center; padding: 4px 10px; font-weight: bold; white-space: nowrap; }
+
+        /* 1. 환자 목록 화면 */
+        #listPage { background: white; padding: 16px; border-radius: 4px; border: 1px solid var(--border-color); flex: 1; overflow-y: auto; width: 100%; }
+        .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 10px; }
+
+        /* 2. EMR 메인 레이아웃 */
+        #detailPage { display: none; flex: 1; flex-direction: column; height: calc(100vh - 65px); width: 100%; }
+        .emr-grid { display: flex; gap: 12px; flex: 1; overflow: hidden; width: 100%; }
+
+        /* 패널 디자인 */
+        .panel { background: white; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .panel-header { background: var(--panel-header-bg); color: #1e3a8a; padding: 8px 12px; font-weight: bold; font-size: 12px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; }
+
+        /* 1열 카드 */
+        .col-1 { width: 280px; min-width: 250px; display: flex; flex-direction: column; gap: 12px; overflow: auto; }
+        .info-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+        .info-table th { background: transparent; text-align: left; border: none; padding: 3px 0; color: var(--text-dark); font-weight: normal; width: 85px; position: static; }
+        .info-table td { text-align: left; border: none; padding: 3px 0; font-weight: bold; white-space: normal; }
+        .memo-area { flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+        .memo-area textarea { flex: 1; resize: none; width: 100%; }
+
+        /* 2열 카드 */
+        .col-2 { width: 280px; min-width: 250px; display: flex; flex-direction: column; gap: 12px; overflow: auto; }
+        .canvas-wrapper { position: relative; width: 210px; height: 310px; margin: 8px auto; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; cursor: crosshair; }
+        .body-svg { width: 100%; height: 100%; pointer-events: none; }
+        
+        .pin-wrapper { position: absolute; transform: translate(-50%, -100%); cursor: pointer; display: flex; flex-direction: column; align-items: center; z-index: 10; }
+        .pin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 3px rgba(0,0,0,0.6); margin-top: 2px; }
+        .pin-op { background-color: #ef4444; }
+        .pin-sore { background-color: var(--primary-blue); }
+
+        .speech-bubble {
+            background: rgba(30, 41, 59, 0.9);
+            color: #ffffff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            white-space: nowrap;
+            max-width: 130px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        .speech-bubble::after {
+            content: ''; position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
+            border-width: 4px 4px 0; border-style: solid; border-color: rgba(30, 41, 59, 0.9) transparent;
+            display: block; width: 0;
+        }
+
+        .quick-patient-item { padding: 6px 8px; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: background-color 0.15s; display: flex; justify-content: space-between; align-items: center; }
+        .quick-patient-item:hover { background-color: #f1f5f9; }
+        .quick-patient-item.active { background-color: #eff6ff; border-left: 3px solid var(--primary-blue); }
+
+        /* 3열 카드 및 분할 탭 영역 */
+        .col-3 { flex: 1; display: flex; flex-direction: column; height: 100%; overflow: hidden; min-width: 450px; }
+        .split-container { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .split-pane { flex: 1; background: white; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: flex 0.2s ease, max-height 0.2s ease; }
+        .split-pane.collapsed { display: none !important; flex: 0 !important; min-height: 0 !important; height: 0 !important; }
+
+        .collapsible-resizer-bar { height: 18px; background: #cbd5e1; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; margin: 4px 0; border-radius: 4px; transition: background 0.2s; }
+        .collapsible-resizer-bar:hover { background: #94a3b8; }
+        .collapsible-resizer-bar button { background: transparent; border: none; color: #1e293b; font-size: 10px; font-weight: bold; padding: 0; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+
+        .main-tab-bar { display: flex; background: #f1f5f9; border-bottom: 1px solid var(--border-color); gap: 3px; padding-top: 4px; padding-left: 4px; }
+        .main-tab-btn { background: #e2e8f0; color: var(--text-dark); padding: 6px 14px; border: 1px solid var(--border-color); border-bottom: none; border-radius: 4px 4px 0 0; cursor: pointer; font-size: 11px; font-weight: bold; }
+        .main-tab-btn.active { background: var(--primary-blue); color: white; border-color: var(--primary-blue); }
+
+        .tab-content { display: none; flex-direction: column; flex: 1; padding: 10px; overflow: hidden; min-height: 0; }
+        .tab-content.active { display: flex; }
+
+        .chart-container { height: 170px; min-height: 120px; margin-bottom: 8px; position: relative; overflow: hidden; }
+        .table-scroll-area { flex: 1; overflow-y: auto; overflow-x: auto; border: 1px solid var(--border-color); border-radius: 3px; margin-bottom: 6px; position: relative; }
+
+        .input-bar-bottom { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .code-badge { background: #eff6ff; color: var(--primary-blue); padding: 1px 4px; border-radius: 3px; font-family: monospace; font-weight: bold; border: 1px solid #bfdbfe; }
+        .sub-tab-bar { display: flex; gap: 4px; margin-bottom: 6px; }
+        .sub-tab-btn { border: 1px solid var(--border-color); background: white; padding: 3px 8px; font-size: 11px; cursor: pointer; border-radius: 3px; }
+        .sub-tab-btn.active { background: var(--primary-blue); color: white; border-color: var(--primary-blue); font-weight: bold; }
+
+        /* 자동 확장 텍스트 영역 */
+        .auto-expand-textarea { resize: none; overflow-y: hidden; min-height: 28px; box-sizing: border-box; line-height: 1.4; }
+        .status-badge-complete { background-color: #10b981; color: white; font-weight: bold; padding: 3px 8px; border-radius: 4px; font-size: 10px; display: inline-block; cursor: pointer; }
+        .status-badge-pending { background-color: #f59e0b; color: white; font-weight: bold; padding: 3px 8px; border-radius: 4px; font-size: 10px; display: inline-block; cursor: pointer; }
+
+        /* 약물 세부입력 인풋 스타일 */
+        .med-detail-input { width: 52px; text-align: center; }
+
+        /* 설정 탭 스타일 */
+        .setting-tab-btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #475569;
+            background-color: #f1f5f9;
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .setting-tab-btn.active {
+            color: #ffffff;
+            background-color: var(--primary-blue);
+            border-color: var(--primary-blue);
+        }
+        .setting-panel { display: none; }
+        .setting-panel.active { display: flex; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+
+    <!-- 수행 등록 모달 -->
+    <div id="nurseInputModal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-9 rounded-xl shadow-2xl w-[600px]">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">👨‍⚕️ 수행자 및 수행 시간 입력</h3>
+            <p class="text-base text-gray-500 mb-6">처방을 수행한 간호사의 이름과 정확한 수행 시간을 입력해 주세요.</p>
+            
+            <div class="space-y-5 mb-8">
+                <div>
+                    <label class="block text-base font-bold text-gray-700 mb-2">수행 일시</label>
+                    <input type="datetime-local" id="modalExecTime" class="w-full border p-3.5 text-base rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-base font-bold text-gray-700 mb-2">수행자 (간호사)</label>
+                    <input type="text" id="modalNurseName" class="w-full border p-3.5 text-base rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="수행자 이름 입력">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-4">
+                <button onclick="closeNurseInputModal()" class="px-6 py-3 bg-gray-400 text-white rounded-lg text-base hover:bg-gray-500 font-bold">취소</button>
+                <button onclick="submitNurseInput()" class="px-6 py-3 bg-blue-600 text-white rounded-lg text-base hover:bg-blue-700 font-bold">확인 및 수행 완료</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 마네킹 핀 메모 수정 모달 -->
+    <div id="pinEditModal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-9 rounded-xl shadow-2xl w-[600px]">
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">📍 마커(핀) 메모 수정</h3>
+            <p class="text-base text-gray-500 mb-6">선택한 수술/욕창 위치의 메모 내용을 수정해 주세요.</p>
+            
+            <div class="space-y-5 mb-8">
+                <div>
+                    <label class="block text-base font-bold text-gray-700 mb-2">메모 내용</label>
+                    <input type="text" id="modalPinNote" class="w-full border p-3.5 text-base rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="메모 입력">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-4">
+                <button onclick="closePinEditModal()" class="px-6 py-3 bg-gray-400 text-white rounded-lg text-base hover:bg-gray-500 font-bold">취소</button>
+                <button onclick="submitPinEdit()" class="px-6 py-3 bg-blue-600 text-white rounded-lg text-base hover:bg-blue-700 font-bold">수정 완료</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 로그인 화면 -->
+    <div id="view-login" class="flex items-center justify-center min-h-screen">
+        <div id="loginView" class="max-w-md w-full mx-auto bg-white p-6 rounded shadow">
+            <h2 class="text-xl font-bold mb-4 text-center">EMR 시스템 로그인</h2>
+            <input type="text" id="uid" value="admin" class="w-full border p-2 mb-2 rounded" placeholder="아이디">
+            <input type="password" id="upw" value="1234" class="w-full border p-2 mb-4 rounded" placeholder="비밀번호">
+            <button onclick="login()" class="w-full bg-blue-600 text-white p-2 rounded font-bold hover:bg-blue-700">로그인</button>
+        </div>
+    </div>
+
+    <!-- 메인 헤더 -->
+    <header id="main-header" class="hidden bg-white shadow-sm border-b px-6 py-2.5 flex justify-between items-center w-full">
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="showView('patients')">
+            <span class="text-xl">🏥</span>
+            <h1 class="text-lg font-bold text-gray-800">환자 관리 및 EMR 시스템</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <button onclick="showView('settings')" class="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-full transition" title="설정">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </button>
+            <button onclick="handleLogout()" class="text-sm text-red-500 hover:underline font-bold">로그아웃</button>
+        </div>
+    </header>
+
+    <!-- 메인 화면 -->
+    <div id="view-patients" class="hidden w-full">
+        <div class="app-container">
+            <div id="listPage">
+                <div class="header-bar">
+                    <h1>📋 EMR System - 환자 목록 관리</h1>
+                </div>
+                <div style="background: #f8fafc; padding: 12px; border: 1px solid var(--border-color); margin: 10px 0; border-radius: 4px;">
+                    <b id="formTitle" style="font-size:12px; color:var(--primary-blue);">[신규 환자 등록]</b>
+                    <div class="input-grid">
+                        <input type="text" id="pName" placeholder="환자명 *">
+                        <input type="text" id="pBirth" placeholder="생년월일(예: 850101) *" oninput="autoCalculateAge(this.value)">
+                        <input type="number" id="pAge" placeholder="만 나이 (자동입력)" readonly style="background-color: #e2e8f0;">
+                        
+                        <select id="pGenderSelect" onchange="toggleGenderCustomInput(this)">
+                            <option value="">성별 선택</option>
+                            <option value="F">여성 (F)</option>
+                            <option value="M">남성 (M)</option>
+                            <option value="custom">그 외 (직접입력)</option>
+                        </select>
+                        <input type="text" id="pGenderCustom" placeholder="성별 입력" style="display:none;">
+
+                        <select id="pBloodType">
+                            <option value="">혈액형 선택</option>
+                            <option value="A+">A (+)</option><option value="A-">A (-)</option>
+                            <option value="B+">B (+)</option><option value="B-">B (-)</option>
+                            <option value="O+">O (+)</option><option value="O-">O (-)</option>
+                            <option value="AB+">AB (+)</option><option value="AB-">AB (-)</option>
+                        </select>
+                        <select id="pDept" onchange="updateDoctorSelectOptions()"></select>
+                        <select id="pDoctor"></select>
+                        <input type="text" id="pRoom" placeholder="입원병실 호수 (예: 701호)">
+                        
+                        <select id="pDiagnosisSelect" onchange="onDiagnosisSelectChange(this)">
+                            <option value="">진단명/KCD 선택</option>
+                        </select>
+                        <input type="text" id="pDiagnosisCustomCode" placeholder="코드(K35.8)" style="display:none;">
+                        <input type="text" id="pDiagnosisCustom" placeholder="진단명 입력" style="display:none;">
+                        
+                        <input type="number" id="pHD" placeholder="입원일수(HD)" min="0">
+                        <input type="number" id="pPOD" placeholder="수술후경과일(POD)" min="0">
+
+                        <input type="text" id="pCC" placeholder="주호소(C.C)" style="grid-column: span 2;">
+                    </div>
+                    <div style="margin-top: 10px; text-align: right; display: flex; justify-content: flex-end; gap: 6px;">
+                        <button id="btnCancelEdit" class="btn-slate" style="display:none;" onclick="cancelEdit()">취소</button>
+                        <button id="btnSavePatient" class="btn-blue" onclick="savePatientForm()">+ 환자 등록</button>
+                    </div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>등록번호</th>
+                            <th>환자명</th>
+                            <th>진료과 / 주치의</th>
+                            <th>입원병실</th>
+                            <th>혈액형</th>
+                            <th>생년월일(나이/성별)</th>
+                            <th>KCD & 진단명</th>
+                            <th>주호소(C.C)</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="patientTableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- EMR 메인 차트 -->
+            <div id="detailPage">
+                <div class="header-bar" style="margin-bottom: 8px;">
+                    <h1>📑 전자의무기록 (EMR Chart)</h1>
+                    <button class="btn-slate" onclick="showListPage()">← 환자 목록으로 돌아가기</button>
+                </div>
+
+                <div class="emr-grid">
+                    <!-- 1열 카드 -->
+                    <div class="col-1">
+                        <div class="panel" style="padding: 10px;">
+                            <div class="panel-header" style="margin: -10px -10px 10px -10px;">👤 환자 기본 정보</div>
+                            
+                            <table class="info-table">
+                                <tr><th>등록번호:</th><td id="dChartNo">-</td></tr>
+                                <tr><th>성 명:</th><td id="dName" style="color:var(--primary-blue); font-size:12px;">-</td></tr>
+                                <tr><th>나이 / 성별:</th><td id="dAgeGender">-</td></tr>
+                                <tr><th>생년월일:</th><td id="dBirth">-</td></tr>
+                                <tr><th>혈 액 형:</th><td id="dBloodType" style="color:#ef4444;">-</td></tr>
+                                <tr><th>입원병실:</th><td id="dRoom" style="color:#8b5cf6;">-</td></tr>
+                                <tr><th>진료과/주치의:</th><td id="dDeptDoc">-</td></tr>
+                            </table>
+                            
+                            <div style="border-top: 1px dashed var(--border-color); padding-top: 6px; margin-top: 4px;">
+                                <table class="info-table" style="margin:0;">
+                                    <tr><th>KCD 코드:</th><td><span class="code-badge" id="dDiagCode">-</span></td></tr>
+                                    <tr><th>진 단 명:</th><td id="dDiagnosis" style="color:var(--primary-blue);">-</td></tr>
+                                    <tr><th>주 호 소:</th><td id="dCC">-</td></tr>
+                                </table>
+
+                                <div style="display: flex; gap: 8px; margin-top: 6px; background: #f8fafc; padding: 4px 6px; border-radius: 4px; border: 1px solid var(--border-color);">
+                                    <div style="flex: 1; display: flex; align-items: center; gap: 4px;">
+                                        <span style="color: var(--text-muted); font-weight: bold;">HD:</span>
+                                        <span id="dHD" style="color: #2563eb; font-weight: bold;">-</span>
+                                    </div>
+                                    <div style="width: 1px; background: var(--border-color);"></div>
+                                    <div style="flex: 1; display: flex; align-items: center; gap: 4px;">
+                                        <span style="color: var(--text-muted); font-weight: bold;">POD:</span>
+                                        <span id="dPOD" style="color: #ef4444; font-weight: bold;">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel" style="flex:1;">
+                            <div class="panel-header">📌 특이사항 및 메모</div>
+                            <div class="memo-area">
+                                <textarea id="patientMemo" placeholder="특이사항 및 메모를 입력하세요..."></textarea>
+                                <button class="btn-blue" onclick="saveMemo()">메모 저장</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2열 카드 -->
+                    <div class="col-2">
+                        <div class="panel" style="flex-shrink: 0;">
+                            <div class="panel-header">
+                                <span>🧪 수술/욕창 마네킹</span>
+                                <div>
+                                    <button class="sub-tab-btn active" id="btnSideFront" onclick="setBodySide('front')">앞모습</button>
+                                    <button class="sub-tab-btn" id="btnSideBack" onclick="setBodySide('back')">뒷모습</button>
+                                </div>
+                            </div>
+                            <div style="text-align:center; color:var(--text-muted); font-size:10px; margin-top:6px;">[클릭 시 핀 추가 / 1번 클릭 수정, 2번 클릭 삭제]</div>
+                            
+                            <div class="canvas-wrapper" id="bodyCanvas" onclick="addBodyMark(event)">
+                                <svg id="svgFront" class="body-svg" viewBox="0 0 100 200" fill="#cbd5e1">
+                                    <circle cx="50" cy="20" r="11" />
+                                    <path d="M42,32 L58,32 L64,85 L36,85 Z" />
+                                    <path d="M35,34 L23,80 L28,82 L38,39 Z" />
+                                    <path d="M65,34 L77,80 L72,82 L62,39 Z" />
+                                    <path d="M37,86 L48,86 L46,170 L35,170 Z" />
+                                    <path d="M52,86 L63,86 L65,170 L54,170 Z" />
+                                </svg>
+                                <svg id="svgBack" class="body-svg" viewBox="0 0 100 200" fill="#94a3b8" style="display:none;">
+                                    <circle cx="50" cy="20" r="11" />
+                                    <path d="M40,32 L60,32 L62,85 L38,85 Z" />
+                                    <line x1="50" y1="32" x2="50" y2="85" stroke="#ffffff" stroke-width="1.5" />
+                                    <path d="M35,34 L21,80 L26,82 L38,39 Z" />
+                                    <path d="M65,34 L79,80 L74,82 L62,39 Z" />
+                                    <path d="M37,86 L48,86 L46,170 L35,170 Z" />
+                                    <path d="M52,86 L63,86 L65,170 L54,170 Z" />
+                                </svg>
+                            </div>
+
+                            <div style="padding: 0 6px 10px 6px; display:flex; gap:6px; justify-content:center;">
+                                <button class="sub-tab-btn active" id="btnTypeOp" onclick="setMarkType('OP')">🔴 수술부위</button>
+                                <button class="sub-tab-btn" id="btnTypeSore" onclick="setMarkType('SORE')">🔵 욕창부위</button>
+                            </div>
+                        </div>
+
+                        <div class="panel" style="flex:1; min-height: 180px;">
+                            <div class="panel-header">
+                                <span>📋 환자 검색/목록</span>
+                                <span id="quickPatientCount" style="font-size:10px; color:var(--text-muted);">총 0명</span>
+                            </div>
+                            <div style="padding: 6px; border-bottom: 1px solid var(--border-color); background: #f8fafc;">
+                                <input type="text" id="quickSearchInput" placeholder="🔍 환자명 또는 등록번호 검색..." style="width: 100%;" oninput="filterQuickPatientList()">
+                            </div>
+                            <div id="quickPatientList" style="flex:1; overflow-y:auto;"></div>
+                        </div>
+                    </div>
+
+                    <!-- 3열 카드 -->
+                    <div class="col-3">
+                        <div class="split-container">
+                            <div class="split-pane" id="topPane">
+                                <div class="main-tab-bar">
+                                    <button class="main-tab-btn active" onclick="openTopTab('prescriptionTab', this)">📋 처방내역</button>
+                                    <button class="main-tab-btn" onclick="openTopTab('surgTab', this)">✂️ 수술/동의서</button>
+                                    <button class="main-tab-btn" onclick="openTopTab('bloodTab', this)">🩸 수혈 관리</button>
+                                    <button class="main-tab-btn" onclick="openTopTab('labTab', this)">🧪 검사 결과</button>
+                                    <button class="main-tab-btn" onclick="openTopTab('nurseTab', this)">📝 간호/투약 기록</button>
+                                </div>
+
+                                <!-- 처방내역 탭 -->
+                                <div id="prescriptionTab" class="tab-content active">
+                                    <div class="table-scroll-area">
+                                        <table class="prescription-table-theme">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:130px;">처방일시</th>
+                                                    <th style="width:80px;">구분</th>
+                                                    <th style="width:80px;">코드</th>
+                                                    <th>처방내역</th>
+                                                    <th style="width:90px;">처방발행자</th>
+                                                    <th style="width:90px;">수행여부</th>
+                                                    <th style="width:80px;">수행자</th>
+                                                    <th style="width:75px;">관리</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="prescriptionTable"></tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <div class="input-bar-bottom" style="gap:5px; background:#f8fafc; padding:8px; border:1px solid var(--border-color); border-radius:3px;">
+                                        <input type="datetime-local" id="prescTime" style="width:135px;">
+                                        <select id="prescType" style="width:75px; font-weight:bold;" onchange="onPrescTypeChange(this.value)">
+                                            <option value="약물">약물</option>
+                                            <option value="처방">처방</option>
+                                            <option value="응급">응급</option>
+                                            <option value="루틴" selected>루틴</option>
+                                            <option value="PRN">PRN</option>
+                                        </select>
+                                        <select id="medDbSelect" onchange="selectMedFromDb(this)" style="width:125px; font-weight:bold; color:var(--primary-blue);">
+                                            <option value="">-- DB 약물 선택 --</option>
+                                        </select>
+                                        <input type="text" id="prescCode" placeholder="코드" style="width:60px;" oninput="onMedCodeInput(this.value)">
+                                        <textarea id="prescNote" class="auto-expand-textarea" placeholder="처방 상세 내역 및 지시사항" rows="1" style="flex:1; min-width: 120px;" oninput="autoExpandTextarea(this)"></textarea>
+                                        
+                                        <!-- 약물 전용 세부 입력 필드 Group -->
+                                        <div id="medDetailGroup" style="display:none; gap:3px; align-items:center;">
+                                            <input type="text" id="prescDose" class="med-detail-input" placeholder="용량">
+                                            <input type="text" id="prescFreq" class="med-detail-input" placeholder="횟수">
+                                            <input type="text" id="prescRoute" class="med-detail-input" placeholder="경로">
+                                        </div>
+
+                                        <input type="text" id="prescIssuer" placeholder="처방발행자" style="width:70px;">
+                                        <button class="btn-blue" onclick="addRecord('presc')" id="btnPrescSave" style="background-color:#1d4ed8;">처방 입력</button>
+                                        <button class="btn-slate" onclick="cancelPrescEdit()" id="btnPrescCancel" style="display:none;">취소</button>
+                                    </div>
+                                </div>
+
+                                <!-- 수술/동의서 탭 -->
+                                <div id="surgTab" class="tab-content">
+                                    <div class="table-scroll-area">
+                                        <table>
+                                            <thead><tr><th>일시</th><th>단계</th><th>수술명</th><th>소견 및 처방</th><th style="width:50px;">관리</th></tr></thead>
+                                            <tbody id="surgTable"></tbody>
+                                        </table>
+                                    </div>
+                                    <div class="input-bar-bottom">
+                                        <input type="datetime-local" id="surgTime">
+                                        <select id="surgStage" style="width:85px;">
+                                            <option value="수술 전">Pre-op</option>
+                                            <option value="수술 중">Intra-op</option>
+                                            <option value="수술 후">Post-op</option>
+                                        </select>
+                                        <input type="text" id="surgOpName" placeholder="수술명" style="width:120px;">
+                                        <input type="text" id="surgNote" placeholder="처방 및 간호소견" style="flex:1;">
+                                        <button class="btn-purple" onclick="addRecord('surg')">저장</button>
+                                    </div>
+                                </div>
+
+                                <!-- 수혈 관리 탭 -->
+                                <div id="bloodTab" class="tab-content">
+                                    <div class="table-scroll-area">
+                                        <table>
+                                            <thead><tr><th>일시</th><th>제제</th><th>바코드</th><th>용량</th><th>V/S 변화</th><th>부작용</th><th style="width:50px;">관리</th></tr></thead>
+                                            <tbody id="bloodTable"></tbody>
+                                        </table>
+                                    </div>
+                                    <div class="input-bar-bottom">
+                                        <input type="datetime-local" id="bloodTime">
+                                        <select id="bloodType" style="width:70px;">
+                                            <option value="RBC">RBC</option>
+                                            <option value="FFP">FFP</option>
+                                            <option value="PLT">PLT</option>
+                                            <option value="Cryo">Cryo</option>
+                                        </select>
+                                        <input type="text" id="bloodCode" placeholder="바코드" style="width:80px;">
+                                        <select id="bloodUnitSelect" onchange="toggleBloodUnitCustom(this)" style="width:75px;">
+                                            <option value="1U">1U</option>
+                                            <option value="2U">2U</option>
+                                            <option value="100mL">100mL</option>
+                                            <option value="200mL">200mL</option>
+                                            <option value="400mL">400mL</option>
+                                            <option value="custom">-- 직접입력 --</option>
+                                        </select>
+                                        <input type="text" id="bloodUnitCustom" placeholder="용량입력" style="display:none; width:65px;">
+                                        <input type="text" id="bloodVs" placeholder="V/S 변화" style="width:80px;">
+                                        <select id="bloodSideEffectSelect" onchange="toggleBloodSideCustom(this)" style="width:110px;">
+                                            <option value="없음">부작용 없음</option>
+                                            <option value="발열">발열 (Febrile)</option>
+                                            <option value="오한">오한 (Chills)</option>
+                                            <option value="두드러기/가려움">두드러기/가려움</option>
+                                            <option value="호흡곤란">호흡곤란 (TRALI/TACO)</option>
+                                            <option value="혈압저하">혈압 저하</option>
+                                            <option value="아나필락시스">아나필락시스</option>
+                                            <option value="오심/구토">오심/구토</option>
+                                            <option value="혈뇨/용혈반응">혈뇨/용혈반응</option>
+                                            <option value="custom">-- 직접입력 --</option>
+                                        </select>
+                                        <input type="text" id="bloodSideCustom" placeholder="부작용 입력" style="display:none; width:90px;">
+                                        <button class="btn-red" onclick="addRecord('blood')">기록 저장</button>
+                                    </div>
+                                </div>
+
+                                <!-- 검사 결과 탭 -->
+                                <div id="labTab" class="tab-content">
+                                    <div class="table-scroll-area">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:120px;">일시</th>
+                                                    <th style="width:90px;">구분</th>
+                                                    <th style="width:120px;">검사명</th>
+                                                    <th>결과 및 판독소견</th>
+                                                    <th style="width:120px;">정상범위 수치</th>
+                                                    <th style="width:50px;">관리</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="labTable"></tbody>
+                                        </table>
+                                    </div>
+                                    <div class="input-bar-bottom">
+                                        <input type="datetime-local" id="labTime" style="width:140px;">
+                                        <select id="labCategorySelect" onchange="onLabCategoryChange(this.value)" style="width:90px;">
+                                            <option value="혈액/진단">혈액/진단</option>
+                                            <option value="영상의학">영상의학</option>
+                                            <option value="기능검사">기능검사</option>
+                                            <option value="조직병리">조직병리</option>
+                                            <option value="custom">-- 기타직접 --</option>
+                                        </select>
+                                        <input type="text" id="labCategoryCustom" placeholder="구분 입력" style="display:none; width:70px;">
+
+                                        <select id="labItemSelect" onchange="onLabItemChange(this)" style="width:120px;"></select>
+                                        <input type="text" id="labItemCustom" placeholder="검사명 입력" style="display:none; width:100px;">
+
+                                        <textarea id="labResult" class="auto-expand-textarea" placeholder="결과/판독소견" rows="1" style="flex:1;" oninput="autoExpandTextarea(this)"></textarea>
+                                        <input type="text" id="labRefRange" placeholder="정상범위 (예: 4.0-10.0)" style="width:130px;">
+                                        <input type="text" id="labUnit" placeholder="단위" style="width:50px;">
+
+                                        <button class="btn-blue" onclick="addRecord('lab_img')">검사 저장</button>
+                                    </div>
+                                </div>
+
+                                <!-- 간호/투약 기록 탭 -->
+                                <div id="nurseTab" class="tab-content">
+                                    <div class="table-scroll-area">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:130px;">일시</th>
+                                                    <th>간호/투약 수행 및 Observation</th>
+                                                    <th style="width:90px;">작성 간호사</th>
+                                                    <th style="width:50px;">관리</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="nurseTable"></tbody>
+                                        </table>
+                                    </div>
+                                    <div class="input-bar-bottom">
+                                        <input type="datetime-local" id="nurseTime">
+                                        <textarea id="nurseNote" class="auto-expand-textarea" placeholder="간호 처치 내역 및 관찰소견/투약 메모 입력" rows="1" style="flex:1;" oninput="autoExpandTextarea(this)"></textarea>
+                                        <input type="text" id="nurseName" placeholder="간호사 이름" style="width:80px;" value="이다은">
+                                        <button class="btn-blue" onclick="addRecord('nurse')">입력</button>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <div class="collapsible-resizer-bar" onclick="toggleBottomPane()" title="클릭하여 하단 패널을 펼치거나 접습니다.">
+                                <button type="button" id="toggleResizerBtn">
+                                    <span id="resizerIcon">▼</span> <span id="resizerText">하단 패널 접기 (V/S, I/O)</span>
+                                </button>
+                            </div>
+
+                            <div class="split-pane" id="bottomPane">
+                                <div class="main-tab-bar">
+                                    <button class="main-tab-btn active" onclick="openBottomTab('vsTab', this)">📈 V/S (활력징후)</button>
+                                    <button class="main-tab-btn" onclick="openBottomTab('ioTab', this)">📊 I/O (섭취/배설)</button>
+                                </div>
+
+                                <!-- V/S (활력징후) 탭 -->
+                                <div id="vsTab" class="tab-content active">
+                                    <div class="chart-container"><canvas id="vsChart"></canvas></div>
+                                    <div class="table-scroll-area">
+                                        <table class="vs-pivot-table">
+                                            <tbody id="vsTableBody"></tbody>
+                                        </table>
+                                    </div>
+                                    <div class="input-bar-bottom">
+                                        <input type="datetime-local" id="vsTime">
+                                        <input type="text" id="vsBp" placeholder="혈압(120/80)" style="width:85px;">
+                                        <input type="number" id="vsHr" placeholder="맥박" style="width:55px;">
+                                        <input type="number" id="vsRr" placeholder="호흡" style="width:55px;">
+                                        <input type="number" step="0.1" id="vsBt" placeholder="체온" style="width:55px;">
+                                        <button class="btn-blue" onclick="addRecord('vs')">기록 입력</button>
+                                    </div>
+                                </div>
+
+                                <!-- I/O (섭취/배설) 탭 -->
+                                <div id="ioTab" class="tab-content">
+                                    <div class="chart-container"><canvas id="ioChart"></canvas></div>
+                                    <div class="table-scroll-area">
+                                        <table class="vs-pivot-table">
+                                            <tbody id="ioTableBody"></tbody>
+                                        </table>
+                                    </div>
+                                    <div class="input-bar-bottom">
+                                        <input type="datetime-local" id="ioTime">
+                                        <input type="number" id="ioIntake" placeholder="Intake (mL)" style="width:110px;">
+                                        <input type="number" id="ioOutput" placeholder="Output (mL)" style="width:110px;">
+                                        <button class="btn-blue" onclick="addRecord('io')">기록 입력</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 시스템 설정 화면 -->
+    <main id="view-settings" class="hidden w-full p-4">
+        <div class="flex items-center justify-between border-b pb-4 px-2">
+            <div>
+                <h2 class="text-[21px] font-bold text-gray-800">시스템 설정</h2>
+                <p class="text-[15px] text-gray-500">진료과, 주치의, 진단코드(KCD), 처방 DB, 검사결과 DB 및 간호기록 DB를 관리합니다.</p>
+            </div>
+            <button onclick="showView('patients')" class="px-3 py-1.5 border rounded-lg text-[15px] text-gray-600 hover:bg-gray-50">← 환자 목록으로 돌아가기</button>
+        </div>
+
+        <div class="flex border-b border-gray-300 mt-6 gap-1">
+            <button class="setting-tab-btn active" onclick="switchSettingTab('dept-panel', this)">🏥 진료과 관리</button>
+            <button class="setting-tab-btn" onclick="switchSettingTab('doctor-panel', this)">👨‍⚕️ 주치의 관리</button>
+            <button class="setting-tab-btn" onclick="switchSettingTab('diag-panel', this)">🩺 KCD DB</button>
+            <button class="setting-tab-btn" onclick="switchSettingTab('drug-panel', this)">💊 처방 DB</button>
+            <button class="setting-tab-btn" onclick="switchSettingTab('labdb-panel', this)">🧪 검사결과 DB</button>
+            <button class="setting-tab-btn" onclick="switchSettingTab('nursedb-panel', this)">📝 간호기록 DB</button>
+        </div>
+
+        <div class="mt-4 w-full">
+            <!-- 1. 진료과 관리 -->
+            <div id="dept-panel" class="setting-panel active bg-white p-6 rounded-xl shadow-sm border space-y-4 flex-col min-h-[500px] w-full">
+                <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
+                    <span>🏥 진료과 관리</span>
+                    <span id="dept-count" class="text-[13px] bg-blue-100 text-blue-800 px-3 py-1 rounded-full">0개</span>
+                </h3>
+                <form onsubmit="handleAddDept(event)" class="flex gap-2 max-w-xl">
+                    <input type="text" id="dept-input" required placeholder="신규 진료과명" class="flex-1 px-3 py-2 border rounded-lg text-[13px]">
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white text-[13px] rounded-lg font-bold">추가</button>
+                </form>
+                <ul id="dept-list" class="divide-y overflow-y-auto border rounded-lg flex-1 min-h-[350px]"></ul>
+            </div>
+
+            <!-- 2. 주치의 관리 -->
+            <div id="doctor-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex-col min-h-[500px] w-full">
+                <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
+                    <span>👨‍⚕️ 주치의 관리</span>
+                    <span id="doctor-count" class="text-[13px] bg-purple-100 text-purple-800 px-3 py-1 rounded-full">0명</span>
+                </h3>
+                <form onsubmit="handleAddDoctor(event)" class="space-y-3 max-w-xl">
+                    <div class="grid grid-cols-2 gap-3">
+                        <select id="doc-dept-select" required class="px-3 py-2 border rounded-lg text-[13px]">
+                            <option value="">진료과 선택</option>
+                        </select>
+                        <input type="text" id="doc-name-input" required placeholder="의사 성명" class="px-3 py-2 border rounded-lg text-[13px]">
+                    </div>
+                    <button type="submit" class="px-4 py-2 bg-purple-600 text-white text-[13px] rounded-lg font-bold">주치의 등록</button>
+                </form>
+                <ul id="doctor-list" class="divide-y overflow-y-auto border rounded-lg flex-1 min-h-[350px]"></ul>
+            </div>
+
+            <!-- 3. 진단명 / KCD DB -->
+            <div id="diag-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex-col min-h-[500px] w-full">
+                <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
+                    <span>🩺 KCD DB 관리</span>
+                    <span id="diag-count" class="text-[13px] bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full">0개</span>
+                </h3>
+                <form onsubmit="handleAddDiagnosis(event)" class="space-y-3 max-w-2xl">
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="text" id="diag-code-input" required placeholder="KCD 코드" class="px-3 py-2 border rounded-lg text-[13px]">
+                        <input type="text" id="diag-name-input" required placeholder="한글 진단명" class="px-3 py-2 border rounded-lg text-[13px]">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="text" id="diag-en-input" placeholder="영문 진단명" class="px-3 py-2 border rounded-lg text-[13px]">
+                        <select id="diag-dept-select" class="px-3 py-2 border rounded-lg text-[13px]">
+                            <option value="">진료과 선택</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-[13px] rounded-lg font-bold">+ 진단명 등록</button>
+                </form>
+                <ul id="diag-list" class="divide-y overflow-y-auto border rounded-lg flex-1 min-h-[350px]"></ul>
+            </div>
+
+            <!-- 4. 처방 DB -->
+            <div id="drug-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex-col min-h-[500px] w-full">
+                <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
+                    <span>💊 처방 DB 관리</span>
+                    <span id="med-count" class="text-[13px] bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">0개</span>
+                </h3>
+                <form onsubmit="handleAddDrug(event)" class="space-y-3 max-w-4xl">
+                    <div class="grid grid-cols-5 gap-3 items-start">
+                        <input type="text" id="drug-code-input" required placeholder="처방 코드" class="col-span-1 px-3 py-2 border rounded-lg text-[13px]">
+                        <textarea id="drug-name-input" required placeholder="처방/약물명 입력" rows="1" class="col-span-4 px-3 py-2 border rounded-lg text-[13px] auto-expand-textarea resize-none" oninput="autoExpandTextarea(this)"></textarea>
+                    </div>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white text-[13px] rounded-lg font-bold">+ 처방 DB 등록</button>
+                </form>
+                <ul id="drug-list" class="divide-y overflow-y-auto border rounded-lg flex-1 min-h-[350px]"></ul>
+            </div>
+
+            <!-- 5. 검사결과 DB -->
+            <div id="labdb-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex-col min-h-[500px] w-full">
+                <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
+                    <span>🧪 검사결과 DB 관리</span>
+                    <span id="labdb-count" class="text-[13px] bg-teal-100 text-teal-800 px-3 py-1 rounded-full">0개</span>
+                </h3>
+                <form onsubmit="handleAddLabDb(event)" class="space-y-3 max-w-2xl">
+                    <select id="labdb-category-input" required class="w-full px-3 py-2 border rounded-lg text-[13px]">
+                        <option value="혈액/진단">혈액/진단</option>
+                        <option value="영상의학">영상의학</option>
+                        <option value="기능검사">기능검사</option>
+                        <option value="조직병리">조직병리</option>
+                    </select>
+                    <input type="text" id="labdb-name-input" required placeholder="검사명 (예: WBC)" class="w-full px-3 py-2 border rounded-lg text-[13px]">
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="text" id="labdb-ref-input" placeholder="정상범위 (예: 4.0-10.0)" class="px-3 py-2 border rounded-lg text-[13px]">
+                        <input type="text" id="labdb-unit-input" placeholder="단위 (예: x10^3/uL)" class="px-3 py-2 border rounded-lg text-[13px]">
+                    </div>
+                    <button type="submit" class="px-4 py-2 bg-teal-600 text-white text-[13px] rounded-lg font-bold">+ 검사 DB 등록</button>
+                </form>
+                <ul id="labdb-list" class="divide-y overflow-y-auto border rounded-lg flex-1 min-h-[350px]"></ul>
+            </div>
+
+            <!-- 6. 간호기록 DB -->
+            <div id="nursedb-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex-col min-h-[500px] w-full">
+                <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
+                    <span>📝 간호기록 DB 관리</span>
+                    <span id="nursedb-count" class="text-[13px] bg-orange-100 text-orange-800 px-3 py-1 rounded-full">0개</span>
+                </h3>
+                <form onsubmit="handleAddNurseDb(event)" class="space-y-3 max-w-2xl">
+                    <input type="text" id="nursedb-category-input" required placeholder="분류 (예: 신체사정, 상처간호)" class="w-full px-3 py-2 border rounded-lg text-[13px]">
+                    <textarea id="nursedb-content-input" required placeholder="자주 쓰는 간호기록 문구 내용 입력..." class="w-full px-3 py-2 border rounded-lg text-[13px] h-24 resize-none"></textarea>
+                    <button type="submit" class="px-4 py-2 bg-orange-600 text-white text-[13px] rounded-lg font-bold">+ 간호기록 DB 등록</button>
+                </form>
+                <ul id="nursedb-list" class="divide-y overflow-y-auto border rounded-lg flex-1 min-h-[300px]"></ul>
+            </div>
+        </div>
+    </main>
+
+    <!-- JavaScript 스크립트 -->
+    <script>
+        const API_BASE_URL = '/api';
+
+        let departments = [];
+        let doctors = [];
+        let diagnosisDatabase = [];
+        let drugDatabase = [];
+        let labDatabase = [];
+        let nurseDatabase = [];
+        let patients = [];
+
+        let currentPatientIndex = null;
+        let editingPatientIndex = null;
+        let editingPrescIndex = null;
+        let targetPrescModalIndex = null;
+        let currentBodySide = 'front';
+        let selectedMarkType = 'OP';
+        let vsChartInstance = null;
+        let ioChartInstance = null;
+
+        let pinClickTimer = null;
+        let targetPinIndex = null;
+
+        function switchSettingTab(panelId, btnElement) {
+            document.querySelectorAll('.setting-tab-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+
+            document.querySelectorAll('.setting-panel').forEach(panel => panel.classList.remove('active'));
+            document.getElementById(panelId).classList.add('active');
+        }
+
+        function autoExpandTextarea(element) {
+            element.style.height = 'auto';
+            element.style.height = (element.scrollHeight) + 'px';
+        }
+
+        function onPrescTypeChange(value) {
+            const group = document.getElementById('medDetailGroup');
+            if (value === '약물') {
+                group.style.display = 'flex';
+            } else {
+                group.style.display = 'none';
+            }
+        }
+
+        function toggleBottomPane() {
+            const bottomPane = document.getElementById('bottomPane');
+            const icon = document.getElementById('resizerIcon');
+            const text = document.getElementById('resizerText');
+
+            if (bottomPane.classList.contains('collapsed')) {
+                bottomPane.classList.remove('collapsed');
+                icon.innerText = '▼';
+                text.innerText = '하단 패널 접기 (V/S, I/O)';
+            } else {
+                bottomPane.classList.add('collapsed');
+                icon.innerText = '▲';
+                text.innerText = '하단 패널 펼치기 (V/S, I/O)';
+            }
+        }
+
+        async function fetchInitialData() {
+            try {
+                const [deptRes, docRes, diagRes, drugRes, labDbRes, nurseDbRes, patRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/departments`).catch(() => null),
+                    fetch(`${API_BASE_URL}/doctors`).catch(() => null),
+                    fetch(`${API_BASE_URL}/diagnoses`).catch(() => null),
+                    fetch(`${API_BASE_URL}/drugs`).catch(() => null),
+                    fetch(`${API_BASE_URL}/labs/db`).catch(() => null),
+                    fetch(`${API_BASE_URL}/nurses/db`).catch(() => null),
+                    fetch(`${API_BASE_URL}/patients`).catch(() => null)
+                ]);
+
+                if (deptRes && deptRes.ok) departments = await deptRes.json();
+                if (docRes && docRes.ok) doctors = await docRes.json();
+                if (diagRes && diagRes.ok) diagnosisDatabase = await diagRes.json();
+                if (drugRes && drugRes.ok) drugDatabase = await drugRes.json();
+                if (labDbRes && labDbRes.ok) labDatabase = await labDbRes.json();
+                if (nurseDbRes && nurseDbRes.ok) nurseDatabase = await nurseDbRes.json();
+                if (patRes && patRes.ok) patients = await patRes.json();
+
+            } catch (err) {
+                console.error('백엔드 데이터 로드 오류:', err);
+            }
+        }
+
+        async function login() {
+            const uid = document.getElementById('uid').value.trim();
+            const upw = document.getElementById('upw').value.trim();
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uid, upw })
+                });
+
+                if (response.ok) {
+                    await fetchInitialData();
+                    showView('patients');
+                } else {
+                    const data = await response.json();
+                    alert(data.message || '아이디 또는 비밀번호가 올바르지 않습니다.');
+                }
+            } catch (error) {
+                console.error('로그인 중 오류 발생:', error);
+                await fetchInitialData();
+                showView('patients');
+            }
+        }
+
+        function handleLogout() { showView('login'); }
+
+        function sortRecordsByTime(recordsArray) {
+            if (!Array.isArray(recordsArray)) return;
+            recordsArray.sort((a, b) => new Date(a.time) - new Date(b.time));
+        }
+
+        async function savePatientToBackend(patientData) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/patients`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(patientData)
+                });
+                return response.ok;
+            } catch (error) {
+                console.error('환자 데이터 저장 에러:', error);
+                return false;
+            }
+        }
+
+        function openTopTab(tabId, btn) {
+            const pane = btn.closest('.split-pane');
+            pane.querySelectorAll('.main-tab-bar .main-tab-btn').forEach(b => b.classList.remove('active'));
+            pane.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        function openBottomTab(tabId, btn) {
+            const pane = btn.closest('.split-pane');
+            pane.querySelectorAll('.main-tab-bar .main-tab-btn').forEach(b => b.classList.remove('active'));
+            pane.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        async function showView(viewName) {
+            document.getElementById('view-login').classList.add('hidden');
+            document.getElementById('view-patients').classList.add('hidden');
+            document.getElementById('view-settings').classList.add('hidden');
+            document.getElementById('main-header').classList.add('hidden');
+
+            if (viewName === 'login') {
+                document.getElementById('view-login').classList.remove('hidden');
+            } else {
+                document.getElementById('main-header').classList.remove('hidden');
+                document.getElementById(`view-${viewName}`).classList.remove('hidden');
+            }
+
+            if (viewName === 'settings') renderSettings();
+            if (viewName === 'patients') {
+                await fetchInitialData();
+                renderPatientList();
+                updateDeptSelectOptions();
+                updateDiagnosisDropdown();
+                updateMedDbDropdown();
+                onLabCategoryChange(document.getElementById('labCategorySelect').value);
+                onPrescTypeChange(document.getElementById('prescType').value);
+            }
+        }
+
+        function renderSettings() {
+            const deptList = document.getElementById('dept-list');
+            document.getElementById('dept-count').innerText = `${departments.length}개`;
+            deptList.innerHTML = departments.map((dept, index) => `
+                <li class="p-3 flex justify-between items-center text-[13px]">
+                    <span class="font-medium text-gray-700">${dept}</span>
+                    <div class="space-x-2">
+                        <button onclick="editDept(${index})" class="text-blue-600 hover:underline">수정</button>
+                        <button onclick="deleteDept(${index})" class="text-red-500 hover:underline">삭제</button>
+                    </div>
+                </li>
+            `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 진료과가 없습니다.</li>';
+
+            document.getElementById('doc-dept-select').innerHTML = '<option value="">진료과 선택</option>' + departments.map(d => `<option value="${d}">${d}</option>`).join('');
+            document.getElementById('diag-dept-select').innerHTML = '<option value="">진료과 선택</option>' + departments.map(d => `<option value="${d}">${d}</option>`).join('');
+
+            const docList = document.getElementById('doctor-list');
+            document.getElementById('doctor-count').innerText = `${doctors.length}명`;
+            docList.innerHTML = doctors.map((doc) => `
+                <li class="p-3 flex justify-between items-center text-[13px]">
+                    <div>
+                        <span class="font-medium text-gray-800">${doc.name}</span>
+                        <span class="ml-2 text-[11px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">${doc.dept}</span>
+                    </div>
+                    <div class="space-x-2">
+                        <button onclick="editDoctor(${doc.id})" class="text-blue-600 hover:underline">수정</button>
+                        <button onclick="deleteDoctor(${doc.id})" class="text-red-500 hover:underline">삭제</button>
+                    </div>
+                </li>
+            `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 주치의가 없습니다.</li>';
+
+            const diagList = document.getElementById('diag-list');
+            document.getElementById('diag-count').innerText = `${diagnosisDatabase.length}개`;
+            diagList.innerHTML = diagnosisDatabase.map((diag) => `
+                <li class="p-2.5 flex justify-between items-center text-[12px]">
+                    <div>
+                        <span class="font-mono bg-indigo-50 px-1.5 py-0.5 rounded text-indigo-600 font-bold">${diag.code}</span>
+                        <span class="font-bold text-gray-800 ml-1">${diag.name_ko}</span>
+                    </div>
+                    <div class="space-x-1">
+                        <button onclick="editDiagnosis(${diag.id})" class="text-blue-600 hover:underline">수정</button>
+                        <button onclick="deleteDiagnosis(${diag.id})" class="text-red-500 hover:underline">삭제</button>
+                    </div>
+                </li>
+            `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 진단명이 없습니다.</li>';
+
+            const drugList = document.getElementById('drug-list');
+            document.getElementById('med-count').innerText = `${drugDatabase.length}개`;
+            drugList.innerHTML = drugDatabase.map((drug) => `
+                <li class="p-2.5 flex justify-between items-center text-[12px]">
+                    <div>
+                        <span class="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-blue-600 font-bold">${drug.code}</span>
+                        <span class="font-bold text-gray-800 ml-1 whitespace-pre-wrap">${drug.name}</span>
+                    </div>
+                    <div class="space-x-1">
+                        <button onclick="editDrug(${drug.id})" class="text-blue-600 hover:underline">수정</button>
+                        <button onclick="deleteDrug(${drug.id})" class="text-red-500 hover:underline">삭제</button>
+                    </div>
+                </li>
+            `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 처방 데이터가 없습니다.</li>';
+
+            const labdbList = document.getElementById('labdb-list');
+            document.getElementById('labdb-count').innerText = `${labDatabase.length}개`;
+            labdbList.innerHTML = labDatabase.map((item) => `
+                <li class="p-2.5 flex justify-between items-center text-[12px]">
+                    <div>
+                        <span class="bg-teal-50 px-1.5 py-0.5 rounded text-teal-700 font-bold">[${item.category}]</span>
+                        <span class="font-bold text-gray-800 ml-1">${item.name}</span>
+                        <span class="text-gray-400 text-[10px] block">범위: ${item.refRange || '없음'} ${item.unit || ''}</span>
+                    </div>
+                    <div class="space-x-1">
+                        <button onclick="deleteLabDb(${item.id})" class="text-red-500 hover:underline">삭제</button>
+                    </div>
+                </li>
+            `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 검사 DB가 없습니다.</li>';
+
+            const nursedbList = document.getElementById('nursedb-list');
+            document.getElementById('nursedb-count').innerText = `${nurseDatabase.length}개`;
+            nursedbList.innerHTML = nurseDatabase.map((item) => `
+                <li class="p-2.5 flex justify-between items-center text-[12px]">
+                    <div class="max-w-[150px] overflow-hidden">
+                        <span class="bg-orange-50 px-1.5 py-0.5 rounded text-orange-700 font-bold">[${item.category}]</span>
+                        <p class="font-medium text-gray-800 mt-1 truncate">${item.content}</p>
+                    </div>
+                    <div class="space-x-1">
+                        <button onclick="deleteNurseDb(${item.id})" class="text-red-500 hover:underline">삭제</button>
+                    </div>
+                </li>
+            `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 간호기록 DB가 없습니다.</li>';
+        }
+
+        async function handleAddNurseDb(e) {
+            e.preventDefault();
+            const category = document.getElementById('nursedb-category-input').value.trim();
+            const content = document.getElementById('nursedb-content-input').value.trim();
+
+            if (category && content) {
+                const newItem = { id: Date.now(), category, content };
+                nurseDatabase.push(newItem);
+                
+                try {
+                    await fetch(`${API_BASE_URL}/nurses/db`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newItem)
+                    });
+                } catch(e) {}
+
+                document.getElementById('nursedb-category-input').value = '';
+                document.getElementById('nursedb-content-input').value = '';
+                renderSettings();
+            }
+        }
+
+        async function deleteNurseDb(id) {
+            if (confirm('해당 간호기록 DB 항목을 삭제하시겠습니까?')) {
+                nurseDatabase = nurseDatabase.filter(item => item.id !== id);
+                try { await fetch(`${API_BASE_URL}/nurses/db/${id}`, { method: 'DELETE' }); } catch(e) {}
+                renderSettings();
+            }
+        }
+
+        async function handleAddLabDb(e) {
+            e.preventDefault();
+            const category = document.getElementById('labdb-category-input').value;
+            const name = document.getElementById('labdb-name-input').value.trim();
+            const refRange = document.getElementById('labdb-ref-input').value.trim();
+            const unit = document.getElementById('labdb-unit-input').value.trim();
+
+            if (category && name) {
+                const newItem = { id: Date.now(), category, name, refRange, unit };
+                labDatabase.push(newItem);
+                
+                try {
+                    await fetch(`${API_BASE_URL}/labs/db`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newItem)
+                    });
+                } catch(e) {}
+
+                document.getElementById('labdb-name-input').value = '';
+                document.getElementById('labdb-ref-input').value = '';
+                document.getElementById('labdb-unit-input').value = '';
+                renderSettings();
+            }
+        }
+
+        async function deleteLabDb(id) {
+            if (confirm('해당 검사 DB 항목을 삭제하시겠습니까?')) {
+                labDatabase = labDatabase.filter(item => item.id !== id);
+                try { await fetch(`${API_BASE_URL}/labs/db/${id}`, { method: 'DELETE' }); } catch(e) {}
+                renderSettings();
+            }
+        }
+
+        function onLabCategoryChange(val) {
+            const itemSelect = document.getElementById('labItemSelect');
+            const customCatInput = document.getElementById('labCategoryCustom');
+            const customItemInput = document.getElementById('labItemCustom');
+
+            if (val === 'custom') {
+                customCatInput.style.display = 'inline-block';
+                itemSelect.style.display = 'none';
+                customItemInput.style.display = 'inline-block';
+            } else {
+                customCatInput.style.display = 'none';
+                itemSelect.style.display = 'inline-block';
+                
+                const filtered = labDatabase.filter(d => d.category === val);
+                itemSelect.innerHTML = '<option value="">검사명 선택</option>' + 
+                    filtered.map(d => `<option value="${d.name}" data-ref="${d.refRange||''}" data-unit="${d.unit||''}">${d.name}</option>`).join('') +
+                    '<option value="custom">-- 직접입력 --</option>';
+                onLabItemChange(itemSelect);
+            }
+        }
+
+        function onLabItemChange(select) {
+            const customItemInput = document.getElementById('labItemCustom');
+            if (select.value === 'custom') {
+                customItemInput.style.display = 'inline-block';
+                document.getElementById('labRefRange').value = '';
+                document.getElementById('labUnit').value = '';
+            } else {
+                customItemInput.style.display = 'none';
+                const opt = select.options[select.selectedIndex];
+                if (opt && opt.value !== '') {
+                    document.getElementById('labRefRange').value = opt.getAttribute('data-ref') || '';
+                    document.getElementById('labUnit').value = opt.getAttribute('data-unit') || '';
+                }
+            }
+        }
+
+        async function handleAddDept(e) {
+            e.preventDefault();
+            const input = document.getElementById('dept-input');
+            const val = input.value.trim();
+            if (val && !departments.includes(val)) {
+                await fetch(`${API_BASE_URL}/departments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: val }) }).catch(() => null);
+                input.value = ''; await fetchInitialData(); renderSettings();
+            }
+        }
+
+        async function editDept(index) {
+            const current = departments[index];
+            const updated = prompt('진료과명을 수정하세요:', current);
+            if (updated && updated.trim() !== '') {
+                await fetch(`${API_BASE_URL}/departments/${encodeURIComponent(current)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: updated.trim() }) }).catch(() => null);
+                await fetchInitialData(); renderSettings();
+            }
+        }
+
+        async function deleteDept(index) {
+            if (confirm(`'${departments[index]}' 진료과를 삭제하시겠습니까?`)) {
+                await fetch(`${API_BASE_URL}/departments/${encodeURIComponent(departments[index])}`, { method: 'DELETE' }).catch(() => null);
+                await fetchInitialData(); renderSettings();
+            }
+        }
+
+        async function handleAddDoctor(e) {
+            e.preventDefault();
+            const dept = document.getElementById('doc-dept-select').value;
+            const nameInput = document.getElementById('doc-name-input');
+            const name = nameInput.value.trim();
+            if (dept && name) {
+                await fetch(`${API_BASE_URL}/doctors`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, dept }) }).catch(() => null);
+                nameInput.value = ''; await fetchInitialData(); renderSettings();
+            }
+        }
+
+        async function editDoctor(id) {
+            const doc = doctors.find(d => d.id === id);
+            if (!doc) return;
+            const newName = prompt('의사 성명을 수정하세요:', doc.name);
+            if (newName && newName.trim() !== '') {
+                await fetch(`${API_BASE_URL}/doctors/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newName.trim(), dept: doc.dept }) }).catch(() => null);
+                await fetchInitialData(); renderSettings();
+            }
+        }
+
+        async function deleteDoctor(id) {
+            if (confirm('해당 주치의를 삭제하시겠습니까?')) {
+                await fetch(`${API_BASE_URL}/doctors/${id}`, { method: 'DELETE' }).catch(() => null);
+                await fetchInitialData(); renderSettings();
+            }
+        }
+
+        async function handleAddDiagnosis(e) {
+            e.preventDefault();
+            const code = document.getElementById('diag-code-input').value.trim();
+            const name_ko = document.getElementById('diag-name-input').value.trim();
+            const name_en = document.getElementById('diag-en-input').value.trim();
+            const category = document.getElementById('diag-dept-select').value;
+            if (code && name_ko) {
+                await fetch(`${API_BASE_URL}/diagnoses`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, name_ko, name_en, category }) }).catch(() => null);
+                document.getElementById('diag-code-input').value = ''; document.getElementById('diag-name-input').value = '';
+                await fetchInitialData(); renderSettings();
+            }
+        }
+
+        async function editDiagnosis(id) {
+            const diag = diagnosisDatabase.find(d => d.id === id);
+            if (!diag) return;
+            const newName = prompt('한글 진단명을 수정하세요:', diag.name_ko);
+            if (newName && newName.trim() !== '') {
+                await fetch(`${API_BASE_URL}/diagnoses/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...diag, name_ko: newName.trim() }) }).catch(() => null);
+                await fetchInitialData(); renderSettings();
+            }
+        }
+
+        async function deleteDiagnosis(id) {
+            if (confirm('해당 진단명을 DB에서 삭제하시겠습니까?')) {
+                await fetch(`${API_BASE_URL}/diagnoses/${id}`, { method: 'DELETE' }).catch(() => null);
+                await fetchInitialData(); renderSettings();
+            }
+        }
+
+        function updateDiagnosisDropdown() {
+            const select = document.getElementById('pDiagnosisSelect');
+            if(!select) return;
+            let html = '<option value="">진단명/KCD 선택</option>';
+            diagnosisDatabase.forEach(d => { html += `<option value="${d.code}" data-name="${d.name_ko} (${d.name_en || ''})" data-category="${d.category || ''}">[${d.code}] ${d.name_ko}</option>`; });
+            html += '<option value="custom">-- 직접 입력 --</option>';
+            select.innerHTML = html;
+        }
+
+        function toggleDiagnosisCustomInput(select) {
+            const codeInput = document.getElementById('pDiagnosisCustomCode');
+            const customInput = document.getElementById('pDiagnosisCustom');
+            if (select.value === 'custom') { codeInput.style.display = 'inline-block'; customInput.style.display = 'inline-block'; }
+            else { codeInput.style.display = 'none'; customInput.style.display = 'none'; }
+        }
+
+        function toggleGenderCustomInput(select) {
+            const customInput = document.getElementById('pGenderCustom');
+            if (select.value === 'custom') { customInput.style.display = 'inline-block'; }
+            else { customInput.style.display = 'none'; }
+        }
+
+        function onDiagnosisSelectChange(select) {
+            toggleDiagnosisCustomInput(select);
+            const selectedOpt = select.options[select.selectedIndex];
+            if(selectedOpt) {
+                const category = selectedOpt.getAttribute('data-category');
+                if(category) {
+                    const pDeptSelect = document.getElementById('pDept');
+                    for(let i = 0; i < pDeptSelect.options.length; i++) {
+                        if(pDeptSelect.options[i].value === category) {
+                            pDeptSelect.selectedIndex = i; updateDoctorSelectOptions(); break;
+                        }
+                    }
+                }
+            }
+        }
+
+        async function handleAddDrug(e) {
+            e.preventDefault();
+            const code = document.getElementById('drug-code-input').value.trim();
+            const drugNameInput = document.getElementById('drug-name-input');
+            const name = drugNameInput.value.trim();
+            if (code && name) {
+                await fetch(`${API_BASE_URL}/drugs`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, name }) }).catch(() => null);
+                document.getElementById('drug-code-input').value = ''; 
+                drugNameInput.value = '';
+                drugNameInput.style.height = 'auto';
+                await fetchInitialData(); renderSettings();
+            }
+        }
+
+        async function editDrug(id) {
+            const drug = drugDatabase.find(d => d.id === id);
+            if (!drug) return;
+            const newName = prompt('처방/약물명을 수정하세요:', drug.name);
+            if (newName && newName.trim() !== '') {
+                await fetch(`${API_BASE_URL}/drugs/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...drug, name: newName.trim() }) }).catch(() => null);
+                await fetchInitialData(); renderSettings();
+            }
+        }
+
+        async function deleteDrug(id) {
+            if (confirm('해당 처방/약물 데이터를 DB에서 삭제하시겠습니까?')) {
+                await fetch(`${API_BASE_URL}/drugs/${id}`, { method: 'DELETE' }).catch(() => null);
+                await fetchInitialData(); renderSettings();
+            }
+        }
+
+        function updateMedDbDropdown() {
+            const select = document.getElementById('medDbSelect');
+            if(!select) return;
+            select.innerHTML = '<option value="">-- DB 처방 선택 --</option>' + drugDatabase.map(d => `<option value="${d.id}">[${d.code}] ${d.name}</option>`).join('');
+        }
+
+        function selectMedFromDb(select) {
+            const drugId = Number(select.value);
+            if(!drugId) return;
+            const drug = drugDatabase.find(d => d.id === drugId);
+            if(drug) {
+                document.getElementById('prescCode').value = drug.code || '';
+                const prescNote = document.getElementById('prescNote');
+                prescNote.value = drug.name || '';
+                autoExpandTextarea(prescNote);
+            }
+        }
+
+        function onMedCodeInput(val) {
+            const cleanVal = val.trim().toUpperCase();
+            const drug = drugDatabase.find(d => d.code.toUpperCase() === cleanVal);
+            if(drug) {
+                const prescNote = document.getElementById('prescNote');
+                prescNote.value = drug.name || '';
+                autoExpandTextarea(prescNote);
+
+                const select = document.getElementById('medDbSelect');
+                for(let i = 0; i < select.options.length; i++) {
+                    if(select.options[i].value == drug.id) { select.selectedIndex = i; break; }
+                }
+            }
+        }
+
+        function updateDeptSelectOptions() {
+            const pDeptSelect = document.getElementById('pDept');
+            pDeptSelect.innerHTML = departments.map(d => `<option value="${d}">${d}</option>`).join('');
+            updateDoctorSelectOptions();
+        }
+
+        function updateDoctorSelectOptions() {
+            const selectedDept = document.getElementById('pDept').value;
+            const pDoctorSelect = document.getElementById('pDoctor');
+            const filteredDoctors = doctors.filter(doc => doc.dept === selectedDept);
+            if (filteredDoctors.length > 0) {
+                pDoctorSelect.innerHTML = filteredDoctors.map(doc => `<option value="${doc.name}">${doc.name}</option>`).join('');
+            } else { pDoctorSelect.innerHTML = '<option value="">등록된 의사 없음</option>'; }
+        }
+
+        function autoCalculateAge(birthVal) {
+            const ageInput = document.getElementById('pAge');
+            const cleanBirth = birthVal.replace(/[^0-9]/g, '');
+            if (cleanBirth.length !== 6 && cleanBirth.length !== 8) { ageInput.value = ''; return; }
+
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            const currentMonth = today.getMonth() + 1;
+            const currentDate = today.getDate();
+            let birthYear, birthMonth, birthDay;
+
+            if (cleanBirth.length === 6) {
+                let year2Digit = parseInt(cleanBirth.substring(0, 2), 10);
+                let twoDigitCurrentYear = currentYear % 100;
+                birthYear = year2Digit > twoDigitCurrentYear ? 1900 + year2Digit : 2000 + year2Digit;
+                birthMonth = parseInt(cleanBirth.substring(2, 4), 10);
+                birthDay = parseInt(cleanBirth.substring(4, 6), 10);
+            } else {
+                birthYear = parseInt(cleanBirth.substring(0, 4), 10);
+                birthMonth = parseInt(cleanBirth.substring(4, 6), 10);
+                birthDay = parseInt(cleanBirth.substring(6, 8), 10);
+            }
+
+            if (birthMonth < 1 || birthMonth > 12 || birthDay < 1 || birthDay > 31) { ageInput.value = ''; return; }
+            let age = currentYear - birthYear;
+            if (currentMonth < birthMonth || (currentMonth === birthMonth && currentDate < birthDay)) { age--; }
+            ageInput.value = age >= 0 ? age : 0;
+        }
+
+        function initCurrentTimeInputs() {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            const timeStr = now.toISOString().slice(0, 16);
+            document.querySelectorAll('input[type="datetime-local"]').forEach(input => input.value = timeStr);
+            if(document.getElementById('prescIssuer')) {
+                const currentDocName = (currentPatientIndex !== null && patients[currentPatientIndex]) ? patients[currentPatientIndex].doctor : '박지은';
+                document.getElementById('prescIssuer').value = currentDocName || '박지은';
+            }
+        }
+
+        async function savePatientForm() {
+            const name = document.getElementById('pName').value.trim();
+            const birth = document.getElementById('pBirth').value.trim();
+            const age = document.getElementById('pAge').value.trim();
+            if(!name || !birth || !age) return alert("환자명과 올바른 생년월일을 입력해주세요.");
+
+            const genderSelect = document.getElementById('pGenderSelect').value;
+            let gender = genderSelect === 'custom' ? (document.getElementById('pGenderCustom').value.trim() || '미지정') : (genderSelect || '미지정');
+            const bloodType = document.getElementById('pBloodType').value || '미확인';
+            const dept = document.getElementById('pDept').value;
+            const doctor = document.getElementById('pDoctor').value || '담당의 미정';
+            const room = document.getElementById('pRoom').value.trim() || '외래/미배정';
+            const hd = document.getElementById('pHD').value.trim() || '0';
+            const pod = document.getElementById('pPOD').value.trim() || '-';
+
+            const selectDiag = document.getElementById('pDiagnosisSelect');
+            let diagCode = selectDiag.value;
+            let diagnosis = '';
+
+            if(diagCode === 'custom') {
+                diagCode = document.getElementById('pDiagnosisCustomCode').value.trim() || 'Custom';
+                diagnosis = document.getElementById('pDiagnosisCustom').value.trim();
+            } else if(diagCode !== '') {
+                diagnosis = selectDiag.options[selectDiag.selectedIndex].getAttribute('data-name');
+            }
+
+            const cc = document.getElementById('pCC').value.trim() || '특이사항 없음';
+
+            if(editingPatientIndex !== null) {
+                const p = patients[editingPatientIndex];
+                p.name = name; p.birth = birth; p.age = age; p.gender = gender; p.bloodType = bloodType;
+                p.dept = dept; p.doctor = doctor; p.room = room; p.hd = hd; p.pod = pod;
+                p.diagCode = diagCode || p.diagCode; p.diagnosis = diagnosis || p.diagnosis; p.cc = cc;
+
+                await fetch(`${API_BASE_URL}/patients/${p.chartNo}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) }).catch(() => null);
+                alert(`${p.name} 환자 정보가 수정되었습니다.`); editingPatientIndex = null;
+            } else {
+                const chartNo = 'P' + String(Date.now()).slice(-5);
+                const newPatient = {
+                    chartNo, name, birth, age, gender, bloodType, dept, doctor, room, hd, pod,
+                    diagCode: diagCode || 'KCD-', diagnosis: diagnosis || '일반 진료', cc, memo: '', bodyMarks: [],
+                    records: { vs: [], io: [], prescriptions: [], nurse: [], surg: [], blood: [], lab: [] }
+                };
+                await savePatientToBackend(newPatient); alert("신규 환자가 등록되었습니다.");
+            }
+
+            await fetchInitialData(); resetForm(); renderPatientList();
+        }
+
+        function resetForm() {
+            document.getElementById('pName').value = '';
+            document.getElementById('pBirth').value = '';
+            document.getElementById('pAge').value = '';
+            document.getElementById('pGenderSelect').value = '';
+            document.getElementById('pGenderCustom').style.display = 'none';
+            document.getElementById('pBloodType').value = '';
+            document.getElementById('pRoom').value = '';
+            document.getElementById('pHD').value = '';
+            document.getElementById('pPOD').value = '';
+            document.getElementById('pDiagnosisSelect').value = '';
+            document.getElementById('pDiagnosisCustomCode').style.display = 'none';
+            document.getElementById('pDiagnosisCustom').style.display = 'none';
+            document.getElementById('pCC').value = '';
+            editingPatientIndex = null;
+            document.getElementById('formTitle').innerText = '[신규 환자 등록]';
+            document.getElementById('btnSavePatient').innerText = '+ 환자 등록';
+            document.getElementById('btnCancelEdit').style.display = 'none';
+        }
+
+        function renderPatientList() {
+            const tbody = document.getElementById('patientTableBody');
+            tbody.innerHTML = patients.length ? '' : `<tr><td colspan="9">등록된 환자가 없습니다.</td></tr>`;
+            patients.forEach((p, idx) => {
+                const genderStr = p.gender ? ` / ${p.gender}` : '';
+                tbody.innerHTML += `
+                    <tr>
+                        <td><b>${p.chartNo}</b></td>
+                        <td><span style="color:var(--primary-blue); font-weight:bold; cursor:pointer;" onclick="openPatientDetail(${idx})">${p.name}</span></td>
+                        <td><b>[${p.dept||'일반외과'}]</b> ${p.doctor||'-'}</td>
+                        <td><b style="color:#8b5cf6;">${p.room||'-'}</b></td>
+                        <td><b style="color:#ef4444;">${p.bloodType||'-'}</b></td>
+                        <td>${p.birth} (만 ${p.age}세${genderStr})</td>
+                        <td><span class="code-badge">${p.diagCode||'-'}</span> ${p.diagnosis}</td>
+                        <td style="text-align:left;">${p.cc}</td>
+                        <td>
+                            <button class="btn-slate" style="padding:1px 5px; margin-right:2px;" onclick="editPatient(${idx})">수정</button>
+                            <button class="btn-red" style="padding:1px 5px;" onclick="deletePatient(${idx})">삭제</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function editPatient(idx) {
+            editingPatientIndex = idx;
+            const p = patients[idx];
+            document.getElementById('pName').value = p.name;
+            document.getElementById('pBirth').value = p.birth;
+            document.getElementById('pAge').value = p.age;
+            
+            const genderSelect = document.getElementById('pGenderSelect');
+            if (['F', 'M'].includes(p.gender)) {
+                genderSelect.value = p.gender;
+                document.getElementById('pGenderCustom').style.display = 'none';
+            } else {
+                genderSelect.value = 'custom';
+                document.getElementById('pGenderCustom').style.display = 'inline-block';
+                document.getElementById('pGenderCustom').value = p.gender || '';
+            }
+
+            document.getElementById('pBloodType').value = p.bloodType || '';
+            document.getElementById('pDept').value = p.dept || '';
+            updateDoctorSelectOptions();
+            document.getElementById('pDoctor').value = p.doctor || '';
+            document.getElementById('pRoom').value = p.room || '';
+            document.getElementById('pHD').value = p.hd || '';
+            document.getElementById('pPOD').value = p.pod || '';
+            
+            const selectDiag = document.getElementById('pDiagnosisSelect');
+            let foundDiag = false;
+            for(let i = 0; i < selectDiag.options.length; i++) {
+                if(selectDiag.options[i].value === p.diagCode) {
+                    selectDiag.selectedIndex = i;
+                    foundDiag = true;
+                    break;
+                }
+            }
+            if(!foundDiag && p.diagCode) {
+                selectDiag.value = 'custom';
+                toggleDiagnosisCustomInput(selectDiag);
+                document.getElementById('pDiagnosisCustomCode').value = p.diagCode || '';
+                document.getElementById('pDiagnosisCustom').value = p.diagnosis || '';
+            } else {
+                toggleDiagnosisCustomInput(selectDiag);
+            }
+
+            document.getElementById('pCC').value = p.cc || '';
+            document.getElementById('formTitle').innerText = `[환자 정보 수정 - ${p.name}]`;
+            document.getElementById('btnSavePatient').innerText = '수정 완료';
+            document.getElementById('btnCancelEdit').style.display = 'inline-block';
+        }
+
+        function cancelEdit() { resetForm(); }
+
+        async function deletePatient(idx) {
+            if(confirm(`'${patients[idx].name}' 환자 정보를 삭제하시겠습니까?`)) {
+                const chartNo = patients[idx].chartNo;
+                try {
+                    await fetch(`${API_BASE_URL}/patients/${chartNo}`, { method: 'DELETE' });
+                } catch(e) {}
+                await fetchInitialData();
+                renderPatientList();
+            }
+        }
+
+        function renderQuickPatientList(filterText = '') {
+            const listContainer = document.getElementById('quickPatientList');
+            const countSpan = document.getElementById('quickPatientCount');
+            if (!listContainer) return;
+
+            const filtered = patients.filter(p => {
+                const keyword = filterText.toLowerCase();
+                return p.name.toLowerCase().includes(keyword) || p.chartNo.toLowerCase().includes(keyword);
+            });
+
+            if (countSpan) countSpan.innerText = `총 ${filtered.length}명`;
+            if (filtered.length === 0) {
+                listContainer.innerHTML = '<div style="padding: 10px; text-align: center; color: #888;">검색 결과가 없습니다.</div>'; return;
+            }
+
+            listContainer.innerHTML = filtered.map((p) => {
+                const originalIndex = patients.findIndex(originalP => originalP.chartNo === p.chartNo);
+                const isSelected = originalIndex === currentPatientIndex;
+                return `
+                    <div class="quick-patient-item ${isSelected ? 'active' : ''}" onclick="selectQuickPatient(${originalIndex})">
+                        <div>
+                            <div style="font-weight: bold; color: var(--text-dark);">${p.name} <span style="font-weight: normal; color: var(--text-muted); font-size: 10px;">(${p.chartNo})</span></div>
+                            <div style="color: var(--text-muted); font-size: 10px;">${p.dept || '일반외과'} | ${p.doctor || '-'}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <span style="background: #e2e8f0; color: #475569; padding: 1px 4px; border-radius: 3px; font-weight: bold; font-size: 10px;">${p.room || '미배정'}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterQuickPatientList() {
+            renderQuickPatientList(document.getElementById('quickSearchInput').value);
+        }
+
+        function selectQuickPatient(index) {
+            if (index !== -1) openPatientDetail(index);
+        }
+
+        function openPatientDetail(index) {
+            currentPatientIndex = index;
+            const p = patients[index];
+
+            document.getElementById('dChartNo').innerText = p.chartNo;
+            document.getElementById('dName').innerText = p.name;
+            document.getElementById('dAgeGender').innerText = `만 ${p.age} 세 / ${p.gender || '-'}`;
+            document.getElementById('dBirth').innerText = p.birth;
+            document.getElementById('dBloodType').innerText = p.bloodType || '미확인';
+            document.getElementById('dRoom').innerText = p.room || '미배정';
+            document.getElementById('dDeptDoc').innerText = `[${p.dept||'일반외과'}] ${p.doctor||'의사'}`;
+            document.getElementById('dDiagCode').innerText = p.diagCode || 'KCD-';
+            document.getElementById('dDiagnosis').innerText = p.diagnosis;
+            document.getElementById('dCC').innerText = p.cc;
+            document.getElementById('dHD').innerText = (p.hd !== undefined && p.hd !== null && p.hd !== '') ? `#${p.hd}` : '-';
+            document.getElementById('dPOD').innerText = (p.pod !== undefined && p.pod !== null && p.pod !== '') ? `#${p.pod}` : '-';
+            document.getElementById('patientMemo').value = p.memo || '';
+
+            renderQuickPatientList();
+            renderBodyMarks();
+            renderAllRecords();
+            initCurrentTimeInputs();
+            updateMedDbDropdown();
+            onLabCategoryChange(document.getElementById('labCategorySelect').value);
+            onPrescTypeChange(document.getElementById('prescType').value);
+
+            document.getElementById('listPage').style.display = 'none';
+            document.getElementById('detailPage').style.display = 'flex';
+        }
+
+        function setBodySide(side) {
+            currentBodySide = side;
+            document.getElementById('svgFront').style.display = side === 'front' ? 'block' : 'none';
+            document.getElementById('svgBack').style.display = side === 'back' ? 'block' : 'none';
+            document.getElementById('btnSideFront').className = 'sub-tab-btn ' + (side === 'front' ? 'active' : '');
+            document.getElementById('btnSideBack').className = 'sub-tab-btn ' + (side === 'back' ? 'active' : '');
+            renderBodyMarks();
+        }
+
+        function setMarkType(type) {
+            selectedMarkType = type;
+            document.getElementById('btnTypeOp').className = 'sub-tab-btn ' + (type === 'OP' ? 'active' : '');
+            document.getElementById('btnTypeSore').className = 'sub-tab-btn ' + (type === 'SORE' ? 'active' : '');
+        }
+
+        async function addBodyMark(event) {
+            if(event.target.closest('.pin-wrapper')) return;
+            const rect = event.currentTarget.getBoundingClientRect();
+            const x = Math.round(((event.clientX - rect.left) / rect.width) * 100);
+            const y = Math.round(((event.clientY - rect.top) / rect.height) * 100);
+            const sideText = currentBodySide === 'front' ? '앞모습' : '뒷모습';
+            const typeName = selectedMarkType === 'OP' ? '수술 부위' : '욕창 부위';
+            const note = prompt(`[${sideText} - ${typeName}] 메모를 입력하세요:`);
+            if(!note) return;
+
+            const p = patients[currentPatientIndex];
+            if(!p.bodyMarks) p.bodyMarks = [];
+            p.bodyMarks.push({ x, y, side: currentBodySide, type: selectedMarkType, note });
+            await savePatientToBackend(p); renderBodyMarks();
+        }
+
+        function handlePinClick(event, index) {
+            event.stopPropagation();
+            if (pinClickTimer) {
+                clearTimeout(pinClickTimer); pinClickTimer = null;
+                if (confirm("해당 마커를 삭제하시겠습니까?")) {
+                    const p = patients[currentPatientIndex];
+                    p.bodyMarks.splice(index, 1);
+                    savePatientToBackend(p); renderBodyMarks();
+                }
+            } else {
+                pinClickTimer = setTimeout(() => {
+                    pinClickTimer = null; openPinEditModal(index);
+                }, 250);
+            }
+        }
+
+        function openPinEditModal(index) {
+            targetPinIndex = index;
+            const p = patients[currentPatientIndex];
+            document.getElementById('modalPinNote').value = p.bodyMarks[index].note || '';
+            document.getElementById('pinEditModal').classList.remove('hidden');
+        }
+
+        function closePinEditModal() {
+            targetPinIndex = null;
+            document.getElementById('pinEditModal').classList.add('hidden');
+        }
+
+        async function submitPinEdit() {
+            if (targetPinIndex === null) return;
+            const newNote = document.getElementById('modalPinNote').value.trim();
+            if (!newNote) return alert("메모 내용을 입력해 주세요.");
+
+            const p = patients[currentPatientIndex];
+            p.bodyMarks[targetPinIndex].note = newNote;
+            await savePatientToBackend(p); closePinEditModal(); renderBodyMarks();
+        }
+
+        function renderBodyMarks() {
+            const p = patients[currentPatientIndex];
+            const container = document.getElementById('bodyCanvas');
+            document.querySelectorAll('.pin-wrapper').forEach(el => el.remove());
+            if(!p || !p.bodyMarks) return;
+
+            p.bodyMarks.forEach((m, idx) => {
+                if((m.side || 'front') === currentBodySide) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'pin-wrapper';
+                    wrapper.style.left = m.x + '%'; wrapper.style.top = m.y + '%';
+                    wrapper.innerHTML = `
+                        <div class="speech-bubble" title="${m.note}">${m.note}</div>
+                        <div class="pin ${m.type === 'OP' ? 'pin-op' : 'pin-sore'}"></div>
+                    `;
+                    wrapper.onclick = (e) => handlePinClick(e, idx);
+                    container.appendChild(wrapper);
+                }
+            });
+        }
+
+        function showListPage() {
+            document.getElementById('detailPage').style.display = 'none';
+            document.getElementById('listPage').style.display = 'block';
+            renderPatientList();
+        }
+
+        async function saveMemo() {
+            if(currentPatientIndex === null) return;
+            const p = patients[currentPatientIndex];
+            p.memo = document.getElementById('patientMemo').value;
+            await savePatientToBackend(p); alert("메모가 저장되었습니다.");
+        }
+
+        function toggleBloodUnitCustom(select) {
+            const customInput = document.getElementById('bloodUnitCustom');
+            customInput.style.display = select.value === 'custom' ? 'inline-block' : 'none';
+        }
+
+        function toggleBloodSideCustom(select) {
+            const customInput = document.getElementById('bloodSideCustom');
+            customInput.style.display = select.value === 'custom' ? 'inline-block' : 'none';
+        }
+
+        async function addRecord(type) {
+            if(currentPatientIndex === null) return;
+            const p = patients[currentPatientIndex];
+
+            if(!p.records) p.records = {};
+            if(!p.records.prescriptions) p.records.prescriptions = [];
+            if(!p.records.nurse) p.records.nurse = [];
+            if(!p.records.lab) p.records.lab = [];
+            if(!p.records.vs) p.records.vs = [];
+            if(!p.records.io) p.records.io = [];
+
+            if (type === 'vs') {
+                const time = document.getElementById('vsTime').value.replace('T', ' ');
+                const bp = document.getElementById('vsBp').value;
+                const hr = document.getElementById('vsHr').value;
+                const rr = document.getElementById('vsRr').value;
+                const bt = document.getElementById('vsBt').value;
+                if(!time) return alert("시간을 입력하세요.");
+                p.records.vs.push({ time, bp, hr: Number(hr), rr: Number(rr), bt: Number(bt) });
+                sortRecordsByTime(p.records.vs);
+            } else if (type === 'io') {
+                const time = document.getElementById('ioTime').value.replace('T', ' ');
+                const intake = document.getElementById('ioIntake').value;
+                const output = document.getElementById('ioOutput').value;
+                if(!time) return alert("시간을 입력하세요.");
+                p.records.io.push({ time, intake: Number(intake), output: Number(output) });
+                sortRecordsByTime(p.records.io);
+            } else if (type === 'presc') {
+                const time = document.getElementById('prescTime').value.replace('T', ' ');
+                const category = document.getElementById('prescType').value;
+                const code = document.getElementById('prescCode').value.trim() || '-';
+                const prescNoteEl = document.getElementById('prescNote');
+                let note = prescNoteEl.value.trim();
+                const issuer = document.getElementById('prescIssuer').value.trim() || '-';
+
+                if(!note) return alert("처방 내역을 입력하세요.");
+
+                if (category === '약물') {
+                    const dose = document.getElementById('prescDose').value.trim();
+                    const freq = document.getElementById('prescFreq').value.trim();
+                    const route = document.getElementById('prescRoute').value.trim();
+
+                    const details = [dose, freq, route].filter(Boolean).join(', ');
+                    if (details) note += ` (${details})`;
+                }
+
+                if(editingPrescIndex !== null) {
+                    p.records.prescriptions[editingPrescIndex] = { ...p.records.prescriptions[editingPrescIndex], time, category, code, note, issuer };
+                    editingPrescIndex = null;
+                } else {
+                    p.records.prescriptions.push({ time, category, code, note, issuer, status: '미수행', nurse: '-' });
+                }
+                sortRecordsByTime(p.records.prescriptions); 
+                cancelPrescEdit();
+                prescNoteEl.style.height = 'auto';
+            } else if (type === 'nurse') {
+                const time = document.getElementById('nurseTime').value.replace('T', ' ');
+                const nurseNoteEl = document.getElementById('nurseNote');
+                const note = nurseNoteEl.value.trim();
+                const nurseName = document.getElementById('nurseName').value.trim() || '간호사';
+                if(!note) return alert("간호/투약 수행 내역을 입력하세요.");
+                p.records.nurse.push({ time, note, nurse: nurseName });
+                sortRecordsByTime(p.records.nurse);
+                nurseNoteEl.value = '';
+                nurseNoteEl.style.height = '28px';
+            } else if (type === 'surg') {
+                const time = document.getElementById('surgTime').value.replace('T', ' ');
+                const stage = document.getElementById('surgStage').value;
+                const opName = document.getElementById('surgOpName').value.trim();
+                const note = document.getElementById('surgNote').value.trim();
+                if(!time || !opName) return alert("일시와 수술명을 입력하세요.");
+                if(!p.records.surg) p.records.surg = [];
+                p.records.surg.push({ time, stage, opName, note });
+                sortRecordsByTime(p.records.surg);
+                document.getElementById('surgOpName').value = '';
+                document.getElementById('surgNote').value = '';
+            } else if (type === 'blood') {
+                const time = document.getElementById('bloodTime').value.replace('T', ' ');
+                const bType = document.getElementById('bloodType').value;
+                const code = document.getElementById('bloodCode').value.trim() || '-';
+                const unitSelect = document.getElementById('bloodUnitSelect').value;
+                const unit = unitSelect === 'custom' ? document.getElementById('bloodUnitCustom').value.trim() : unitSelect;
+                const vs = document.getElementById('bloodVs').value.trim() || '-';
+                const sideSelect = document.getElementById('bloodSideEffectSelect').value;
+                const sideEffect = sideSelect === 'custom' ? document.getElementById('bloodSideCustom').value.trim() : sideSelect;
+                if(!time) return alert("시간을 입력하세요.");
+                if(!p.records.blood) p.records.blood = [];
+                p.records.blood.push({ time, bType, code, unit, vs, sideEffect });
+                sortRecordsByTime(p.records.blood);
+                document.getElementById('bloodCode').value = '';
+            } else if (type === 'lab_img') {
+                const time = document.getElementById('labTime').value.replace('T', ' ');
+                const catSelect = document.getElementById('labCategorySelect').value;
+                const category = catSelect === 'custom' ? (document.getElementById('labCategoryCustom').value.trim() || '기타') : catSelect;
+                
+                const itemSelect = document.getElementById('labItemSelect').value;
+                const item = (catSelect === 'custom' || itemSelect === 'custom') ? (document.getElementById('labItemCustom').value.trim() || '검사 항목') : itemSelect;
+                
+                const labResultEl = document.getElementById('labResult');
+                const result = labResultEl.value.trim();
+                const refRange = document.getElementById('labRefRange').value.trim();
+                const unit = document.getElementById('labUnit').value.trim();
+
+                if(!time || !item || !result) return alert("일시, 검사명, 판독 결과를 올바르게 입력해주세요.");
+
+                p.records.lab.push({ time, category, item, result, refRange, unit });
+                sortRecordsByTime(p.records.lab);
+
+                labResultEl.value = '';
+                labResultEl.style.height = '28px';
+            }
+
+            await savePatientToBackend(p);
+            renderAllRecords();
+            initCurrentTimeInputs();
+        }
+
+        function cancelPrescEdit() {
+            editingPrescIndex = null;
+            document.getElementById('prescCode').value = '';
+            document.getElementById('prescNote').value = '';
+            document.getElementById('prescDose').value = '';
+            document.getElementById('prescFreq').value = '';
+            document.getElementById('prescRoute').value = '';
+            document.getElementById('medDbSelect').value = '';
+            document.getElementById('btnPrescSave').innerText = '처방 입력';
+            document.getElementById('btnPrescCancel').style.display = 'none';
+        }
+
+        function editPresc(idx) {
+            const p = patients[currentPatientIndex];
+            const item = p.records.prescriptions[idx];
+            editingPrescIndex = idx;
+            document.getElementById('prescTime').value = item.time.replace(' ', 'T');
+            document.getElementById('prescType').value = item.category;
+            onPrescTypeChange(item.category);
+            document.getElementById('prescCode').value = item.code || '';
+            const prescNote = document.getElementById('prescNote');
+            prescNote.value = item.note || '';
+            autoExpandTextarea(prescNote);
+            document.getElementById('prescIssuer').value = item.issuer || '';
+            document.getElementById('btnPrescSave').innerText = '수정 완료';
+            document.getElementById('btnPrescCancel').style.display = 'inline-block';
+        }
+
+        function openNurseInputModal(idx) {
+            const p = patients[currentPatientIndex];
+            const item = p.records.prescriptions[idx];
+            if(item.status === '수행완료' || item.status === '투약완료') {
+                if(confirm("수행완료 상태를 취소하고 미수행으로 변경하시겠습니까?")) {
+                    item.status = '미수행'; item.nurse = '-';
+                    savePatientToBackend(p); renderAllRecords();
+                }
+                return;
+            }
+            targetPrescModalIndex = idx;
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('modalExecTime').value = now.toISOString().slice(0, 16);
+            document.getElementById('modalNurseName').value = '이다은';
+            document.getElementById('nurseInputModal').classList.remove('hidden');
+        }
+
+        function closeNurseInputModal() {
+            targetPrescModalIndex = null;
+            document.getElementById('nurseInputModal').classList.add('hidden');
+        }
+
+        async function submitNurseInput() {
+            if(targetPrescModalIndex === null) return;
+            const execTime = document.getElementById('modalExecTime').value.replace('T', ' ');
+            const nurseName = document.getElementById('modalNurseName').value.trim() || '간호사';
+            if (!execTime) return alert("수행 일시를 입력하세요.");
+
+            const p = patients[currentPatientIndex];
+            const item = p.records.prescriptions[targetPrescModalIndex];
+            item.status = item.category === '약물' ? '투약완료' : '수행완료';
+            item.nurse = `${nurseName} (${execTime.slice(5)})`;
+            
+            await savePatientToBackend(p);
+            closeNurseInputModal();
+            renderAllRecords();
+        }
+
+        async function deleteRecord(type, idx) {
+            if (currentPatientIndex === null) return;
+            if (!confirm("해당 기록을 삭제하시겠습니까?")) return;
+
+            const p = patients[currentPatientIndex];
+            if (type === 'presc') p.records.prescriptions.splice(idx, 1);
+            else if (type === 'surg') p.records.surg.splice(idx, 1);
+            else if (type === 'blood') p.records.blood.splice(idx, 1);
+            else if (type === 'lab') p.records.lab.splice(idx, 1);
+            else if (type === 'nurse') p.records.nurse.splice(idx, 1);
+            else if (type === 'vs') p.records.vs.splice(idx, 1);
+            else if (type === 'io') p.records.io.splice(idx, 1);
+
+            await savePatientToBackend(p);
+            renderAllRecords();
+        }
+
+        function renderAllRecords() {
+            if (currentPatientIndex === null) return;
+            const p = patients[currentPatientIndex];
+            if (!p.records) p.records = {};
+
+            // 1. 처방 내역
+            const prescBody = document.getElementById('prescriptionTable');
+            const prescs = p.records.prescriptions || [];
+            prescBody.innerHTML = prescs.length ? '' : '<tr><td colspan="8">처방 내역이 없습니다.</td></tr>';
+            prescs.forEach((item, idx) => {
+                const isDone = item.status === '수행완료' || item.status === '투약완료';
+                const badgeClass = isDone ? 'status-badge-complete' : 'status-badge-pending';
+                prescBody.innerHTML += `
+                    <tr>
+                        <td>${item.time}</td>
+                        <td><b>${item.category}</b></td>
+                        <td><span class="code-badge">${item.code || '-'}</span></td>
+                        <td style="text-align:left;">${item.note}</td>
+                        <td>${item.issuer || '-'}</td>
+                        <td><span class="${badgeClass}" onclick="openNurseInputModal(${idx})">${item.status || '미수행'}</span></td>
+                        <td>${item.nurse || '-'}</td>
+                        <td>
+                            <button class="btn-slate" style="padding:1px 4px;" onclick="editPresc(${idx})">수정</button>
+                            <button class="btn-red" style="padding:1px 4px;" onclick="deleteRecord('presc', ${idx})">삭제</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            // 2. 수술/동의서
+            const surgBody = document.getElementById('surgTable');
+            const surgs = p.records.surg || [];
+            surgBody.innerHTML = surgs.length ? '' : '<tr><td colspan="5">수술 기록이 없습니다.</td></tr>';
+            surgs.forEach((item, idx) => {
+                surgBody.innerHTML += `
+                    <tr>
+                        <td>${item.time}</td>
+                        <td><b>${item.stage}</b></td>
+                        <td style="text-align:left;"><b>${item.opName}</b></td>
+                        <td style="text-align:left;">${item.note}</td>
+                        <td><button class="btn-red" style="padding:1px 4px;" onclick="deleteRecord('surg', ${idx})">삭제</button></td>
+                    </tr>
+                `;
+            });
+
+            // 3. 수혈 관리
+            const bloodBody = document.getElementById('bloodTable');
+            const bloods = p.records.blood || [];
+            bloodBody.innerHTML = bloods.length ? '' : '<tr><td colspan="7">수혈 기록이 없습니다.</td></tr>';
+            bloods.forEach((item, idx) => {
+                bloodBody.innerHTML += `
+                    <tr>
+                        <td>${item.time}</td>
+                        <td><b>${item.bType}</b></td>
+                        <td><span class="code-badge">${item.code}</span></td>
+                        <td>${item.unit}</td>
+                        <td>${item.vs}</td>
+                        <td><span style="${item.sideEffect !== '없음' ? 'color:#ef4444; font-weight:bold;' : ''}">${item.sideEffect}</span></td>
+                        <td><button class="btn-red" style="padding:1px 4px;" onclick="deleteRecord('blood', ${idx})">삭제</button></td>
+                    </tr>
+                `;
+            });
+
+            // 4. 검사 결과
+            const labBody = document.getElementById('labTable');
+            const labs = p.records.lab || [];
+            labBody.innerHTML = labs.length ? '' : '<tr><td colspan="6">검사 결과가 없습니다.</td></tr>';
+            labs.forEach((item, idx) => {
+                labBody.innerHTML += `
+                    <tr>
+                        <td>${item.time}</td>
+                        <td><b>${item.category}</b></td>
+                        <td><b>${item.item}</b></td>
+                        <td style="text-align:left;">${item.result}</td>
+                        <td>${item.refRange || '-'} ${item.unit || ''}</td>
+                        <td><button class="btn-red" style="padding:1px 4px;" onclick="deleteRecord('lab', ${idx})">삭제</button></td>
+                    </tr>
+                `;
+            });
+
+            // 5. 간호/투약 기록
+            const nurseBody = document.getElementById('nurseTable');
+            const nurses = p.records.nurse || [];
+            nurseBody.innerHTML = nurses.length ? '' : '<tr><td colspan="4">간호 기록이 없습니다.</td></tr>';
+            nurses.forEach((item, idx) => {
+                nurseBody.innerHTML += `
+                    <tr>
+                        <td>${item.time}</td>
+                        <td style="text-align:left;">${item.note}</td>
+                        <td><b>${item.nurse}</b></td>
+                        <td><button class="btn-red" style="padding:1px 4px;" onclick="deleteRecord('nurse', ${idx})">삭제</button></td>
+                    </tr>
+                `;
+            });
+
+            // 6. V/S 및 I/O
+            renderVsTableAndChart();
+            renderIoTableAndChart();
+        }
+
+        function renderVsTableAndChart() {
+            const p = patients[currentPatientIndex];
+            const vsList = p.records.vs || [];
+            const vsTableBody = document.getElementById('vsTableBody');
+
+            if (vsList.length === 0) {
+                vsTableBody.innerHTML = '<tr><td style="padding:10px; color:#888;">측정된 V/S 기록이 없습니다.</td></tr>';
+                if (vsChartInstance) vsChartInstance.destroy();
+                return;
+            }
+
+            let timesHtml = '<th class="vs-header-title">구분 \\ 시간</th>';
+            let bpRow = '<td class="vs-label">혈압 (BP)</td>';
+            let hrRow = '<td class="vs-label">맥박 (HR)</td>';
+            let rrRow = '<td class="vs-label">호흡 (RR)</td>';
+            let btRow = '<td class="vs-label">체온 (BT)</td>';
+            let actionRow = '<td class="vs-label">관리</td>';
+
+            vsList.forEach((vs, idx) => {
+                timesHtml += `<th class="vs-header-time">${vs.time.slice(5)}</th>`;
+                bpRow += `<td class="vs-val">${vs.bp || '-'}</td>`;
+                hrRow += `<td class="vs-val">${vs.hr || '-'}</td>`;
+                rrRow += `<td class="vs-val">${vs.rr || '-'}</td>`;
+                btRow += `<td class="vs-val">${vs.bt ? Number(vs.bt).toFixed(1) : '-'}</td>`;
+                actionRow += `<td class="vs-val"><button class="btn-red" style="padding:0px 4px; font-size:10px;" onclick="deleteRecord('vs', ${idx})">X</button></td>`;
+            });
+
+            vsTableBody.innerHTML = `
+                <tr>${timesHtml}</tr>
+                <tr>${bpRow}</tr>
+                <tr>${hrRow}</tr>
+                <tr>${rrRow}</tr>
+                <tr>${btRow}</tr>
+                <tr>${actionRow}</tr>
+            `;
+
+            const labels = vsList.map(v => v.time.slice(5));
+            const hrData = vsList.map(v => v.hr || null);
+            const rrData = vsList.map(v => v.rr || null);
+            const btData = vsList.map(v => v.bt || null);
+
+            const ctx = document.getElementById('vsChart').getContext('2d');
+            if (vsChartInstance) vsChartInstance.destroy();
+
+            vsChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: '맥박(HR)', data: hrData, borderColor: '#ef4444', backgroundColor: '#ef4444', tension: 0.2, yAxisID: 'y' },
+                        { label: '호흡(RR)', data: rrData, borderColor: '#3b82f6', backgroundColor: '#3b82f6', tension: 0.2, yAxisID: 'y' },
+                        { label: '체온(BT)', data: btData, borderColor: '#10b981', backgroundColor: '#10b981', tension: 0.2, yAxisID: 'y1' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { type: 'linear', display: true, position: 'left', min: 0, max: 180 },
+                        y1: { type: 'linear', display: true, position: 'right', min: 34, max: 42, grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+        }
+
+        function renderIoTableAndChart() {
+            const p = patients[currentPatientIndex];
+            const ioList = p.records.io || [];
+            const ioTableBody = document.getElementById('ioTableBody');
+
+            if (ioList.length === 0) {
+                ioTableBody.innerHTML = '<tr><td style="padding:10px; color:#888;">측정된 I/O 기록이 없습니다.</td></tr>';
+                if (ioChartInstance) ioChartInstance.destroy();
+                return;
+            }
+
+            let timesHtml = '<th class="vs-header-title">구분 \\ 시간</th>';
+            let intakeRow = '<td class="vs-label">Intake (mL)</td>';
+            let outputRow = '<td class="vs-label">Output (mL)</td>';
+            let actionRow = '<td class="vs-label">관리</td>';
+
+            ioList.forEach((io, idx) => {
+                timesHtml += `<th class="vs-header-time">${io.time.slice(5)}</th>`;
+                intakeRow += `<td class="vs-val" style="color:#2563eb;">${io.intake || 0}</td>`;
+                outputRow += `<td class="vs-val" style="color:#ef4444;">${io.output || 0}</td>`;
+                actionRow += `<td class="vs-val"><button class="btn-red" style="padding:0px 4px; font-size:10px;" onclick="deleteRecord('io', ${idx})">X</button></td>`;
+            });
+
+            ioTableBody.innerHTML = `
+                <tr>${timesHtml}</tr>
+                <tr>${intakeRow}</tr>
+                <tr>${outputRow}</tr>
+                <tr>${actionRow}</tr>
+            `;
+
+            const labels = ioList.map(i => i.time.slice(5));
+            const intakeData = ioList.map(i => i.intake || 0);
+            const outputData = ioList.map(i => i.output || 0);
+
+            const ctx = document.getElementById('ioChart').getContext('2d');
+            if (ioChartInstance) ioChartInstance.destroy();
+
+            ioChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Intake (mL)', data: intakeData, backgroundColor: '#3b82f6' },
+                        { label: 'Output (mL)', data: outputData, backgroundColor: '#ef4444' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
