@@ -10,30 +10,30 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --primary-blue: #3b82f6;
-            --primary-blue-hover: #2563eb;
-            --bg-light-blue: #ebf1f6;
-            --panel-header-bg: #2b364a;
-            --text-dark: #1e293b;
-            --text-muted: #64748b;
+            --primary-navy: #1e3a8a;
+            --primary-navy-hover: #1e293b;
+            --bg-light-navy: #f0f4f8;
+            --panel-header-bg: #0f172a;
+            --text-dark: #0f172a;
+            --text-muted: #475569;
             --border-color: #cbd5e1;
         }
 
         * { box-sizing: border-box; font-family: '맑은 고딕', 'Malgun Gothic', sans-serif; }
-        html, body { width: 100vw; height: 100vh; margin: 0; padding: 0; background-color: var(--bg-light-blue); color: var(--text-dark); font-size: 11px; overflow-x: hidden; }
+        html, body { width: 100vw; height: 100vh; margin: 0; padding: 0; background-color: var(--bg-light-navy); color: var(--text-dark); font-size: 11px; overflow-x: hidden; }
 
         .app-container { width: 100vw; height: calc(100vh - 50px); padding: 8px; display: flex; flex-direction: column; gap: 12px; }
 
         /* 상단 헤더 */
         .header-bar { display: flex; justify-content: space-between; align-items: center; background: white; padding: 8px 16px; border-radius: 4px; border: 1px solid var(--border-color); width: 100%; }
-        .header-bar h1 { margin: 0; font-size: 15px; color: #1e3a8a; display: flex; align-items: center; gap: 6px; }
+        .header-bar h1 { margin: 0; font-size: 15px; color: var(--primary-navy); display: flex; align-items: center; gap: 6px; }
 
         /* 공통 버튼 및 입력폼 */
         input, select, textarea { padding: 4px 6px; border: 1px solid var(--border-color); border-radius: 3px; font-size: 11px; outline: none; }
-        input:focus, select:focus, textarea:focus { border-color: var(--primary-blue); }
+        input:focus, select:focus, textarea:focus { border-color: var(--primary-navy); }
         
         button { padding: 5px 10px; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold; font-size: 11px; }
-        .btn-blue { background-color: var(--primary-blue); } .btn-blue:hover { background-color: var(--primary-blue-hover); }
+        .btn-blue { background-color: var(--primary-navy); } .btn-blue:hover { background-color: var(--primary-navy-hover); }
         .btn-green { background-color: #10b981; } .btn-green:hover { background-color: #059669; }
         .btn-slate { background-color: #64748b; } .btn-slate:hover { background-color: #475569; }
         .btn-red { background-color: #ef4444; } .btn-red:hover { background-color: #dc2626; }
@@ -47,14 +47,14 @@
         tr:hover { background-color: #f1f5f9; }
 
         /* 처방 테이블 테마 */
-        .prescription-table-theme th { background-color: #2b364a !important; color: #ffffff; font-weight: bold; padding: 4px 6px; border-bottom: 1px solid #4a5568; font-size: 11px; }
+        .prescription-table-theme th { background-color: var(--panel-header-bg) !important; color: #ffffff; font-weight: bold; padding: 4px 6px; border-bottom: 1px solid #334155; font-size: 11px; }
         .prescription-table-theme td { padding: 3px 5px; font-size: 10.5px; line-height: 1.3; white-space: pre-wrap; word-break: break-word; }
 
         /* V/S 및 I/O 피벗 테이블 전용 스타일 */
         .vs-pivot-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; background: white; }
-        .vs-pivot-table th.vs-header-title { background-color: #edf2f7; color: #1a202c; width: 120px; text-align: center; font-weight: bold; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; position: sticky; left: 0; top: 0; z-index: 20; }
-        .vs-pivot-table th.vs-header-time { background-color: #3a4a5d; color: white; padding: 5px 12px; font-weight: bold; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; white-space: nowrap; position: sticky; top: 0; z-index: 10; }
-        .vs-pivot-table td.vs-label { background-color: #f0f4f8; color: #2d3748; font-weight: bold; text-align: center; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; position: sticky; left: 0; z-index: 15; white-space: nowrap; }
+        .vs-pivot-table th.vs-header-title { background-color: #e2e8f0; color: #0f172a; width: 120px; text-align: center; font-weight: bold; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; position: sticky; left: 0; top: 0; z-index: 20; }
+        .vs-pivot-table th.vs-header-time { background-color: #1e293b; color: white; padding: 5px 12px; font-weight: bold; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; white-space: nowrap; position: sticky; top: 0; z-index: 10; }
+        .vs-pivot-table td.vs-label { background-color: #f1f5f9; color: #1e293b; font-weight: bold; text-align: center; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; position: sticky; left: 0; z-index: 15; white-space: nowrap; }
         .vs-pivot-table td.vs-val { border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; text-align: center; padding: 4px 10px; font-weight: bold; white-space: nowrap; }
 
         /* 1. 환자 목록 화면 */
@@ -85,10 +85,10 @@
         .pin-wrapper { position: absolute; transform: translate(-50%, -100%); cursor: pointer; display: flex; flex-direction: column; align-items: center; z-index: 10; }
         .pin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 3px rgba(0,0,0,0.6); margin-top: 2px; }
         .pin-op { background-color: #ef4444; }
-        .pin-sore { background-color: var(--primary-blue); }
+        .pin-sore { background-color: var(--primary-navy); }
 
         .speech-bubble {
-            background: rgba(30, 41, 59, 0.9);
+            background: rgba(15, 23, 42, 0.9);
             color: #ffffff;
             padding: 2px 6px;
             border-radius: 4px;
@@ -103,13 +103,13 @@
         }
         .speech-bubble::after {
             content: ''; position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
-            border-width: 4px 4px 0; border-style: solid; border-color: rgba(30, 41, 59, 0.9) transparent;
+            border-width: 4px 4px 0; border-style: solid; border-color: rgba(15, 23, 42, 0.9) transparent;
             display: block; width: 0;
         }
 
         .quick-patient-item { padding: 6px 8px; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: background-color 0.15s; display: flex; justify-content: space-between; align-items: center; }
         .quick-patient-item:hover { background-color: #f1f5f9; }
-        .quick-patient-item.active { background-color: #eff6ff; border-left: 3px solid var(--primary-blue); }
+        .quick-patient-item.active { background-color: #e2e8f0; border-left: 3px solid var(--primary-navy); }
 
         /* 3열 카드 및 분할 탭 영역 */
         .col-3 { flex: 1; display: flex; flex-direction: column; height: 100%; overflow: hidden; min-width: 450px; }
@@ -123,7 +123,7 @@
 
         .main-tab-bar { display: flex; background: #f1f5f9; border-bottom: 1px solid var(--border-color); gap: 3px; padding-top: 4px; padding-left: 4px; }
         .main-tab-btn { background: #e2e8f0; color: var(--text-dark); padding: 6px 14px; border: 1px solid var(--border-color); border-bottom: none; border-radius: 4px 4px 0 0; cursor: pointer; font-size: 11px; font-weight: bold; }
-        .main-tab-btn.active { background: var(--primary-blue); color: white; border-color: var(--primary-blue); }
+        .main-tab-btn.active { background: var(--primary-navy); color: white; border-color: var(--primary-navy); }
 
         .tab-content { display: none; flex-direction: column; flex: 1; padding: 10px; overflow: hidden; min-height: 0; }
         .tab-content.active { display: flex; }
@@ -132,10 +132,10 @@
         .table-scroll-area { flex: 1; overflow-y: auto; overflow-x: auto; border: 1px solid var(--border-color); border-radius: 3px; margin-bottom: 6px; position: relative; }
 
         .input-bar-bottom { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-        .code-badge { background: #eff6ff; color: var(--primary-blue); padding: 1px 4px; border-radius: 3px; font-family: monospace; font-weight: bold; border: 1px solid #bfdbfe; }
+        .code-badge { background: #f1f5f9; color: var(--primary-navy); padding: 1px 4px; border-radius: 3px; font-family: monospace; font-weight: bold; border: 1px solid #cbd5e1; }
         .sub-tab-bar { display: flex; gap: 4px; margin-bottom: 6px; }
         .sub-tab-btn { border: 1px solid var(--border-color); background: white; padding: 3px 8px; font-size: 11px; cursor: pointer; border-radius: 3px; }
-        .sub-tab-btn.active { background: var(--primary-blue); color: white; border-color: var(--primary-blue); font-weight: bold; }
+        .sub-tab-btn.active { background: var(--primary-navy); color: white; border-color: var(--primary-navy); font-weight: bold; }
 
         /* 자동 확장 텍스트 영역 */
         .auto-expand-textarea { resize: none; overflow-y: hidden; min-height: 28px; box-sizing: border-box; line-height: 1.4; }
@@ -160,8 +160,8 @@
         }
         .setting-tab-btn.active {
             color: #ffffff;
-            background-color: var(--primary-blue);
-            border-color: var(--primary-blue);
+            background-color: var(--primary-navy);
+            border-color: var(--primary-navy);
         }
         .setting-panel { display: none; }
         .setting-panel.active { display: flex; }
@@ -178,17 +178,17 @@
             <div class="space-y-5 mb-8">
                 <div>
                     <label class="block text-base font-bold text-gray-700 mb-2">수행 일시</label>
-                    <input type="datetime-local" id="modalExecTime" class="w-full border p-3.5 text-base rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                    <input type="datetime-local" id="modalExecTime" class="w-full border p-3.5 text-base rounded focus:ring-2 focus:ring-slate-800 outline-none">
                 </div>
                 <div>
                     <label class="block text-base font-bold text-gray-700 mb-2">수행자 (간호사)</label>
-                    <input type="text" id="modalNurseName" class="w-full border p-3.5 text-base rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="수행자 이름 입력">
+                    <input type="text" id="modalNurseName" class="w-full border p-3.5 text-base rounded focus:ring-2 focus:ring-slate-800 outline-none" placeholder="수행자 이름 입력">
                 </div>
             </div>
 
             <div class="flex justify-end gap-4">
                 <button onclick="closeNurseInputModal()" class="px-6 py-3 bg-gray-400 text-white rounded-lg text-base hover:bg-gray-500 font-bold">취소</button>
-                <button onclick="submitNurseInput()" class="px-6 py-3 bg-blue-600 text-white rounded-lg text-base hover:bg-blue-700 font-bold">확인 및 수행 완료</button>
+                <button onclick="submitNurseInput()" class="px-6 py-3 bg-slate-900 text-white rounded-lg text-base hover:bg-slate-800 font-bold">확인 및 수행 완료</button>
             </div>
         </div>
     </div>
@@ -202,13 +202,13 @@
             <div class="space-y-5 mb-8">
                 <div>
                     <label class="block text-base font-bold text-gray-700 mb-2">메모 내용</label>
-                    <input type="text" id="modalPinNote" class="w-full border p-3.5 text-base rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="메모 입력">
+                    <input type="text" id="modalPinNote" class="w-full border p-3.5 text-base rounded focus:ring-2 focus:ring-slate-800 outline-none" placeholder="메모 입력">
                 </div>
             </div>
 
             <div class="flex justify-end gap-4">
                 <button onclick="closePinEditModal()" class="px-6 py-3 bg-gray-400 text-white rounded-lg text-base hover:bg-gray-500 font-bold">취소</button>
-                <button onclick="submitPinEdit()" class="px-6 py-3 bg-blue-600 text-white rounded-lg text-base hover:bg-blue-700 font-bold">수정 완료</button>
+                <button onclick="submitPinEdit()" class="px-6 py-3 bg-slate-900 text-white rounded-lg text-base hover:bg-slate-800 font-bold">수정 완료</button>
             </div>
         </div>
     </div>
@@ -216,10 +216,10 @@
     <!-- 로그인 화면 -->
     <div id="view-login" class="flex items-center justify-center min-h-screen">
         <div id="loginView" class="max-w-md w-full mx-auto bg-white p-6 rounded shadow">
-            <h2 class="text-xl font-bold mb-4 text-center">EMR 시스템 로그인</h2>
+            <h2 class="text-xl font-bold mb-4 text-center text-slate-900">EMR 시스템 로그인</h2>
             <input type="text" id="uid" value="admin" class="w-full border p-2 mb-2 rounded" placeholder="아이디">
             <input type="password" id="upw" value="1234" class="w-full border p-2 mb-4 rounded" placeholder="비밀번호">
-            <button onclick="login()" class="w-full bg-blue-600 text-white p-2 rounded font-bold hover:bg-blue-700">로그인</button>
+            <button onclick="login()" class="w-full bg-slate-900 text-white p-2 rounded font-bold hover:bg-slate-800">로그인</button>
         </div>
     </div>
 
@@ -227,10 +227,10 @@
     <header id="main-header" class="hidden bg-white shadow-sm border-b px-6 py-2.5 flex justify-between items-center w-full">
         <div class="flex items-center space-x-3 cursor-pointer" onclick="showView('patients')">
             <span class="text-xl">🏥</span>
-            <h1 class="text-lg font-bold text-gray-800">환자 관리 및 EMR 시스템</h1>
+            <h1 class="text-lg font-bold text-slate-900">환자 관리 및 EMR 시스템</h1>
         </div>
         <div class="flex items-center space-x-4">
-            <button onclick="showView('settings')" class="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-full transition" title="설정">
+            <button onclick="showView('settings')" class="p-2 text-gray-600 hover:text-slate-900 hover:bg-gray-100 rounded-full transition" title="설정">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -248,7 +248,7 @@
                     <h1>📋 EMR System - 환자 목록 관리</h1>
                 </div>
                 <div style="background: #f8fafc; padding: 12px; border: 1px solid var(--border-color); margin: 10px 0; border-radius: 4px;">
-                    <b id="formTitle" style="font-size:12px; color:var(--primary-blue);">[신규 환자 등록]</b>
+                    <b id="formTitle" style="font-size:12px; color:var(--primary-navy);">[신규 환자 등록]</b>
                     <div class="input-grid">
                         <input type="text" id="pName" placeholder="환자명 *">
                         <input type="text" id="pBirth" placeholder="생년월일(예: 850101) *" oninput="autoCalculateAge(this.value)">
@@ -323,7 +323,7 @@
                             
                             <table class="info-table">
                                 <tr><th>등록번호:</th><td id="dChartNo">-</td></tr>
-                                <tr><th>성 명:</th><td id="dName" style="color:var(--primary-blue); font-size:12px;">-</td></tr>
+                                <tr><th>성 명:</th><td id="dName" style="color:var(--primary-navy); font-size:12px;">-</td></tr>
                                 <tr><th>나이 / 성별:</th><td id="dAgeGender">-</td></tr>
                                 <tr><th>생년월일:</th><td id="dBirth">-</td></tr>
                                 <tr><th>혈 액 형:</th><td id="dBloodType" style="color:#ef4444;">-</td></tr>
@@ -334,14 +334,14 @@
                             <div style="border-top: 1px dashed var(--border-color); padding-top: 6px; margin-top: 4px;">
                                 <table class="info-table" style="margin:0;">
                                     <tr><th>KCD 코드:</th><td><span class="code-badge" id="dDiagCode">-</span></td></tr>
-                                    <tr><th>진 단 명:</th><td id="dDiagnosis" style="color:var(--primary-blue);">-</td></tr>
+                                    <tr><th>진 단 명:</th><td id="dDiagnosis" style="color:var(--primary-navy);">-</td></tr>
                                     <tr><th>주 호 소:</th><td id="dCC">-</td></tr>
                                 </table>
 
                                 <div style="display: flex; gap: 8px; margin-top: 6px; background: #f8fafc; padding: 4px 6px; border-radius: 4px; border: 1px solid var(--border-color);">
                                     <div style="flex: 1; display: flex; align-items: center; gap: 4px;">
                                         <span style="color: var(--text-muted); font-weight: bold;">HD:</span>
-                                        <span id="dHD" style="color: #2563eb; font-weight: bold;">-</span>
+                                        <span id="dHD" style="color: #1e3a8a; font-weight: bold;">-</span>
                                     </div>
                                     <div style="width: 1px; background: var(--border-color);"></div>
                                     <div style="flex: 1; display: flex; align-items: center; gap: 4px;">
@@ -452,7 +452,7 @@
                                             <option value="루틴" selected>루틴</option>
                                             <option value="PRN">PRN</option>
                                         </select>
-                                        <select id="medDbSelect" onchange="selectMedFromDb(this)" style="width:125px; font-weight:bold; color:var(--primary-blue);">
+                                        <select id="medDbSelect" onchange="selectMedFromDb(this)" style="width:125px; font-weight:bold; color:var(--primary-navy);">
                                             <option value="">-- DB 약물 선택 --</option>
                                         </select>
                                         <input type="text" id="prescCode" placeholder="코드" style="width:60px;" oninput="onMedCodeInput(this.value)">
@@ -466,7 +466,7 @@
                                         </div>
 
                                         <input type="text" id="prescIssuer" placeholder="처방발행자" style="width:70px;">
-                                        <button class="btn-blue" onclick="addRecord('presc')" id="btnPrescSave" style="background-color:#1d4ed8;">처방 입력</button>
+                                        <button class="btn-blue" onclick="addRecord('presc')" id="btnPrescSave">처방 입력</button>
                                         <button class="btn-slate" onclick="cancelPrescEdit()" id="btnPrescCancel" style="display:none;">취소</button>
                                     </div>
                                 </div>
@@ -658,7 +658,7 @@
     <main id="view-settings" class="hidden w-full p-4">
         <div class="flex items-center justify-between border-b pb-4 px-2">
             <div>
-                <h2 class="text-[21px] font-bold text-gray-800">시스템 설정</h2>
+                <h2 class="text-[21px] font-bold text-slate-900">시스템 설정</h2>
                 <p class="text-[15px] text-gray-500">진료과, 주치의, 진단코드(KCD), 처방 DB, 검사결과 DB 및 간호기록 DB를 관리합니다.</p>
             </div>
             <button onclick="showView('patients')" class="px-3 py-1.5 border rounded-lg text-[15px] text-gray-600 hover:bg-gray-50">← 환자 목록으로 돌아가기</button>
@@ -678,11 +678,11 @@
             <div id="dept-panel" class="setting-panel active bg-white p-6 rounded-xl shadow-sm border space-y-4 flex-col min-h-[500px] w-full">
                 <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
                     <span>🏥 진료과 관리</span>
-                    <span id="dept-count" class="text-[13px] bg-blue-100 text-blue-800 px-3 py-1 rounded-full">0개</span>
+                    <span id="dept-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full">0개</span>
                 </h3>
                 <form onsubmit="handleAddDept(event)" class="flex gap-2 max-w-xl">
                     <input type="text" id="dept-input" required placeholder="신규 진료과명" class="flex-1 px-3 py-2 border rounded-lg text-[13px]">
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white text-[13px] rounded-lg font-bold">추가</button>
+                    <button type="submit" class="px-4 py-2 bg-slate-900 text-white text-[13px] rounded-lg font-bold">추가</button>
                 </form>
                 <ul id="dept-list" class="divide-y overflow-y-auto border rounded-lg flex-1 min-h-[350px]"></ul>
             </div>
@@ -691,7 +691,7 @@
             <div id="doctor-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex-col min-h-[500px] w-full">
                 <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
                     <span>👨‍⚕️ 주치의 관리</span>
-                    <span id="doctor-count" class="text-[13px] bg-purple-100 text-purple-800 px-3 py-1 rounded-full">0명</span>
+                    <span id="doctor-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full">0명</span>
                 </h3>
                 <form onsubmit="handleAddDoctor(event)" class="space-y-3 max-w-xl">
                     <div class="grid grid-cols-2 gap-3">
@@ -700,7 +700,7 @@
                         </select>
                         <input type="text" id="doc-name-input" required placeholder="의사 성명" class="px-3 py-2 border rounded-lg text-[13px]">
                     </div>
-                    <button type="submit" class="px-4 py-2 bg-purple-600 text-white text-[13px] rounded-lg font-bold">주치의 등록</button>
+                    <button type="submit" class="px-4 py-2 bg-slate-900 text-white text-[13px] rounded-lg font-bold">주치의 등록</button>
                 </form>
                 <ul id="doctor-list" class="divide-y overflow-y-auto border rounded-lg flex-1 min-h-[350px]"></ul>
             </div>
@@ -709,7 +709,7 @@
             <div id="diag-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex-col min-h-[500px] w-full">
                 <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
                     <span>🩺 KCD DB 관리</span>
-                    <span id="diag-count" class="text-[13px] bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full">0개</span>
+                    <span id="diag-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full">0개</span>
                 </h3>
                 <form onsubmit="handleAddDiagnosis(event)" class="space-y-3 max-w-2xl">
                     <div class="grid grid-cols-2 gap-3">
@@ -722,7 +722,7 @@
                             <option value="">진료과 선택</option>
                         </select>
                     </div>
-                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-[13px] rounded-lg font-bold">+ 진단명 등록</button>
+                    <button type="submit" class="px-4 py-2 bg-slate-900 text-white text-[13px] rounded-lg font-bold">+ 진단명 등록</button>
                 </form>
                 <ul id="diag-list" class="divide-y overflow-y-auto border rounded-lg flex-1 min-h-[350px]"></ul>
             </div>
@@ -731,14 +731,14 @@
             <div id="drug-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex-col min-h-[500px] w-full">
                 <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
                     <span>💊 처방 DB 관리</span>
-                    <span id="med-count" class="text-[13px] bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">0개</span>
+                    <span id="med-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full">0개</span>
                 </h3>
                 <form onsubmit="handleAddDrug(event)" class="space-y-3 max-w-4xl">
                     <div class="grid grid-cols-5 gap-3 items-start">
                         <input type="text" id="drug-code-input" required placeholder="처방 코드" class="col-span-1 px-3 py-2 border rounded-lg text-[13px]">
                         <textarea id="drug-name-input" required placeholder="처방/약물명 입력" rows="1" class="col-span-4 px-3 py-2 border rounded-lg text-[13px] auto-expand-textarea resize-none" oninput="autoExpandTextarea(this)"></textarea>
                     </div>
-                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white text-[13px] rounded-lg font-bold">+ 처방 DB 등록</button>
+                    <button type="submit" class="px-4 py-2 bg-slate-900 text-white text-[13px] rounded-lg font-bold">+ 처방 DB 등록</button>
                 </form>
                 <ul id="drug-list" class="divide-y overflow-y-auto border rounded-lg flex-1 min-h-[350px]"></ul>
             </div>
@@ -747,7 +747,7 @@
             <div id="labdb-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex-col min-h-[500px] w-full">
                 <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
                     <span>🧪 검사결과 DB 관리</span>
-                    <span id="labdb-count" class="text-[13px] bg-teal-100 text-teal-800 px-3 py-1 rounded-full">0개</span>
+                    <span id="labdb-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full">0개</span>
                 </h3>
                 <form onsubmit="handleAddLabDb(event)" class="space-y-3 max-w-2xl">
                     <select id="labdb-category-input" required class="w-full px-3 py-2 border rounded-lg text-[13px]">
@@ -761,7 +761,7 @@
                         <input type="text" id="labdb-ref-input" placeholder="정상범위 (예: 4.0-10.0)" class="px-3 py-2 border rounded-lg text-[13px]">
                         <input type="text" id="labdb-unit-input" placeholder="단위 (예: x10^3/uL)" class="px-3 py-2 border rounded-lg text-[13px]">
                     </div>
-                    <button type="submit" class="px-4 py-2 bg-teal-600 text-white text-[13px] rounded-lg font-bold">+ 검사 DB 등록</button>
+                    <button type="submit" class="px-4 py-2 bg-slate-900 text-white text-[13px] rounded-lg font-bold">+ 검사 DB 등록</button>
                 </form>
                 <ul id="labdb-list" class="divide-y overflow-y-auto border rounded-lg flex-1 min-h-[350px]"></ul>
             </div>
@@ -770,12 +770,12 @@
             <div id="nursedb-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex-col min-h-[500px] w-full">
                 <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
                     <span>📝 간호기록 DB 관리</span>
-                    <span id="nursedb-count" class="text-[13px] bg-orange-100 text-orange-800 px-3 py-1 rounded-full">0개</span>
+                    <span id="nursedb-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full">0개</span>
                 </h3>
                 <form onsubmit="handleAddNurseDb(event)" class="space-y-3 max-w-2xl">
                     <input type="text" id="nursedb-category-input" required placeholder="분류 (예: 신체사정, 상처간호)" class="w-full px-3 py-2 border rounded-lg text-[13px]">
                     <textarea id="nursedb-content-input" required placeholder="자주 쓰는 간호기록 문구 내용 입력..." class="w-full px-3 py-2 border rounded-lg text-[13px] h-24 resize-none"></textarea>
-                    <button type="submit" class="px-4 py-2 bg-orange-600 text-white text-[13px] rounded-lg font-bold">+ 간호기록 DB 등록</button>
+                    <button type="submit" class="px-4 py-2 bg-slate-900 text-white text-[13px] rounded-lg font-bold">+ 간호기록 DB 등록</button>
                 </form>
                 <ul id="nursedb-list" class="divide-y overflow-y-auto border rounded-lg flex-1 min-h-[300px]"></ul>
             </div>
@@ -963,7 +963,7 @@
                 <li class="p-3 flex justify-between items-center text-[13px]">
                     <span class="font-medium text-gray-700">${dept}</span>
                     <div class="space-x-2">
-                        <button onclick="editDept(${index})" class="text-blue-600 hover:underline">수정</button>
+                        <button onclick="editDept(${index})" class="text-slate-800 hover:underline font-bold">수정</button>
                         <button onclick="deleteDept(${index})" class="text-red-500 hover:underline">삭제</button>
                     </div>
                 </li>
@@ -981,7 +981,7 @@
                         <span class="ml-2 text-[11px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">${doc.dept}</span>
                     </div>
                     <div class="space-x-2">
-                        <button onclick="editDoctor(${doc.id})" class="text-blue-600 hover:underline">수정</button>
+                        <button onclick="editDoctor(${doc.id})" class="text-slate-800 hover:underline font-bold">수정</button>
                         <button onclick="deleteDoctor(${doc.id})" class="text-red-500 hover:underline">삭제</button>
                     </div>
                 </li>
@@ -992,11 +992,11 @@
             diagList.innerHTML = diagnosisDatabase.map((diag) => `
                 <li class="p-2.5 flex justify-between items-center text-[12px]">
                     <div>
-                        <span class="font-mono bg-indigo-50 px-1.5 py-0.5 rounded text-indigo-600 font-bold">${diag.code}</span>
+                        <span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-900 font-bold">${diag.code}</span>
                         <span class="font-bold text-gray-800 ml-1">${diag.name_ko}</span>
                     </div>
                     <div class="space-x-1">
-                        <button onclick="editDiagnosis(${diag.id})" class="text-blue-600 hover:underline">수정</button>
+                        <button onclick="editDiagnosis(${diag.id})" class="text-slate-800 hover:underline font-bold">수정</button>
                         <button onclick="deleteDiagnosis(${diag.id})" class="text-red-500 hover:underline">삭제</button>
                     </div>
                 </li>
@@ -1007,11 +1007,11 @@
             drugList.innerHTML = drugDatabase.map((drug) => `
                 <li class="p-2.5 flex justify-between items-center text-[12px]">
                     <div>
-                        <span class="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-blue-600 font-bold">${drug.code}</span>
+                        <span class="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-slate-800 font-bold">${drug.code}</span>
                         <span class="font-bold text-gray-800 ml-1 whitespace-pre-wrap">${drug.name}</span>
                     </div>
                     <div class="space-x-1">
-                        <button onclick="editDrug(${drug.id})" class="text-blue-600 hover:underline">수정</button>
+                        <button onclick="editDrug(${drug.id})" class="text-slate-800 hover:underline font-bold">수정</button>
                         <button onclick="deleteDrug(${drug.id})" class="text-red-500 hover:underline">삭제</button>
                     </div>
                 </li>
@@ -1022,7 +1022,7 @@
             labdbList.innerHTML = labDatabase.map((item) => `
                 <li class="p-2.5 flex justify-between items-center text-[12px]">
                     <div>
-                        <span class="bg-teal-50 px-1.5 py-0.5 rounded text-teal-700 font-bold">[${item.category}]</span>
+                        <span class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-bold">[${item.category}]</span>
                         <span class="font-bold text-gray-800 ml-1">${item.name}</span>
                         <span class="text-gray-400 text-[10px] block">범위: ${item.refRange || '없음'} ${item.unit || ''}</span>
                     </div>
@@ -1037,7 +1037,7 @@
             nursedbList.innerHTML = nurseDatabase.map((item) => `
                 <li class="p-2.5 flex justify-between items-center text-[12px]">
                     <div class="max-w-[150px] overflow-hidden">
-                        <span class="bg-orange-50 px-1.5 py-0.5 rounded text-orange-700 font-bold">[${item.category}]</span>
+                        <span class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-bold">[${item.category}]</span>
                         <p class="font-medium text-gray-800 mt-1 truncate">${item.content}</p>
                     </div>
                     <div class="space-x-1">
@@ -1467,7 +1467,7 @@
                 tbody.innerHTML += `
                     <tr>
                         <td><b>${p.chartNo}</b></td>
-                        <td><span style="color:var(--primary-blue); font-weight:bold; cursor:pointer;" onclick="openPatientDetail(${idx})">${p.name}</span></td>
+                        <td><span style="color:var(--primary-navy); font-weight:bold; cursor:pointer;" onclick="openPatientDetail(${idx})">${p.name}</span></td>
                         <td><b>[${p.dept||'일반외과'}]</b> ${p.doctor||'-'}</td>
                         <td><b style="color:#8b5cf6;">${p.room||'-'}</b></td>
                         <td><b style="color:#ef4444;">${p.bloodType||'-'}</b></td>
@@ -1967,8 +1967,8 @@
                     <tr>
                         <td>${item.time}</td>
                         <td><b>${item.stage}</b></td>
-                        <td style="text-align:left;"><b>${item.opName}</b></td>
-                        <td style="text-align:left;">${item.note}</td>
+                        <td>${item.opName}</td>
+                        <td style="text-align:left;">${item.note || '-'}</td>
                         <td><button class="btn-red" style="padding:1px 4px;" onclick="deleteRecord('surg', ${idx})">삭제</button></td>
                     </tr>
                 `;
@@ -2000,10 +2000,10 @@
                 labBody.innerHTML += `
                     <tr>
                         <td>${item.time}</td>
-                        <td><b>[${item.category}]</b></td>
-                        <td><b>${item.item}</b></td>
+                        <td><b>${item.category}</b></td>
+                        <td>${item.item}</td>
                         <td style="text-align:left;">${item.result}</td>
-                        <td>${item.refRange ? `${item.refRange} ${item.unit||''}` : '-'}</td>
+                        <td>${item.refRange || '-'} ${item.unit || ''}</td>
                         <td><button class="btn-red" style="padding:1px 4px;" onclick="deleteRecord('lab', ${idx})">삭제</button></td>
                     </tr>
                 `;
@@ -2012,7 +2012,7 @@
             // 5. 간호/투약 기록
             const nurseBody = document.getElementById('nurseTable');
             const nurses = p.records.nurse || [];
-            nurseBody.innerHTML = nurses.length ? '' : '<tr><td colspan="4">간호/투약 기록이 없습니다.</td></tr>';
+            nurseBody.innerHTML = nurses.length ? '' : '<tr><td colspan="4">간호 기록이 없습니다.</td></tr>';
             nurses.forEach((item, idx) => {
                 nurseBody.innerHTML += `
                     <tr>
@@ -2024,90 +2024,152 @@
                 `;
             });
 
-            // V/S 및 I/O 테이블/차트 업데이트
-            renderVsTableAndChart(p.records.vs || []);
-            renderIoTableAndChart(p.records.io || []);
+            // 6. V/S (활력징후) 피벗 및 차트
+            renderVsPivotAndChart(p.records.vs || []);
+
+            // 7. I/O (섭취/배설) 피벗 및 차트
+            renderIoPivotAndChart(p.records.io || []);
         }
 
-        function renderVsTableAndChart(vsData) {
-            const body = document.getElementById('vsTableBody');
+        function renderVsPivotAndChart(vsData) {
+            const tableBody = document.getElementById('vsTableBody');
             if(!vsData || vsData.length === 0) {
-                body.innerHTML = '<tr><td style="padding:10px;">V/S 기록이 없습니다.</td></tr>';
+                tableBody.innerHTML = '<tr><td style="padding:10px; color:#888;">기록된 활력징후 데이터가 없습니다.</td></tr>';
                 if(vsChartInstance) vsChartInstance.destroy();
                 return;
             }
 
-            let timesRow = '<tr><th class="vs-header-title">구분 \\ 시간</th>' + vsData.map(d => `<th class="vs-header-time">${d.time.slice(5)}</th>`).join('') + '</tr>';
-            let bpRow = '<tr><td class="vs-label">혈압 (BP)</td>' + vsData.map(d => `<td class="vs-val">${d.bp || '-'}</td>`).join('') + '</tr>';
-            let hrRow = '<tr><td class="vs-label">맥박 (HR)</td>' + vsData.map(d => `<td class="vs-val">${d.hr || '-'}</td>`).join('') + '</tr>';
-            let rrRow = '<tr><td class="vs-label">호흡 (RR)</td>' + vsData.map(d => `<td class="vs-val">${d.rr || '-'}</td>`).join('') + '</tr>';
-            let btRow = '<tr><td class="vs-label">체온 (BT)</td>' + vsData.map(d => `<td class="vs-val">${d.bt || '-'}</td>`).join('') + '</tr>';
+            let timesHeader = '<th class="vs-header-title">구분 \\ 시간</th>';
+            let bpRow = '<td class="vs-label">혈압 (BP)</td>';
+            let hrRow = '<td class="vs-label">맥박 (HR)</td>';
+            let rrRow = '<td class="vs-label">호흡 (RR)</td>';
+            let btRow = '<td class="vs-label">체온 (BT)</td>';
+            let actionRow = '<td class="vs-label">관리</td>';
 
-            body.innerHTML = timesRow + bpRow + hrRow + rrRow + btRow;
+            const labels = [];
+            const sysBpData = [];
+            const diaBpData = [];
+            const hrData = [];
+            const btData = [];
 
-            const labels = vsData.map(d => d.time.slice(5));
-            const hrData = vsData.map(d => d.hr || null);
-            const rrData = vsData.map(d => d.rr || null);
-            const btData = vsData.map(d => d.bt || null);
+            vsData.forEach((item, idx) => {
+                const shortTime = item.time.slice(5);
+                labels.push(shortTime);
+
+                timesHeader += `<th class="vs-header-time">${shortTime}</th>`;
+                bpRow += `<td class="vs-val">${item.bp || '-'}</td>`;
+                hrRow += `<td class="vs-val" style="color:#2563eb;">${item.hr || '-'}</td>`;
+                rrRow += `<td class="vs-val">${item.rr || '-'}</td>`;
+                btRow += `<td class="vs-val" style="color:#ef4444;">${item.bt ? item.bt + '℃' : '-'}</td>`;
+                actionRow += `<td class="vs-val"><button class="btn-red" style="padding:0px 4px; font-size:10px;" onclick="deleteRecord('vs', ${idx})">삭제</button></td>`;
+
+                if(item.bp && item.bp.includes('/')) {
+                    const parts = item.bp.split('/');
+                    sysBpData.push(Number(parts[0]) || null);
+                    diaBpData.push(Number(parts[1]) || null);
+                } else {
+                    sysBpData.push(null); diaBpData.push(null);
+                }
+                hrData.push(item.hr || null);
+                btData.push(item.bt || null);
+            });
+
+            tableBody.innerHTML = `
+                <tr>${timesHeader}</tr>
+                <tr>${bpRow}</tr>
+                <tr>${hrRow}</tr>
+                <tr>${rrRow}</tr>
+                <tr>${btRow}</tr>
+                <tr>${actionRow}</tr>
+            `;
 
             const ctx = document.getElementById('vsChart').getContext('2d');
             if(vsChartInstance) vsChartInstance.destroy();
+
             vsChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels,
+                    labels: labels,
                     datasets: [
-                        { label: '맥박(HR)', data: hrData, borderColor: '#ef4444', backgroundColor: '#ef4444', tension: 0.2 },
-                        { label: '호흡(RR)', data: rrData, borderColor: '#3b82f6', backgroundColor: '#3b82f6', tension: 0.2 },
-                        { label: '체온(BT)', data: btData, borderColor: '#10b981', backgroundColor: '#10b981', yAxisID: 'y1', tension: 0.2 }
+                        { label: '수축기 혈압', data: sysBpData, borderColor: '#ef4444', backgroundColor: '#ef4444', tension: 0.2, yAxisID: 'y' },
+                        { label: '이완기 혈압', data: diaBpData, borderColor: '#f97316', backgroundColor: '#f97316', tension: 0.2, yAxisID: 'y' },
+                        { label: '맥박', data: hrData, borderColor: '#1e3a8a', backgroundColor: '#1e3a8a', tension: 0.2, yAxisID: 'y' },
+                        { label: '체온', data: btData, borderColor: '#10b981', backgroundColor: '#10b981', tension: 0.2, yAxisID: 'y1' }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10 } } } },
                     scales: {
-                        y: { type: 'linear', position: 'left', title: { display: true, text: 'HR / RR' } },
-                        y1: { type: 'linear', position: 'right', title: { display: true, text: 'BT (°C)' }, grid: { drawOnChartArea: false } }
+                        y: { type: 'linear', display: true, position: 'left', title: { display: true, text: '혈압 / 맥박', font: { size: 9 } } },
+                        y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '체온 (℃)', font: { size: 9 } }, min: 35, max: 40 }
                     }
                 }
             });
         }
 
-        function renderIoTableAndChart(ioData) {
-            const body = document.getElementById('ioTableBody');
+        function renderIoPivotAndChart(ioData) {
+            const tableBody = document.getElementById('ioTableBody');
             if(!ioData || ioData.length === 0) {
-                body.innerHTML = '<tr><td style="padding:10px;">I/O 기록이 없습니다.</td></tr>';
+                tableBody.innerHTML = '<tr><td style="padding:10px; color:#888;">기록된 섭취/배설 데이터가 없습니다.</td></tr>';
                 if(ioChartInstance) ioChartInstance.destroy();
                 return;
             }
 
-            let timesRow = '<tr><th class="vs-header-title">구분 \\ 시간</th>' + ioData.map(d => `<th class="vs-header-time">${d.time.slice(5)}</th>`).join('') + '</tr>';
-            let intakeRow = '<tr><td class="vs-label">Intake (mL)</td>' + ioData.map(d => `<td class="vs-val" style="color:#2563eb;">${d.intake || 0}</td>`).join('') + '</tr>';
-            let outputRow = '<tr><td class="vs-label">Output (mL)</td>' + ioData.map(d => `<td class="vs-val" style="color:#ef4444;">${d.output || 0}</td>`).join('') + '</tr>';
+            let timesHeader = '<th class="vs-header-title">구분 \\ 시간</th>';
+            let intakeRow = '<td class="vs-label">Intake (섭취)</td>';
+            let outputRow = '<td class="vs-label">Output (배설)</td>';
+            let balanceRow = '<td class="vs-label">Balance (차이)</td>';
+            let actionRow = '<td class="vs-label">관리</td>';
 
-            body.innerHTML = timesRow + intakeRow + outputRow;
+            const labels = [];
+            const intakeData = [];
+            const outputData = [];
 
-            const labels = ioData.map(d => d.time.slice(5));
-            const intakeData = ioData.map(d => d.intake || 0);
-            const outputData = ioData.map(d => d.output || 0);
+            ioData.forEach((item, idx) => {
+                const shortTime = item.time.slice(5);
+                labels.push(shortTime);
+
+                const intake = item.intake || 0;
+                const output = item.output || 0;
+                const balance = intake - output;
+
+                timesHeader += `<th class="vs-header-time">${shortTime}</th>`;
+                intakeRow += `<td class="vs-val" style="color:#1e3a8a;">${intake} mL</td>`;
+                outputRow += `<td class="vs-val" style="color:#ef4444;">${output} mL</td>`;
+                balanceRow += `<td class="vs-val" style="color:${balance >= 0 ? '#10b981' : '#f59e0b'};">${balance > 0 ? '+' : ''}${balance} mL</td>`;
+                actionRow += `<td class="vs-val"><button class="btn-red" style="padding:0px 4px; font-size:10px;" onclick="deleteRecord('io', ${idx})">삭제</button></td>`;
+
+                intakeData.push(intake);
+                outputData.push(output);
+            });
+
+            tableBody.innerHTML = `
+                <tr>${timesHeader}</tr>
+                <tr>${intakeRow}</tr>
+                <tr>${outputRow}</tr>
+                <tr>${balanceRow}</tr>
+                <tr>${actionRow}</tr>
+            `;
 
             const ctx = document.getElementById('ioChart').getContext('2d');
             if(ioChartInstance) ioChartInstance.destroy();
+
             ioChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels,
+                    labels: labels,
                     datasets: [
-                        { label: 'Intake (mL)', data: intakeData, backgroundColor: '#3b82f6' },
-                        { label: 'Output (mL)', data: outputData, backgroundColor: '#ef4444' }
+                        { label: 'Intake (섭취)', data: intakeData, backgroundColor: '#1e3a8a' },
+                        { label: 'Output (배설)', data: outputData, backgroundColor: '#ef4444' }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, title: { display: true, text: '용량 (mL)' } }
-                    }
+                    plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10 } } } },
+                    scales: { y: { beginAtZero: true, title: { display: true, text: '용량 (mL)', font: { size: 9 } } } }
                 }
             });
         }
