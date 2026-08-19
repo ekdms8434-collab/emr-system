@@ -798,11 +798,20 @@
     <script>
         const API_BASE_URL = '/api';
 
-        let departments = [];
-        let doctors = [];
-        let diagnosisDatabase = [];
-        let drugDatabase = [];
-        let labDatabase = [];
+        let departments = ['외과', '내과', '정형외과'];
+        let doctors = [
+            { id: 1, name: '박지은', dept: '외과' },
+            { id: 2, name: '김철수', dept: '내과' }
+        ];
+        let diagnosisDatabase = [
+            { id: 1, code: 'K35.8', name_ko: '급성 충수염', name_en: 'Acute appendicitis', category: '외과' }
+        ];
+        let drugDatabase = [
+            { id: 1, code: 'M001', name: 'Cefazolin 1g IV' }
+        ];
+        let labDatabase = [
+            { id: 1, category: '혈액/진단', name: 'WBC', refRange: '4.0-10.0', unit: 'x10^3/uL' }
+        ];
         let nurseDatabase = [];
         let patients = [];
 
@@ -814,9 +823,6 @@
         let selectedMarkType = 'OP';
         let vsChartInstance = null;
         let ioChartInstance = null;
-
-        // V/S 항목 표시/숨김 관리 상태값
-        let vsVisibility = { bp: true, hr: true, rr: true, bt: true };
 
         let pinClickTimer = null;
         let targetPinIndex = null;
@@ -1448,6 +1454,7 @@
                     diagCode: diagCode || 'KCD-', diagnosis: diagnosis || '일반 진료', cc, memo: '', bodyMarks: [],
                     records: { vs: [], io: [], prescriptions: [], nurse: [], surg: [], blood: [], lab: [] }
                 };
+                patients.push(newPatient);
                 await savePatientToBackend(newPatient); alert("신규 환자가 등록되었습니다.");
             }
 
@@ -1555,7 +1562,7 @@
                 try {
                     await fetch(`${API_BASE_URL}/patients/${chartNo}`, { method: 'DELETE' });
                 } catch(e) {}
-                await fetchInitialData();
+                patients.splice(idx, 1);
                 renderPatientList();
             }
         }
@@ -1868,7 +1875,6 @@
 
             await savePatientToBackend(p);
             renderAllRecords();
-            initCurrentTimeInputs();
         }
 
         function cancelPrescEdit() {
@@ -1878,9 +1884,46 @@
             document.getElementById('prescDose').value = '';
             document.getElementById('prescFreq').value = '';
             document.getElementById('prescRoute').value = '';
-            document.getElementById('medDbSelect').value = '';
             document.getElementById('btnPrescSave').innerText = '처방 입력';
             document.getElementById('btnPrescCancel').style.display = 'none';
+            initCurrentTimeInputs();
+        }
+
+        function renderAllRecords() {
+            if (currentPatientIndex === null) return;
+            renderPrescriptions();
+            renderSurgRecords();
+            renderBloodRecords();
+            renderLabRecords();
+            renderNurseRecords();
+            renderVsPivot();
+            renderIoPivot();
+        }
+
+        function renderPrescriptions() {
+            const p = patients[currentPatientIndex];
+            const tbody = document.getElementById('prescriptionTable');
+            if (!tbody) return;
+            tbody.innerHTML = (p.records && p.records.prescriptions && p.records.prescriptions.length) ? '' : '<tr><td colspan="8">처방 내역이 없습니다.</td></tr>';
+            
+            (p.records?.prescriptions || []).forEach((item, idx) => {
+                const statusClass = item.status === '수행' ? 'status-badge-complete' : 'status-badge-pending';
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${item.time || '-'}</td>
+                        <td><b>${item.category || '-'}</b></td>
+                        <td><span class="code-badge">${item.code || '-'}</span></td>
+                        <td style="text-align:left;">${item.note || '-'}</td>
+                        <td>${item.issuer || '-'}</td>
+                        <td><span class="${statusClass}" onclick="openNurseInputModal(${idx})">${item.status || '미수행'}</span></td>
+                        <td>${item.nurse || '-'}</td>
+                        <td>
+                            <button class="btn-slate" style="padding:1px 4px;" onclick="editPresc(${idx})">수정</button>
+                            <button class="btn-red" style="padding:1px 4px;" onclick="deletePresc(${idx})">삭제</button>
+                        </td>
+                    </tr>
+                `;
+            });
         }
 
         function editPresc(idx) {
@@ -1890,30 +1933,27 @@
             document.getElementById('prescTime').value = item.time.replace(' ', 'T');
             document.getElementById('prescType').value = item.category;
             onPrescTypeChange(item.category);
-            document.getElementById('prescCode').value = item.code || '';
-            const prescNote = document.getElementById('prescNote');
-            prescNote.value = item.note || '';
-            autoExpandTextarea(prescNote);
-            document.getElementById('prescIssuer').value = item.issuer || '';
+            document.getElementById('prescCode').value = item.code;
+            document.getElementById('prescNote').value = item.note;
+            document.getElementById('prescIssuer').value = item.issuer;
             document.getElementById('btnPrescSave').innerText = '수정 완료';
             document.getElementById('btnPrescCancel').style.display = 'inline-block';
         }
 
-        function openNurseInputModal(idx) {
-            const p = patients[currentPatientIndex];
-            const item = p.records.prescriptions[idx];
-            if(item.status === '수행완료' || item.status === '투약완료') {
-                if(confirm("수행완료 상태를 취소하고 미수행으로 변경하시겠습니까?")) {
-                    item.status = '미수행'; item.nurse = '-';
-                    savePatientToBackend(p); renderAllRecords();
-                }
-                return;
+        async function deletePresc(idx) {
+            if(confirm('이 처방 항목을 삭제하시겠습니까?')) {
+                const p = patients[currentPatientIndex];
+                p.records.prescriptions.splice(idx, 1);
+                await savePatientToBackend(p);
+                renderPrescriptions();
             }
+        }
+
+        function openNurseInputModal(idx) {
             targetPrescModalIndex = idx;
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             document.getElementById('modalExecTime').value = now.toISOString().slice(0, 16);
-            document.getElementById('modalNurseName').value = '이다은';
             document.getElementById('nurseInputModal').classList.remove('hidden');
         }
 
@@ -1924,458 +1964,198 @@
 
         async function submitNurseInput() {
             if(targetPrescModalIndex === null) return;
-            const execTime = document.getElementById('modalExecTime').value.replace('T', ' ');
-            const nurseName = document.getElementById('modalNurseName').value.trim() || '간호사';
-            if (!execTime) return alert("수행 일시를 입력하세요.");
-
-            const p = patients[currentPatientIndex];
-            const item = p.records.prescriptions[targetPrescModalIndex];
-            item.status = item.category === '약물' ? '투약완료' : '수행완료';
-            item.nurse = `${nurseName} (${execTime.slice(5)})`;
+            const nurseName = document.getElementById('modalNurseName').value.trim();
+            if(!nurseName) return alert('수행자 이름을 입력하세요.');
             
+            const p = patients[currentPatientIndex];
+            p.records.prescriptions[targetPrescModalIndex].status = '수행';
+            p.records.prescriptions[targetPrescModalIndex].nurse = nurseName;
             await savePatientToBackend(p);
             closeNurseInputModal();
-            renderAllRecords();
+            renderPrescriptions();
         }
 
-        async function deleteRecord(type, idx) {
-            if (currentPatientIndex === null) return;
-            if (!confirm("해당 기록을 삭제하시겠습니까?")) return;
-
+        function renderSurgRecords() {
             const p = patients[currentPatientIndex];
-            if (type === 'presc') p.records.prescriptions.splice(idx, 1);
-            else if (type === 'nurse') p.records.nurse.splice(idx, 1);
-            else if (type === 'surg') p.records.surg.splice(idx, 1);
-            else if (type === 'blood') p.records.blood.splice(idx, 1);
-            else if (type === 'lab_img') p.records.lab.splice(idx, 1);
-            else if (type === 'vs') p.records.vs.splice(idx, 1);
-            else if (type === 'io') p.records.io.splice(idx, 1);
-
-            await savePatientToBackend(p);
-            renderAllRecords();
-        }
-
-        /* --- 혈압 문자열(120/80) 파싱 헬퍼 함수 --- */
-        function parseBP(bpStr) {
-            if (!bpStr) return { sys: null, dia: null };
-            const parts = String(bpStr).split('/').map(s => parseFloat(s.trim()));
-            return {
-                sys: !isNaN(parts[0]) ? parts[0] : null,
-                dia: !isNaN(parts[1]) ? parts[1] : null
-            };
-        }
-
-        /* --- V/S 체크박스 토글 함수 --- */
-        function toggleVsMetric(key) {
-            vsVisibility[key] = !vsVisibility[key];
-            renderVsSection();
-        }
-
-        /* --- 전체 기록 랜더링 --- */
-        function renderAllRecords() {
-            if (currentPatientIndex === null) return;
-            renderPrescriptionTable();
-            renderSurgTable();
-            renderBloodTable();
-            renderLabTable();
-            renderNurseTable();
-            renderVsSection();
-            renderIoSection();
-        }
-
-        /* --- V/S (활력징후) 피벗 테이블 및 차트 랜더링 --- */
-        function renderVsSection() {
-            if (currentPatientIndex === null) return;
-            const p = patients[currentPatientIndex];
-            const vsRecords = (p.records && p.records.vs) ? p.records.vs : [];
-
-            // 1. 피벗 테이블 생성
-            const vsTableBody = document.getElementById('vsTableBody');
-            if (!vsTableBody) return;
-
-            if (vsRecords.length === 0) {
-                vsTableBody.innerHTML = `
+            const tbody = document.getElementById('surgTable');
+            if (!tbody) return;
+            tbody.innerHTML = (p.records?.surg?.length) ? '' : '<tr><td colspan="5">수술/동의서 기록이 없습니다.</td></tr>';
+            (p.records?.surg || []).forEach((item, idx) => {
+                tbody.innerHTML += `
                     <tr>
-                        <th class="vs-header-title">구분 \\ 시간</th>
-                        <td class="vs-val" style="color:#94a3b8;">기록 없음</td>
-                    </tr>
-                    <tr>
-                        <td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.bp ? 'checked' : ''} onchange="toggleVsMetric('bp')"> 혈압 (BP)</label></td>
-                        <td class="vs-val">-</td>
-                    </tr>
-                    <tr>
-                        <td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.hr ? 'checked' : ''} onchange="toggleVsMetric('hr')"> 맥박 (HR)</label></td>
-                        <td class="vs-val">-</td>
-                    </tr>
-                    <tr>
-                        <td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.rr ? 'checked' : ''} onchange="toggleVsMetric('rr')"> 호흡 (RR)</label></td>
-                        <td class="vs-val">-</td>
-                    </tr>
-                    <tr>
-                        <td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.bt ? 'checked' : ''} onchange="toggleVsMetric('bt')"> 체온 (BT)</label></td>
-                        <td class="vs-val">-</td>
+                        <td>${item.time}</td>
+                        <td><b>${item.stage}</b></td>
+                        <td><b>${item.opName}</b></td>
+                        <td style="text-align:left;">${item.note || '-'}</td>
+                        <td><button class="btn-red" style="padding:1px 4px;" onclick="deleteRecord('surg', ${idx})">삭제</button></td>
                     </tr>
                 `;
-            } else {
-                let headerRow = `<tr><th class="vs-header-title">구분 \\ 시간</th>`;
-                let bpRow = `<tr><td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.bp ? 'checked' : ''} onchange="toggleVsMetric('bp')"> 혈압 (BP)</label></td>`;
-                let hrRow = `<tr><td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.hr ? 'checked' : ''} onchange="toggleVsMetric('hr')"> 맥박 (HR)</label></td>`;
-                let rrRow = `<tr><td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.rr ? 'checked' : ''} onchange="toggleVsMetric('rr')"> 호흡 (RR)</label></td>`;
-                let btRow = `<tr><td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.bt ? 'checked' : ''} onchange="toggleVsMetric('bt')"> 체온 (BT)</label></td>`;
-                let delRow = `<tr><td class="vs-label" style="background:#fee2e2; color:#ef4444;">삭제</td>`;
-
-                vsRecords.forEach((r, idx) => {
-                    headerRow += `<th class="vs-header-time">${r.time}</th>`;
-                    bpRow += `<td class="vs-val">${r.bp || '-'}</td>`;
-                    hrRow += `<td class="vs-val">${r.hr || '-'}</td>`;
-                    rrRow += `<td class="vs-val">${r.rr || '-'}</td>`;
-                    btRow += `<td class="vs-val">${r.bt || '-'}</td>`;
-                    delRow += `<td class="vs-val"><button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('vs', ${idx})">✕</button></td>`;
-                });
-
-                headerRow += `</tr>`;
-                bpRow += `</tr>`;
-                hrRow += `</tr>`;
-                rrRow += `</tr>`;
-                btRow += `</tr>`;
-                delRow += `</tr>`;
-
-                vsTableBody.innerHTML = headerRow + bpRow + hrRow + rrRow + btRow + delRow;
-            }
-
-            // 2. Chart.js 활력징후 그래프 그리기
-            renderVsChart(vsRecords);
+            });
         }
 
-        /* --- V/S Chart.js 다중 Y축 차트 랜더링 --- */
-        function renderVsChart(vsRecords) {
-            const ctx = document.getElementById('vsChart');
-            if (!ctx) return;
+        function renderBloodRecords() {
+            const p = patients[currentPatientIndex];
+            const tbody = document.getElementById('bloodTable');
+            if (!tbody) return;
+            tbody.innerHTML = (p.records?.blood?.length) ? '' : '<tr><td colspan="7">수혈 기록이 없습니다.</td></tr>';
+            (p.records?.blood || []).forEach((item, idx) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${item.time}</td>
+                        <td><b>${item.bType}</b></td>
+                        <td><span class="code-badge">${item.code}</span></td>
+                        <td>${item.unit}</td>
+                        <td>${item.vs}</td>
+                        <td><span style="color:${item.sideEffect !== '없음' ? '#ef4444' : '#10b981'}; font-weight:bold;">${item.sideEffect}</span></td>
+                        <td><button class="btn-red" style="padding:1px 4px;" onclick="deleteRecord('blood', ${idx})">삭제</button></td>
+                    </tr>
+                `;
+            });
+        }
 
-            if (vsChartInstance) {
-                vsChartInstance.destroy();
+        function renderLabRecords() {
+            const p = patients[currentPatientIndex];
+            const tbody = document.getElementById('labTable');
+            if (!tbody) return;
+            tbody.innerHTML = (p.records?.lab?.length) ? '' : '<tr><td colspan="6">검사 결과 기록이 없습니다.</td></tr>';
+            (p.records?.lab || []).forEach((item, idx) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${item.time}</td>
+                        <td><b>${item.category}</b></td>
+                        <td><b>${item.item}</b></td>
+                        <td style="text-align:left;">${item.result}</td>
+                        <td>${item.refRange ? item.refRange + ' ' + (item.unit || '') : '-'}</td>
+                        <td><button class="btn-red" style="padding:1px 4px;" onclick="deleteRecord('lab', ${idx})">삭제</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderNurseRecords() {
+            const p = patients[currentPatientIndex];
+            const tbody = document.getElementById('nurseTable');
+            if (!tbody) return;
+            tbody.innerHTML = (p.records?.nurse?.length) ? '' : '<tr><td colspan="4">간호 및 투약 기록이 없습니다.</td></tr>';
+            (p.records?.nurse || []).forEach((item, idx) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${item.time}</td>
+                        <td style="text-align:left;">${item.note}</td>
+                        <td>${item.nurse}</td>
+                        <td><button class="btn-red" style="padding:1px 4px;" onclick="deleteRecord('nurse', ${idx})">삭제</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function deleteRecord(recType, idx) {
+            if(confirm('이 기록을 삭제하시겠습니까?')) {
+                const p = patients[currentPatientIndex];
+                if(p.records && p.records[recType]) {
+                    p.records[recType].splice(idx, 1);
+                    await savePatientToBackend(p);
+                    renderAllRecords();
+                }
+            }
+        }
+
+        function renderVsPivot() {
+            const p = patients[currentPatientIndex];
+            const tbody = document.getElementById('vsTableBody');
+            if (!tbody) return;
+            const records = p.records?.vs || [];
+
+            if (!records.length) {
+                tbody.innerHTML = '<tr><td style="padding:10px; color:#888;">입력된 V/S 기록이 없습니다.</td></tr>';
+                renderVsChart([]);
+                return;
             }
 
-            const labels = vsRecords.map(r => r.time);
+            let timesRow = '<tr><th class="vs-header-title">구분 \\ 일시</th>' + records.map(r => `<th class="vs-header-time">${r.time}</th>`).join('') + '</tr>';
+            let bpRow = '<tr><td class="vs-label">혈압 (BP)</td>' + records.map(r => `<td class="vs-val">${r.bp || '-'}</td>`).join('') + '</tr>';
+            let hrRow = '<tr><td class="vs-label">맥박 (HR)</td>' + records.map(r => `<td class="vs-val">${r.hr !== null ? r.hr : '-'}</td>`).join('') + '</tr>';
+            let rrRow = '<tr><td class="vs-label">호흡 (RR)</td>' + records.map(r => `<td class="vs-val">${r.rr !== null ? r.rr : '-'}</td>`).join('') + '</tr>';
+            let btRow = '<tr><td class="vs-label">체온 (BT)</td>' + records.map(r => `<td class="vs-val">${r.bt !== null ? r.bt + '°C' : '-'}</td>`).join('') + '</tr>';
 
-            // 기본 Y축 최댓값 및 최솟값 (유동적 구간 확장 로직)
-            let maxBP = 200;
-            let maxHR = 200;
-            let maxRR = 80;
-            let minBT = 34;
-            let maxBT = 43;
+            tbody.innerHTML = timesRow + bpRow + hrRow + rrRow + btRow;
+            renderVsChart(records);
+        }
 
-            vsRecords.forEach(r => {
-                const parsed = parseBP(r.bp);
-                if (parsed.sys !== null && parsed.sys > maxBP) maxBP = Math.ceil(parsed.sys + 10);
-                if (parsed.dia !== null && parsed.dia > maxBP) maxBP = Math.ceil(parsed.dia + 10);
-                if (r.hr && r.hr > maxHR) maxHR = Math.ceil(r.hr + 10);
-                if (r.rr && r.rr > maxRR) maxRR = Math.ceil(r.rr + 10);
-                if (r.bt) {
-                    if (r.bt < minBT) minBT = Math.floor(r.bt - 1);
-                    if (r.bt > maxBT) maxBT = Math.ceil(r.bt + 1);
-                }
-            });
+        function renderIoPivot() {
+            const p = patients[currentPatientIndex];
+            const tbody = document.getElementById('ioTableBody');
+            if (!tbody) return;
+            const records = p.records?.io || [];
 
-            const datasets = [
-                {
-                    label: '수축기 혈압 (mmHg)',
-                    data: vsRecords.map(r => parseBP(r.bp).sys),
-                    borderColor: '#ef4444',
-                    backgroundColor: '#ef4444',
-                    yAxisID: 'yBP',
-                    hidden: !vsVisibility.bp,
-                    tension: 0.2,
-                    spanGaps: true
-                },
-                {
-                    label: '이완기 혈압 (mmHg)',
-                    data: vsRecords.map(r => parseBP(r.bp).dia),
-                    borderColor: '#f97316',
-                    backgroundColor: '#f97316',
-                    borderDash: [4, 4],
-                    yAxisID: 'yBP',
-                    hidden: !vsVisibility.bp,
-                    tension: 0.2,
-                    spanGaps: true
-                },
-                {
-                    label: '맥박 (bpm)',
-                    data: vsRecords.map(r => r.hr !== null && r.hr !== undefined ? r.hr : null),
-                    borderColor: '#3b82f6',
-                    backgroundColor: '#3b82f6',
-                    yAxisID: 'yHR',
-                    hidden: !vsVisibility.hr,
-                    tension: 0.2,
-                    spanGaps: true
-                },
-                {
-                    label: '호흡 (회/분)',
-                    data: vsRecords.map(r => r.rr !== null && r.rr !== undefined ? r.rr : null),
-                    borderColor: '#10b981',
-                    backgroundColor: '#10b981',
-                    yAxisID: 'yRR',
-                    hidden: !vsVisibility.rr,
-                    tension: 0.2,
-                    spanGaps: true
-                },
-                {
-                    label: '체온 (°C)',
-                    data: vsRecords.map(r => r.bt !== null && r.bt !== undefined ? r.bt : null),
-                    borderColor: '#8b5cf6',
-                    backgroundColor: '#8b5cf6',
-                    yAxisID: 'yBT',
-                    hidden: !vsVisibility.bt,
-                    tension: 0.2,
-                    spanGaps: true
-                }
-            ];
+            if (!records.length) {
+                tbody.innerHTML = '<tr><td style="padding:10px; color:#888;">입력된 I/O 기록이 없습니다.</td></tr>';
+                renderIoChart([]);
+                return;
+            }
+
+            let timesRow = '<tr><th class="vs-header-title">구분 \\ 일시</th>' + records.map(r => `<th class="vs-header-time">${r.time}</th>`).join('') + '</tr>';
+            let intakeRow = '<tr><td class="vs-label">섭취량 (Intake)</td>' + records.map(r => `<td class="vs-val" style="color:#10b981;">${r.intake || 0} mL</td>`).join('') + '</tr>';
+            let outputRow = '<tr><td class="vs-label">배설량 (Output)</td>' + records.map(r => `<td class="vs-val" style="color:#ef4444;">${r.output || 0} mL</td>`).join('') + '</tr>';
+
+            tbody.innerHTML = timesRow + intakeRow + outputRow;
+            renderIoChart(records);
+        }
+
+        function renderVsChart(records) {
+            const ctx = document.getElementById('vsChart');
+            if(!ctx) return;
+            if(vsChartInstance) vsChartInstance.destroy();
+
+            const labels = records.map(r => r.time);
+            const hrData = records.map(r => r.hr);
+            const rrData = records.map(r => r.rr);
+            const btData = records.map(r => r.bt);
 
             vsChartInstance = new Chart(ctx, {
                 type: 'line',
-                data: { labels, datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            labels: { boxWidth: 12, font: { size: 10 } }
-                        },
-                        tooltip: { mode: 'index', intersect: false }
-                    },
-                    scales: {
-                        x: {
-                            ticks: { font: { size: 9 } }
-                        },
-                        yBP: {
-                            type: 'linear',
-                            display: vsVisibility.bp,
-                            position: 'left',
-                            min: 0,
-                            suggestedMax: maxBP,
-                            title: { display: true, text: '혈압', color: '#ef4444', font: { size: 10, weight: 'bold' } },
-                            ticks: { color: '#ef4444', font: { size: 9 } }
-                        },
-                        yHR: {
-                            type: 'linear',
-                            display: vsVisibility.hr,
-                            position: 'left',
-                            min: 0,
-                            suggestedMax: maxHR,
-                            title: { display: true, text: '맥박', color: '#3b82f6', font: { size: 10, weight: 'bold' } },
-                            ticks: { color: '#3b82f6', font: { size: 9 } }
-                        },
-                        yRR: {
-                            type: 'linear',
-                            display: vsVisibility.rr,
-                            position: 'left',
-                            min: 0,
-                            suggestedMax: maxRR,
-                            title: { display: true, text: '호흡', color: '#10b981', font: { size: 10, weight: 'bold' } },
-                            ticks: { color: '#10b981', font: { size: 9 } }
-                        },
-                        yBT: {
-                            type: 'linear',
-                            display: vsVisibility.bt,
-                            position: 'left',
-                            suggestedMin: minBT,
-                            suggestedMax: maxBT,
-                            title: { display: true, text: '체온', color: '#8b5cf6', font: { size: 10, weight: 'bold' } },
-                            ticks: { color: '#8b5cf6', font: { size: 9 } }
-                        }
-                    }
-                }
-            });
-        }
-
-        /* --- I/O (섭취/배설) 랜더링 --- */
-        function renderIoSection() {
-            if (currentPatientIndex === null) return;
-            const p = patients[currentPatientIndex];
-            const ioRecords = (p.records && p.records.io) ? p.records.io : [];
-
-            const ioTableBody = document.getElementById('ioTableBody');
-            if (!ioTableBody) return;
-
-            if (ioRecords.length === 0) {
-                ioTableBody.innerHTML = `
-                    <tr><th class="vs-header-title">구분 \\ 시간</th><td class="vs-val" style="color:#94a3b8;">기록 없음</td></tr>
-                    <tr><td class="vs-label">Intake (mL)</td><td class="vs-val">-</td></tr>
-                    <tr><td class="vs-label">Output (mL)</td><td class="vs-val">-</td></tr>
-                `;
-            } else {
-                let headerRow = `<tr><th class="vs-header-title">구분 \\ 시간</th>`;
-                let intakeRow = `<tr><td class="vs-label">Intake (mL)</td>`;
-                let outputRow = `<tr><td class="vs-label">Output (mL)</td>`;
-                let delRow = `<tr><td class="vs-label" style="background:#fee2e2; color:#ef4444;">삭제</td>`;
-
-                ioRecords.forEach((r, idx) => {
-                    headerRow += `<th class="vs-header-time">${r.time}</th>`;
-                    intakeRow += `<td class="vs-val" style="color:#3b82f6;">${r.intake || 0}</td>`;
-                    outputRow += `<td class="vs-val" style="color:#ef4444;">${r.output || 0}</td>`;
-                    delRow += `<td class="vs-val"><button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('io', ${idx})">✕</button></td>`;
-                });
-
-                headerRow += `</tr>`; intakeRow += `</tr>`; outputRow += `</tr>`; delRow += `</tr>`;
-                ioTableBody.innerHTML = headerRow + intakeRow + outputRow + delRow;
-            }
-
-            renderIoChart(ioRecords);
-        }
-
-        function renderIoChart(ioRecords) {
-            const ctx = document.getElementById('ioChart');
-            if (!ctx) return;
-
-            if (ioChartInstance) {
-                ioChartInstance.destroy();
-            }
-
-            const labels = ioRecords.map(r => r.time);
-            ioChartInstance = new Chart(ctx, {
-                type: 'bar',
                 data: {
                     labels,
                     datasets: [
-                        { label: 'Intake (mL)', data: ioRecords.map(r => r.intake || 0), backgroundColor: '#3b82f6' },
-                        { label: 'Output (mL)', data: ioRecords.map(r => r.output || 0), backgroundColor: '#ef4444' }
+                        { label: '맥박 (HR)', data: hrData, borderColor: '#ef4444', tension: 0.2, fill: false },
+                        { label: '호흡 (RR)', data: rrData, borderColor: '#3b82f6', tension: 0.2, fill: false },
+                        { label: '체온 (BT)', data: btData, borderColor: '#10b981', tension: 0.2, fill: false }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 10 } } } },
-                    scales: {
-                        x: { ticks: { font: { size: 9 } } },
-                        y: { ticks: { font: { size: 9 } }, beginAtZero: true }
-                    }
+                    scales: { y: { beginAtZero: false } }
                 }
             });
         }
 
-        /* --- 상단 탭별 테이블 랜더링 함수들 --- */
-        function renderPrescriptionTable() {
-            const p = patients[currentPatientIndex];
-            const tbody = document.getElementById('prescriptionTable');
-            if (!tbody || !p) return;
-            const records = p.records?.prescriptions || [];
+        function renderIoChart(records) {
+            const ctx = document.getElementById('ioChart');
+            if(!ctx) return;
+            if(ioChartInstance) ioChartInstance.destroy();
 
-            if (records.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#94a3b8;">등록된 처방 내역이 없습니다.</td></tr>`;
-                return;
-            }
+            const labels = records.map(r => r.time);
+            const intakeData = records.map(r => r.intake || 0);
+            const outputData = records.map(r => r.output || 0);
 
-            tbody.innerHTML = records.map((r, idx) => {
-                const statusBadge = (r.status === '수행완료' || r.status === '투약완료') 
-                    ? `<span class="status-badge-complete" onclick="openNurseInputModal(${idx})">✓ ${r.status}</span>`
-                    : `<span class="status-badge-pending" onclick="openNurseInputModal(${idx})">⏳ 미수행</span>`;
-                return `
-                    <tr>
-                        <td>${r.time}</td>
-                        <td><b>${r.category}</b></td>
-                        <td><span class="code-badge">${r.code || '-'}</span></td>
-                        <td style="text-align:left;">${r.note}</td>
-                        <td>${r.issuer || '-'}</td>
-                        <td>${statusBadge}</td>
-                        <td>${r.nurse || '-'}</td>
-                        <td>
-                            <button class="btn-slate" style="padding:1px 4px; font-size:10px;" onclick="editPresc(${idx})">수정</button>
-                            <button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('presc', ${idx})">삭제</button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        function renderNurseTable() {
-            const p = patients[currentPatientIndex];
-            const tbody = document.getElementById('nurseTable');
-            if (!tbody || !p) return;
-            const records = p.records?.nurse || [];
-
-            if (records.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#94a3b8;">등록된 간호기록이 없습니다.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = records.map((r, idx) => `
-                <tr>
-                    <td>${r.time}</td>
-                    <td style="text-align:left;">${r.note}</td>
-                    <td><b>${r.nurse || '-'}</b></td>
-                    <td><button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('nurse', ${idx})">삭제</button></td>
-                </tr>
-            `).join('');
-        }
-
-        function renderSurgTable() {
-            const p = patients[currentPatientIndex];
-            const tbody = document.getElementById('surgTable');
-            if (!tbody || !p) return;
-            const records = p.records?.surg || [];
-
-            if (records.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#94a3b8;">등록된 수술 기록이 없습니다.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = records.map((r, idx) => `
-                <tr>
-                    <td>${r.time}</td>
-                    <td><b>${r.stage}</b></td>
-                    <td style="font-weight:bold; color:var(--primary-navy);">${r.opName}</td>
-                    <td style="text-align:left;">${r.note || '-'}</td>
-                    <td><button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('surg', ${idx})">삭제</button></td>
-                </tr>
-            `).join('');
-        }
-
-        function renderBloodTable() {
-            const p = patients[currentPatientIndex];
-            const tbody = document.getElementById('bloodTable');
-            if (!tbody || !p) return;
-            const records = p.records?.blood || [];
-
-            if (records.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#94a3b8;">등록된 수혈 기록이 없습니다.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = records.map((r, idx) => `
-                <tr>
-                    <td>${r.time}</td>
-                    <td><b style="color:#ef4444;">${r.bType}</b></td>
-                    <td><span class="code-badge">${r.code || '-'}</span></td>
-                    <td>${r.unit || '-'}</td>
-                    <td>${r.vs || '-'}</td>
-                    <td>${r.sideEffect || '없음'}</td>
-                    <td><button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('blood', ${idx})">삭제</button></td>
-                </tr>
-            `).join('');
-        }
-
-        function renderLabTable() {
-            const p = patients[currentPatientIndex];
-            const tbody = document.getElementById('labTable');
-            if (!tbody || !p) return;
-            const records = p.records?.lab || [];
-
-            if (records.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#94a3b8;">등록된 검사 결과가 없습니다.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = records.map((r, idx) => `
-                <tr>
-                    <td>${r.time}</td>
-                    <td><b>${r.category}</b></td>
-                    <td style="font-weight:bold; color:var(--primary-navy);">${r.item}</td>
-                    <td style="text-align:left;">${r.result}</td>
-                    <td>${r.refRange ? (r.refRange + ' ' + (r.unit||'')) : '-'}</td>
-                    <td><button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('lab_img', ${idx})">삭제</button></td>
-                </tr>
-            `).join('');
+            ioChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: '섭취량 (Intake)', data: intakeData, backgroundColor: '#10b981' },
+                        { label: '배설량 (Output)', data: outputData, backgroundColor: '#ef4444' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 10 } } } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
         }
     </script>
 </body>
