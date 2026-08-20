@@ -1,38 +1,56 @@
+<!-- 문서 형식을 HTML5로 지정합니다. -->
 <!DOCTYPE html>
+<!-- 문서의 기본 언어를 한국어(ko)로 설정합니다. -->
 <html lang="ko">
 <head>
+    <!-- 문자 인코딩을 UTF-8로 설정하여 한글이 깨지지 않게 합니다. -->
     <meta charset="UTF-8">
+    <!-- 모바일 기기에서도 화면 크기가 적절하게 보이도록 비율을 맞춰줍니다. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 브라우저 탭에 표시될 웹페이지의 제목입니다. -->
     <title>전자의무기록 (EMR Chart) 및 환자 관리 시스템</title>
-    <!-- Tailwind CSS -->
+    
+    <!-- 외부 디자인 도구인 Tailwind CSS를 가져옵니다. HTML 태그 안에 직접 디자인 클래스를 적을 수 있게 해줍니다. -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js -->
+    <!-- 그래프를 그리기 위한 외부 도구인 Chart.js를 가져옵니다. -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- CSS 스타일을 정의하는 공간입니다. 웹페이지의 화장(디자인)을 담당합니다. -->
     <style>
+        /* :root는 문서의 뿌리를 의미하며, 여기서 지정한 색상들을 변수처럼 전체 코드에서 쉽게 가져다 쓸 수 있습니다. */
         :root {
-            --primary-navy: #1e3a8a;
-            --primary-navy-hover: #1e293b;
-            --bg-light-navy: #f0f4f8;
-            --panel-header-bg: #0f172a;
-            --text-dark: #0f172a;
-            --text-muted: #475569;
-            --border-color: #cbd5e1;
+            --primary-navy: #1e3a8a;       /* 메인 네이비 색상 */
+            --primary-navy-hover: #1e293b; /* 마우스가 올라갔을 때의 진한 네이비 색상 */
+            --bg-light-navy: #f0f4f8;      /* 아주 연한 배경 네이비 색상 */
+            --panel-header-bg: #0f172a;    /* 패널(상자) 윗부분의 어두운 배경색 */
+            --text-dark: #0f172a;          /* 기본 어두운 글씨색 */
+            --text-muted: #475569;         /* 약간 옅은 회색 글씨색 (설명 등에 쓰임) */
+            --border-color: #cbd5e1;       /* 테두리 색상 */
         }
 
+        /* *는 웹페이지의 '모든 요소'를 의미합니다. 전체 글꼴과 크기 기준을 잡습니다. */
         * { box-sizing: border-box; font-family: '맑은 고딕', 'Malgun Gothic', sans-serif; }
+        
+        /* 웹페이지의 바탕(html, body) 설정입니다. 꽉 차게 만들고 스크롤이 생기지 않도록 여백을 없앱니다. */
         html, body { width: 100vw; height: 100vh; margin: 0; padding: 0; background-color: var(--bg-light-navy); color: var(--text-dark); font-size: 11px; overflow-x: hidden; }
 
+        /* 화면 안의 주요 내용을 담는 큰 상자 설정입니다. flex를 써서 요소들을 세로로 나란히(column) 배치합니다. */
         .app-container { width: 100vw; height: calc(100vh - 50px); padding: 8px; display: flex; flex-direction: column; gap: 12px; }
 
-        /* 상단 헤더 */
+        /* 상단 헤더 (메뉴바) 디자인입니다. 양쪽 끝으로 내용물을 밀어내기 위해 justify-content: space-between을 씁니다. */
         .header-bar { display: flex; justify-content: space-between; align-items: center; background: white; padding: 8px 16px; border-radius: 4px; border: 1px solid var(--border-color); width: 100%; }
+        /* 헤더 안의 제목(h1) 글씨 크기와 간격 설정입니다. */
         .header-bar h1 { margin: 0; font-size: 15px; color: var(--primary-navy); display: flex; align-items: center; gap: 6px; }
 
-        /* 공통 버튼 및 입력폼 */
+        /* 글자를 입력하거나 선택하는 칸(input, select, textarea)들의 기본 모양입니다. */
         input, select, textarea { padding: 4px 6px; border: 1px solid var(--border-color); border-radius: 3px; font-size: 11px; outline: none; }
+        /* 입력 칸을 마우스로 클릭(focus)했을 때 테두리 색상이 네이비로 변하게 합니다. */
         input:focus, select:focus, textarea:focus { border-color: var(--primary-navy); }
         
+        /* 버튼들의 기본 공통 디자인입니다. */
         button { padding: 5px 10px; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold; font-size: 11px; }
+        
+        /* 각 버튼별 색상 디자인 모음입니다. (파랑, 초록, 회색, 빨강 등) - :hover는 마우스를 올렸을 때의 색상입니다. */
         .btn-blue { background-color: var(--primary-navy); } .btn-blue:hover { background-color: var(--primary-navy-hover); }
         .btn-green { background-color: #10b981; } .btn-green:hover { background-color: #059669; }
         .btn-slate { background-color: #64748b; } .btn-slate:hover { background-color: #475569; }
@@ -40,54 +58,67 @@
         .btn-purple { background-color: #8b5cf6; }
         .btn-orange { background-color: #f97316; } .btn-orange:hover { background-color: #ea580c; }
 
-        /* 테이블 기본 및 고정 헤더(Sticky Header) 설정 */
+        /* 데이터가 들어가는 표(table) 기본 디자인입니다. */
         table { width: 100%; border-collapse: separate; border-spacing: 0; background: white; }
+        /* 표의 제목줄(th) 디자인. 스크롤을 내려도 제목줄이 위에 고정(sticky)되도록 설정되어 있습니다. */
         th { background-color: #f8fafc; color: var(--text-muted); padding: 6px; border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); text-align: center; font-weight: bold; font-size: 11px; position: sticky; top: 0; z-index: 10; }
+        /* 표의 일반 데이터 칸(td) 디자인입니다. */
         td { border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 5px 6px; text-align: center; font-size: 11px; white-space: pre-wrap; word-break: break-word; }
+        /* 표의 줄에 마우스를 올렸을 때 배경색이 살짝 변하게 합니다. */
         tr:hover { background-color: #f1f5f9; }
 
-        /* 처방 테마 헤더 (네이비 컬러) */
+        /* 처방전 테이블 전용 디자인 (네이비색 헤더) 입니다. */
         .prescription-table-theme th { background-color: var(--panel-header-bg) !important; color: #ffffff; font-weight: bold; padding: 4px 6px; border-bottom: 1px solid #334155; font-size: 11px; }
         .prescription-table-theme td { padding: 3px 5px; font-size: 10.5px; line-height: 1.3; white-space: pre-wrap; word-break: break-word; }
 
-        /* V/S 및 I/O 피벗 테이블 전용 스타일 */
+        /* 활력징후(V/S)와 섭취배설(I/O) 차트를 위한 피벗 테이블(행과 열이 크로스되는 표) 디자인입니다. */
         .vs-pivot-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; background: white; }
         .vs-pivot-table th.vs-header-title { background-color: #e2e8f0; color: #0f172a; width: 120px; text-align: center; font-weight: bold; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; position: sticky; left: 0; top: 0; z-index: 20; }
         .vs-pivot-table th.vs-header-time { background-color: #1e293b; color: white; padding: 5px 12px; font-weight: bold; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; white-space: nowrap; position: sticky; top: 0; z-index: 10; }
         .vs-pivot-table td.vs-label { background-color: #f1f5f9; color: #1e293b; font-weight: bold; text-align: center; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; position: sticky; left: 0; z-index: 15; white-space: nowrap; }
         .vs-pivot-table td.vs-val { border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; text-align: center; padding: 4px 10px; font-weight: bold; white-space: nowrap; }
 
-        /* 1. 환자 목록 화면 */
+        /* 1. 환자 목록 화면의 바깥 상자 디자인입니다. */
         #listPage { background: white; padding: 16px; border-radius: 4px; border: 1px solid var(--border-color); flex: 1; overflow-y: auto; width: 100%; }
+        /* 환자 정보를 입력하는 칸들을 격자무늬(grid)로 일정하게 배치하는 설정입니다. */
         .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 10px; }
 
-        /* 2. EMR 메인 레이아웃 */
+        /* 2. EMR 메인 레이아웃(디테일 페이지) - 처음엔 숨겨두기 위해 display: none 설정되어 있습니다. */
         #detailPage { display: none; flex: 1; flex-direction: column; height: calc(100vh - 65px); width: 100%; }
+        /* EMR 화면의 정보들을 가로로 나란히 배치하기 위한 설정입니다. */
         .emr-grid { display: flex; gap: 12px; flex: 1; overflow: hidden; width: 100%; }
 
-        /* 패널 디자인 */
+        /* EMR 안의 작은 정보 카드(패널)들의 공통 디자인입니다. */
         .panel { background: white; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        /* 정보 카드의 제목 부분 디자인입니다. */
         .panel-header { background: var(--panel-header-bg); color: #ffffff; padding: 8px 12px; font-weight: bold; font-size: 12px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; }
 
-        /* 1열 카드 */
+        /* 왼쪽 첫 번째 열(1열) 카드 크기 설정입니다. */
         .col-1 { width: 280px; min-width: 250px; display: flex; flex-direction: column; gap: 12px; overflow: auto; }
+        /* 1열 안의 환자 기본 정보를 보여주는 작은 테이블 디자인입니다. */
         .info-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
         .info-table th { background: transparent; text-align: left; border: none; padding: 3px 0; color: var(--text-dark); font-weight: normal; width: 85px; position: static; }
         .info-table td { text-align: left; border: none; padding: 3px 0; font-weight: bold; white-space: normal; }
+        /* 특이사항 메모를 적는 구역 설정입니다. */
         .memo-area { flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
         .memo-area textarea { flex: 1; resize: none; width: 100%; }
 
-        /* 2열 카드 */
+        /* 왼쪽 두 번째 열(2열) 카드 크기 설정입니다. (마네킹이 들어갈 자리) */
         .col-2 { width: 280px; min-width: 250px; display: flex; flex-direction: column; gap: 12px; overflow: auto; }
+        /* 마네킹 그림이 들어갈 상자 설정입니다. 클릭 위치(좌표)를 잡기 위해 relative 설정이 있습니다. */
         .canvas-wrapper { position: relative; width: 210px; height: 310px; margin: 8px auto; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; cursor: crosshair; }
+        /* 마네킹 그림 크기를 상자에 꽉 차게 맞춥니다. */
         .body-svg { width: 100%; height: 100%; pointer-events: none; }
         
+        /* 마네킹에 찍히는 '핀(마커)'의 디자인입니다. absolute로 원하는 위치에 고정시킵니다. */
         .pin-wrapper { position: absolute; transform: translate(-50%, -100%); cursor: pointer; display: flex; flex-direction: column; align-items: center; z-index: 10; }
         .pin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 3px rgba(0,0,0,0.6); margin-top: 2px; }
+        /* 핀의 종류별 색상입니다 (수술=빨강, 욕창=파랑/네이비, 기구=초록) */
         .pin-op { background-color: #ef4444; }
         .pin-sore { background-color: var(--primary-navy); }
         .pin-device { background-color: #10b981; }
 
+        /* 핀 위에 뜨는 말풍선 메모 디자인입니다. */
         .speech-bubble {
             background: rgba(15, 23, 42, 0.9);
             color: #ffffff;
@@ -98,44 +129,61 @@
             white-space: nowrap;
             max-width: 130px;
             overflow: hidden;
-            text-overflow: ellipsis;
+            text-overflow: ellipsis; /* 너무 길면 ...으로 표시 */
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             position: relative;
         }
+        /* 말풍선 아래의 뾰족한 화살표 꼬리 모양을 만듭니다. */
         .speech-bubble::after {
             content: ''; position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
             border-width: 4px 4px 0; border-style: solid; border-color: rgba(15, 23, 42, 0.9) transparent;
             display: block; width: 0;
         }
 
+        /* 2열 하단의 빠른 환자 검색 목록 아이템 디자인입니다. */
         .quick-patient-item { padding: 6px 8px; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: background-color 0.15s; display: flex; justify-content: space-between; align-items: center; }
         .quick-patient-item:hover { background-color: #f1f5f9; }
+        /* 현재 선택된 환자를 시각적으로 강조합니다. */
         .quick-patient-item.active { background-color: #e2e8f0; border-left: 3px solid var(--primary-navy); }
 
-        /* 3열 카드 및 분할 탭 영역 */
+        /* 오른쪽 넓은 영역(3열) 카드 설정입니다. 가장 넓게 쓰도록 flex: 1을 줍니다. */
         .col-3 { flex: 1; display: flex; flex-direction: column; height: 100%; overflow: hidden; min-width: 450px; }
+        /* 상단(처방 등)과 하단(V/S 차트)을 나누는 구역입니다. */
         .split-container { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        /* 상단/하단 각각의 창 설정입니다. */
         .split-pane { flex: 1; background: white; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: flex 0.2s ease, max-height 0.2s ease; }
+        /* 창이 접혔을 때(숨김)의 설정입니다. */
         .split-pane.collapsed { display: none !important; flex: 0 !important; min-height: 0 !important; height: 0 !important; }
 
+        /* 상단과 하단을 나누는 중간 조절 바(클릭해서 접는 버튼) 디자인입니다. */
         .collapsible-resizer-bar { height: 18px; background: #cbd5e1; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; margin: 4px 0; border-radius: 4px; transition: background 0.2s; }
         .collapsible-resizer-bar:hover { background: #94a3b8; }
         .collapsible-resizer-bar button { background: transparent; border: none; color: #1e293b; font-size: 10px; font-weight: bold; padding: 0; cursor: pointer; display: flex; align-items: center; gap: 4px; }
 
+        /* 3열 상단의 주요 메뉴 탭(처방, 수술, 수혈 등) 묶음 바 디자인입니다. */
         .main-tab-bar { display: flex; background: #f1f5f9; border-bottom: 1px solid var(--border-color); gap: 3px; padding-top: 4px; padding-left: 4px; }
+        /* 메뉴 탭 버튼 기본 디자인입니다. */
         .main-tab-btn { background: #e2e8f0; color: var(--text-dark); padding: 6px 14px; border: 1px solid var(--border-color); border-bottom: none; border-radius: 4px 4px 0 0; cursor: pointer; font-size: 11px; font-weight: bold; }
+        /* 활성화된(클릭한) 메뉴 탭 버튼 디자인입니다. 네이비색으로 변경됩니다. */
         .main-tab-btn.active { background: var(--primary-navy); color: white; border-color: var(--primary-navy); }
 
+        /* 탭을 눌렀을 때 보여지는 실제 내용 부분입니다. 기본적으로 숨겨(display: none)둡니다. */
         .tab-content { display: none; flex-direction: column; flex: 1; padding: 10px; overflow: hidden; min-height: 0; }
+        /* 활성화되면 보이게(display: flex) 합니다. */
         .tab-content.active { display: flex; }
 
+        /* 그래프(Chart.js)가 그려지는 상자의 크기 설정입니다. */
         .chart-container { height: 180px; min-height: 140px; margin-bottom: 8px; position: relative; overflow: hidden; }
+        /* 데이터 목록 테이블의 스크롤 영역 설정입니다. */
         .table-scroll-area { flex: 1; overflow-y: auto; overflow-x: auto; border: 1px solid var(--border-color); border-radius: 3px; margin-bottom: 6px; position: relative; }
 
+        /* 하단의 데이터 입력 칸들을 가로로 나란히 정렬하는 설정입니다. */
         .input-bar-bottom { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        /* 코드(KCD 등)를 돋보이게 하는 배지 모양 디자인입니다. */
         .code-badge { background: #f1f5f9; color: var(--primary-navy); padding: 1px 4px; border-radius: 3px; font-family: monospace; font-weight: bold; border: 1px solid #cbd5e1; }
+        
+        /* 2열 마네킹 앞모습/뒷모습 등을 나누는 작은 서브 탭 디자인입니다. */
         .sub-tab-bar { display: flex; gap: 4px; margin-bottom: 6px; }
-
         .sub-tab-btn { 
             border: 1px solid var(--border-color); 
             background: #f1f5f9; 
@@ -152,12 +200,17 @@
             font-weight: bold; 
         }
 
+        /* 텍스트 내용이 길어지면 자동으로 세로로 늘어나는 입력창 설정입니다. */
         .auto-expand-textarea { resize: none; overflow-y: hidden; min-height: 28px; box-sizing: border-box; line-height: 1.4; }
+        
+        /* 수행완료/미수행 상태를 나타내는 색상 배지(버튼) 디자인입니다. */
         .status-badge-complete { background-color: #10b981; color: white; font-weight: bold; padding: 3px 8px; border-radius: 4px; font-size: 10px; display: inline-block; cursor: pointer; }
         .status-badge-pending { background-color: #f59e0b; color: white; font-weight: bold; padding: 3px 8px; border-radius: 4px; font-size: 10px; display: inline-block; cursor: pointer; }
 
+        /* 처방 입력 중 용량, 횟수 등을 입력하는 작은 입력칸 설정입니다. */
         .med-detail-input { width: 52px; text-align: center; }
 
+        /* 마지막 3번째 '설정' 화면의 탭 버튼 디자인입니다. */
         .setting-tab-btn {
             padding: 8px 16px;
             font-size: 13px;
@@ -175,42 +228,45 @@
             background-color: var(--primary-navy);
             border-color: var(--primary-navy);
         }
+        /* 설정 화면의 패널들 보이고 숨기는 기능입니다. */
         .setting-panel { display: none; }
         .setting-panel.active { display: flex; }
+
         /* ==========================================
-   [환자 목록 테이블] 로우(Row) 높이 최소화 스타일
-   ========================================== */
-/* 1. 헤더(th) 높이 및 패딩 축소 */
-#listPage table th {
-    padding: 3px 4px !important;
-    font-size: 10.5px !important;
-    line-height: 1.1 !important;
-}
+           [환자 목록 테이블] 로우(Row) 높이 최소화 스타일
+           데이터가 한 화면에 많이 보이도록 높이와 여백을 줄였습니다.
+           ========================================== */
+        /* 1. 헤더(th) 높이 및 패딩 축소 */
+        #listPage table th {
+            padding: 3px 4px !important;
+            font-size: 10.5px !important;
+            line-height: 1.1 !important;
+        }
 
-/* 2. 데이터 셀(td) 높이 및 패딩 최소화 */
-#listPage table td {
-    padding: 1px 4px !important; /* 상하 패딩을 1px로 최소화 */
-    font-size: 10.5px !important;
-    line-height: 1.2 !important;
-    white-space: nowrap !important; /* 줄바꿈 방지로 한 줄 고정 */
-    overflow: hidden;
-    text-overflow: ellipsis; /* 길이가 길면 ... 로 표시 */
-    max-width: 180px; /* 특정 셀이 너무 넓어지는 것 방지 */
-}
+        /* 2. 데이터 셀(td) 높이 및 패딩 최소화 */
+        #listPage table td {
+            padding: 1px 4px !important; /* 상하 패딩을 1px로 최소화 */
+            font-size: 10.5px !important;
+            line-height: 1.2 !important;
+            white-space: nowrap !important; /* 줄바꿈 방지로 한 줄 고정 */
+            overflow: hidden;
+            text-overflow: ellipsis; /* 길이가 길면 ... 로 표시 */
+            max-width: 180px; /* 특정 셀이 너무 넓어지는 것 방지 */
+        }
 
-/* 3. 관리 열 내 수정/삭제 버튼 높이 최소화 */
-#listPage table td button {
-    padding: 0px 4px !important;
-    font-size: 10px !important;
-    line-height: 16px !important;
-    height: 18px !important;
-    margin: 0 1px !important;
-}
+        /* 3. 관리 열 내 수정/삭제 버튼 높이 최소화 */
+        #listPage table td button {
+            padding: 0px 4px !important;
+            font-size: 10px !important;
+            line-height: 16px !important;
+            height: 18px !important;
+            margin: 0 1px !important;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
 
-    <!-- 수행 등록 모달 -->
+    <!-- 수행 등록 모달 (팝업창) - 평소엔 hidden으로 숨겨져 있습니다. -->
     <div id="nurseInputModal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center z-50">
         <div class="bg-white p-9 rounded-xl shadow-2xl w-[600px]">
             <h3 class="text-2xl font-bold text-gray-800 mb-4">👨‍⚕️ 수행자 및 수행 시간 입력</h3>
@@ -227,6 +283,7 @@
                 </div>
             </div>
 
+            <!-- 확인 및 취소 버튼 영역입니다. -->
             <div class="flex justify-end gap-4">
                 <button onclick="closeNurseInputModal()" class="px-6 py-3 bg-gray-400 text-white rounded-lg text-base hover:bg-gray-500 font-bold">취소</button>
                 <button onclick="submitNurseInput()" class="px-6 py-3 bg-slate-900 text-white rounded-lg text-base hover:bg-slate-800 font-bold">확인 및 수행 완료</button>
@@ -234,7 +291,7 @@
         </div>
     </div>
 
-    <!-- 마네킹 핀 메모 수정 모달 -->
+    <!-- 마네킹 핀 메모 수정 모달 (팝업창) -->
     <div id="pinEditModal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center z-50">
         <div class="bg-white p-9 rounded-xl shadow-2xl w-[600px]">
             <h3 class="text-2xl font-bold text-gray-800 mb-4">📍 마커(핀) 메모 수정</h3>
@@ -254,24 +311,28 @@
         </div>
     </div>
 
-    <!-- 로그인 화면 -->
+    <!-- 로그인 화면. 시스템에 접속할 때 가장 먼저 보이는 페이지입니다. -->
     <div id="view-login" class="flex items-center justify-center min-h-screen">
         <div id="loginView" class="max-w-md w-full mx-auto bg-white p-6 rounded shadow">
             <h2 class="text-xl font-bold mb-4 text-center text-slate-900">EMR 시스템 로그인</h2>
             <input type="text" id="uid" value="admin" class="w-full border p-2 mb-2 rounded" placeholder="아이디">
             <input type="password" id="upw" value="1234" class="w-full border p-2 mb-4 rounded" placeholder="비밀번호">
+            <!-- 버튼을 누르면 login() 자바스크립트 함수가 실행됩니다. -->
             <button onclick="login()" class="w-full bg-slate-900 text-white p-2 rounded font-bold hover:bg-slate-800">로그인</button>
         </div>
     </div>
 
-    <!-- 메인 헤더 -->
+    <!-- 메인 화면 최상단 헤더(메뉴바)입니다. 로그인 성공 시 나타납니다. -->
     <header id="main-header" class="hidden bg-white shadow-sm border-b px-6 py-2.5 flex justify-between items-center w-full">
+        <!-- 왼쪽 로고/제목 영역. 클릭하면 환자 목록 화면으로 이동합니다. -->
         <div class="flex items-center space-x-3 cursor-pointer" onclick="showView('patients')">
             <span class="text-xl">🏥</span>
             <h1 class="text-lg font-bold text-slate-900">환자 관리 및 EMR 시스템</h1>
         </div>
+        <!-- 오른쪽 설정 및 로그아웃 영역입니다. -->
         <div class="flex items-center space-x-4">
             <button onclick="showView('settings')" class="p-2 text-gray-600 hover:text-slate-900 hover:bg-gray-100 rounded-full transition" title="설정">
+                <!-- 톱니바퀴 아이콘(SVG 이미지) 입니다. -->
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -281,18 +342,20 @@
         </div>
     </header>
 
-    <!-- 메인 화면 -->
+    <!-- 1. 메인 환자 관리 및 EMR 화면 영역입니다. -->
     <div id="view-patients" class="hidden w-full">
-        <!-- 생략 없이 위의 원본 내용 동일하게 포함 ... -->
-        <!-- 너무 길어지면 일부 레이아웃 렌더링 생략 가능하나 요청에 따라 전체 포함 -->
         <div class="app-container">
-            <!-- (기존 HTML 구조 원본과 동일하게 이어짐) -->
+            
+            <!-- 환자 목록을 보여주는 페이지입니다. (초기 화면) -->
             <div id="listPage">
                 <div class="header-bar">
                     <h1>📋 EMR System - 환자 목록 관리</h1>
                 </div>
+                
+                <!-- 신규 환자를 등록하거나 기존 환자를 수정하는 폼 영역입니다. -->
                 <div style="background: #f8fafc; padding: 12px; border: 1px solid var(--border-color); margin: 10px 0; border-radius: 4px;">
                     <b id="formTitle" style="font-size:12px; color:var(--primary-navy);">[신규 환자 등록]</b>
+                    
                     <div class="input-grid">
                         <input type="text" id="pName" placeholder="환자명 *">
                         <input type="text" id="pBirth" placeholder="생년월일(예: 850101) *" oninput="autoCalculateAge(this.value)">
@@ -304,6 +367,7 @@
                             <option value="M">남성 (M)</option>
                             <option value="custom">그 외 (직접입력)</option>
                         </select>
+                        <!-- '그 외(직접입력)' 선택 시 나타나는 입력창입니다. -->
                         <input type="text" id="pGenderCustom" placeholder="성별 입력" style="display:none;">
 
                         <select id="pBloodType">
@@ -328,12 +392,14 @@
 
                         <input type="text" id="pCC" placeholder="주호소(C.C)" style="grid-column: span 2;">
                     </div>
+                    
                     <div style="margin-top: 10px; text-align: right; display: flex; justify-content: flex-end; gap: 6px;">
                         <button id="btnCancelEdit" class="btn-slate" style="display:none;" onclick="cancelEdit()">취소</button>
                         <button id="btnSavePatient" class="btn-blue" onclick="savePatientForm()">+ 환자 등록</button>
                     </div>
                 </div>
 
+                <!-- 등록된 환자들의 목록을 띄워주는 테이블입니다. JS에서 <tbody> 안을 채워넣습니다. -->
                 <table>
                     <thead>
                         <tr>
@@ -351,7 +417,8 @@
                     <tbody id="patientTableBody"></tbody>
                 </table>
             </div>
-<!-- EMR 메인 차트 -->
+
+            <!-- 특정 환자를 클릭했을 때 나타나는 상세 EMR 메인 차트 페이지입니다. -->
             <div id="detailPage">
                 <div class="header-bar" style="margin-bottom: 8px;">
                     <h1>📑 전자의무기록 (EMR Chart)</h1>
@@ -359,11 +426,13 @@
                 </div>
 
                 <div class="emr-grid">
-                    <!-- 1열 카드 -->
+                    
+                    <!-- 1열 카드: 환자 기본 정보와 메모를 표시합니다. -->
                     <div class="col-1">
                         <div class="panel" style="padding: 10px;">
                             <div class="panel-header" style="margin: -10px -10px 10px -10px;">👤 환자 기본 정보</div>
                             
+                            <!-- 선택한 환자의 데이터를 여기에 뿌려줍니다. -->
                             <table class="info-table">
                                 <tr><th>등록번호:</th><td id="dChartNo">-</td></tr>
                                 <tr><th>성 명:</th><td id="dName" style="color:var(--primary-navy); font-size:12px;">-</td></tr>
@@ -374,6 +443,7 @@
                                 <tr><th>진료과/주치의:</th><td id="dDeptDoc">-</td></tr>
                             </table>
                             
+                            <!-- 진단 정보 및 입원일수/수술경과일 정보입니다. -->
                             <div style="border-top: 1px dashed var(--border-color); padding-top: 6px; margin-top: 4px;">
                                 <table class="info-table" style="margin:0;">
                                     <tr><th>KCD 코드:</th><td><span class="code-badge" id="dDiagCode">-</span></td></tr>
@@ -395,6 +465,7 @@
                             </div>
                         </div>
 
+                        <!-- 1열 하단의 특이사항 메모 작성 영역입니다. -->
                         <div class="panel" style="flex:1;">
                             <div class="panel-header">📌 특이사항 및 메모</div>
                             <div class="memo-area">
@@ -404,8 +475,9 @@
                         </div>
                     </div>
 
-                    <!-- 2열 카드 -->
+                    <!-- 2열 카드: 신체 마네킹과 빠른 환자 검색 기능이 있습니다. -->
                     <div class="col-2">
+                        <!-- 마네킹 부분 -->
                         <div class="panel" style="flex-shrink: 0;">
                             <div class="panel-header">
                                 <span>🧪 수술/욕창 마네킹</span>
@@ -416,7 +488,9 @@
                             </div>
                             <div style="text-align:center; color:var(--text-muted); font-size:10px; margin-top:6px;">[클릭 시 핀 추가 / 1번 클릭 수정, 2번 클릭 삭제]</div>
                             
+                            <!-- 마네킹 SVG 그림이 들어가는 영역입니다. 클릭하면 핀이 생성됩니다. -->
                             <div class="canvas-wrapper" id="bodyCanvas" onclick="addBodyMark(event)">
+                                <!-- 앞모습 -->
                                 <svg id="svgFront" class="body-svg" viewBox="0 0 100 200" fill="#cbd5e1">
                                     <circle cx="50" cy="20" r="11" />
                                     <path d="M42,32 L58,32 L64,85 L36,85 Z" />
@@ -425,6 +499,7 @@
                                     <path d="M37,86 L48,86 L46,170 L35,170 Z" />
                                     <path d="M52,86 L63,86 L65,170 L54,170 Z" />
                                 </svg>
+                                <!-- 뒷모습 (초기에는 숨김 처리) -->
                                 <svg id="svgBack" class="body-svg" viewBox="0 0 100 200" fill="#94a3b8" style="display:none;">
                                     <circle cx="50" cy="20" r="11" />
                                     <path d="M40,32 L60,32 L62,85 L38,85 Z" />
@@ -436,6 +511,7 @@
                                 </svg>
                             </div>
 
+                            <!-- 핀의 종류(수술, 욕창, 기구)를 선택하는 버튼들입니다. -->
                             <div style="padding: 0 6px 10px 6px; display:flex; gap:6px; justify-content:center;">
                                 <button class="sub-tab-btn active" id="btnTypeOp" onclick="setMarkType('OP')">🔴 수술부위</button>
                                 <button class="sub-tab-btn" id="btnTypeSore" onclick="setMarkType('SORE')">🔵 욕창부위</button>
@@ -443,6 +519,7 @@
                             </div>
                         </div>
 
+                        <!-- 2열 하단: 다른 환자로 빠르게 이동할 수 있는 목록입니다. -->
                         <div class="panel" style="flex:1; min-height: 180px;">
                             <div class="panel-header">
                                 <span>📋 환자 검색/목록</span>
@@ -455,10 +532,13 @@
                         </div>
                     </div>
 
-                    <!-- 3열 카드 -->
+                    <!-- 3열 카드: 상세 처방, 간호기록, 검사결과 등이 들어가는 가장 넓은 영역입니다. -->
                     <div class="col-3">
                         <div class="split-container">
+                            
+                            <!-- 상단 패널 (처방, 수술, 수혈, 검사, 간호기록 탭) -->
                             <div class="split-pane" id="topPane">
+                                <!-- 탭 버튼들 -->
                                 <div class="main-tab-bar">
                                     <button class="main-tab-btn active" onclick="openTopTab('prescriptionTab', this)">📋 처방내역</button>
                                     <button class="main-tab-btn" onclick="openTopTab('surgTab', this)">✂️ 수술/동의서</button>
@@ -467,7 +547,7 @@
                                     <button class="main-tab-btn" onclick="openTopTab('nurseTab', this)">📝 간호/투약 기록</button>
                                 </div>
 
-                                <!-- 처방내역 탭 -->
+                                <!-- 1. 처방내역 탭 화면 -->
                                 <div id="prescriptionTab" class="tab-content active">
                                     <div class="table-scroll-area">
                                         <table class="prescription-table-theme">
@@ -487,6 +567,7 @@
                                         </table>
                                     </div>
                                     
+                                    <!-- 처방내역을 새로 입력하는 영역 -->
                                     <div class="input-bar-bottom" style="gap:5px; background:#f8fafc; padding:8px; border:1px solid var(--border-color); border-radius:3px;">
                                         <input type="datetime-local" id="prescTime" style="width:135px;">
                                         <select id="prescType" style="width:75px; font-weight:bold;" onchange="onPrescTypeChange(this.value)">
@@ -502,6 +583,7 @@
                                         <input type="text" id="prescCode" placeholder="코드" style="width:60px;" oninput="onMedCodeInput(this.value)">
                                         <textarea id="prescNote" class="auto-expand-textarea" placeholder="처방 상세 내역 및 지시사항" rows="1" style="flex:1; min-width: 120px;" oninput="autoExpandTextarea(this)"></textarea>
                                         
+                                        <!-- 약물을 선택했을 때만 나타나는 용량/횟수/경로 입력칸 -->
                                         <div id="medDetailGroup" style="display:none; gap:3px; align-items:center;">
                                             <input type="text" id="prescDose" class="med-detail-input" placeholder="용량">
                                             <input type="text" id="prescFreq" class="med-detail-input" placeholder="횟수">
@@ -514,7 +596,7 @@
                                     </div>
                                 </div>
 
-                                <!-- 수술/동의서 탭 -->
+                                <!-- 2. 수술/동의서 탭 화면 -->
                                 <div id="surgTab" class="tab-content">
                                     <div class="table-scroll-area">
                                         <table class="prescription-table-theme">
@@ -535,7 +617,7 @@
                                     </div>
                                 </div>
 
-                                <!-- 수혈 관리 탭 -->
+                                <!-- 3. 수혈 관리 탭 화면 -->
                                 <div id="bloodTab" class="tab-content">
                                     <div class="table-scroll-area">
                                         <table class="prescription-table-theme">
@@ -579,7 +661,7 @@
                                     </div>
                                 </div>
 
-                                <!-- 검사 결과 탭 -->
+                                <!-- 4. 검사 결과 탭 화면 -->
                                 <div id="labTab" class="tab-content">
                                     <div class="table-scroll-area">
                                         <table class="prescription-table-theme">
@@ -618,7 +700,7 @@
                                     </div>
                                 </div>
 
-                                <!-- 간호/투약 기록 탭 -->
+                                <!-- 5. 간호/투약 기록 탭 화면 -->
                                 <div id="nurseTab" class="tab-content">
                                     <div class="table-scroll-area">
                                         <table class="prescription-table-theme">
@@ -643,19 +725,21 @@
 
                             </div>
 
+                            <!-- 상단과 하단을 나누고 접을 수 있게 해주는 경계선 바입니다. -->
                             <div class="collapsible-resizer-bar" onclick="toggleBottomPane()" title="클릭하여 하단 패널을 펼치거나 접습니다.">
                                 <button type="button" id="toggleResizerBtn">
                                     <span id="resizerIcon">▼</span> <span id="resizerText">하단 패널 접기 (V/S, I/O)</span>
                                 </button>
                             </div>
 
+                            <!-- 하단 패널 (V/S 차트와 I/O 차트) 영역입니다. -->
                             <div class="split-pane" id="bottomPane">
                                 <div class="main-tab-bar">
                                     <button class="main-tab-btn active" onclick="openBottomTab('vsTab', this)">📈 V/S (활력징후)</button>
                                     <button class="main-tab-btn" onclick="openBottomTab('ioTab', this)">📊 I/O (섭취/배설)</button>
                                 </div>
 
-                                <!-- V/S (활력징후) 탭 -->
+                                <!-- V/S (활력징후) 탭 화면 -->
                                 <div id="vsTab" class="tab-content active">
                                     <div class="chart-container"><canvas id="vsChart"></canvas></div>
                                     <div class="table-scroll-area">
@@ -673,7 +757,7 @@
                                     </div>
                                 </div>
 
-                                <!-- I/O (섭취/배설) 탭 -->
+                                <!-- I/O (섭취/배설) 탭 화면 -->
                                 <div id="ioTab" class="tab-content">
                                     <div class="chart-container"><canvas id="ioChart"></canvas></div>
                                     <div class="table-scroll-area">
@@ -694,14 +778,13 @@
 
                 </div>
             </div>
-            <!-- 중략된 HTML 컴포넌트들 원본과 일치하게 유지 (EMR 차트 페이지 등...) -->
-            <!-- 전체 자바스크립트로 점프 -->
             
         </div>
     </div>
 
-        <!-- 3. 시스템 설정 화면 -->
+    <!-- 3. 시스템 설정 화면 (처음엔 감춰져 있습니다.) -->
     <main id="view-settings" class="hidden w-full p-4">
+        <!-- 설정 화면 상단 제목과 뒤로 가기 버튼 -->
         <div class="flex items-center justify-between border-b pb-4 px-2">
             <div>
                 <h2 class="text-[21px] font-bold text-slate-900">시스템 설정</h2>
@@ -710,6 +793,7 @@
             <button onclick="showView('patients')" class="px-3 py-1.5 border rounded-lg text-[15px] text-gray-600 hover:bg-gray-50">← 환자 목록으로 돌아가기</button>
         </div>
 
+        <!-- 설정 화면의 하위 탭 버튼들입니다. -->
         <div class="flex border-b border-gray-300 mt-6 gap-1">
             <button class="setting-tab-btn active" onclick="switchSettingTab('dept-panel', this)">🏥 진료과 관리</button>
             <button class="setting-tab-btn" onclick="switchSettingTab('doctor-panel', this)">👨‍⚕️ 주치의 관리</button>
@@ -720,7 +804,7 @@
         </div>
 
         <div class="mt-4 w-full">
-            <!-- 1. 진료과 관리 -->
+            <!-- 1. 진료과 관리 패널 -->
             <div id="dept-panel" class="setting-panel active bg-white p-6 rounded-xl shadow-sm border space-y-4 flex-col min-h-[500px] w-full">
                 <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
                     <span>🏥 진료과 관리</span>
@@ -733,7 +817,7 @@
                 <ul id="dept-list" class="divide-y overflow-y-auto border rounded-lg flex-1 min-h-[350px]"></ul>
             </div>
 
-            <!-- 2. 주치의 관리 -->
+            <!-- 2. 주치의 관리 패널 -->
             <div id="doctor-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex-col min-h-[500px] w-full">
                 <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
                     <span>👨‍⚕️ 주치의 관리</span>
@@ -751,7 +835,7 @@
                 <ul id="doctor-list" class="divide-y overflow-y-auto border rounded-lg flex-1 min-h-[350px]"></ul>
             </div>
 
-            <!-- 3. 진단명 / KCD DB -->
+            <!-- 3. 진단명 / KCD DB 패널 -->
             <div id="diag-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex-col min-h-[500px] w-full">
                 <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
                     <span>🩺 KCD DB 관리</span>
@@ -773,7 +857,7 @@
                 <ul id="diag-list" class="divide-y overflow-y-auto border rounded-lg flex-1 min-h-[350px]"></ul>
             </div>
 
-            <!-- 4. 처방 DB -->
+            <!-- 4. 처방 DB 패널 -->
             <div id="drug-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex-col min-h-[500px] w-full">
                 <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
                     <span>💊 처방 DB 관리</span>
@@ -789,7 +873,7 @@
                 <ul id="drug-list" class="divide-y overflow-y-auto border rounded-lg flex-1 min-h-[350px]"></ul>
             </div>
 
-            <!-- 5. 검사결과 DB -->
+            <!-- 5. 검사결과 DB 패널 -->
             <div id="labdb-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex-col min-h-[500px] w-full">
                 <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
                     <span>🧪 검사결과 DB 관리</span>
@@ -812,7 +896,7 @@
                 <ul id="labdb-list" class="divide-y overflow-y-auto border rounded-lg flex-1 min-h-[350px]"></ul>
             </div>
 
-            <!-- 6. 간호기록 DB -->
+            <!-- 6. 간호기록 DB 패널 -->
             <div id="nursedb-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex-col min-h-[500px] w-full">
                 <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
                     <span>📝 간호기록 DB 관리</span>
@@ -828,46 +912,55 @@
         </div>
     </main>
 
-    <!-- JavaScript 스크립트 -->
+    <!-- JavaScript 로직 시작 - 데이터를 관리하고 화면을 움직이게 하는 뇌 역할입니다. -->
     <script>
+        // 데이터를 주고받을 가짜(또는 진짜) 서버 주소입니다.
         const API_BASE_URL = '/api';
 
-        let departments = [];
-        let doctors = [];
-        let diagnosisDatabase = [];
-        let drugDatabase = [];
-        let labDatabase = [];
-        let nurseDatabase = [];
-        let patients = [];
+        // 서버에서 불러올 데이터를 담아둘 빈 상자(배열)들을 만듭니다.
+        let departments = []; // 진료과 목록
+        let doctors = [];     // 의사 목록
+        let diagnosisDatabase = []; // KCD 진단코드 목록
+        let drugDatabase = [];      // 약물/처방 목록
+        let labDatabase = [];       // 검사결과 목록
+        let nurseDatabase = [];     // 간호기록 목록
+        let patients = [];          // 환자 정보 목록
 
-        let currentPatientIndex = null;
-        let editingPatientIndex = null;
-        let editingPrescIndex = null;
+        // 현재 프로그램의 상태를 기억하는 변수들입니다.
+        let currentPatientIndex = null; // 지금 보고 있는 환자가 누구인지 기억
+        let editingPatientIndex = null; // 수정 중인 환자가 누구인지 기억
+        let editingPrescIndex = null;   // 수정 중인 처방전 기록 기억
         let targetPrescModalIndex = null;
-        let currentBodySide = 'front';
-        let selectedMarkType = 'OP';
-        let vsChartInstance = null;
-        let ioChartInstance = null;
+        let currentBodySide = 'front';  // 마네킹이 앞모습인지 뒷모습인지 기억
+        let selectedMarkType = 'OP';    // 선택된 핀 종류(수술부위 등) 기억
+        let vsChartInstance = null;     // V/S 그래프 객체
+        let ioChartInstance = null;     // I/O 그래프 객체
 
-        // V/S 항목 표시/숨김 관리 상태값
+        // V/S 항목 중 어떤 것을 차트에 보여줄지 숨길지 결정하는 값입니다.
         let vsVisibility = { bp: true, hr: true, rr: true, bt: true };
 
         let pinClickTimer = null;
         let targetPinIndex = null;
 
+        // 설정 화면에서 탭을 누를 때마다 화면을 바꿔주는 함수입니다.
         function switchSettingTab(panelId, btnElement) {
+            // 모든 탭 버튼에서 'active(선택됨)' 효과를 지우고
             document.querySelectorAll('.setting-tab-btn').forEach(btn => btn.classList.remove('active'));
+            // 방금 누른 버튼에만 'active' 효과를 줍니다.
             btnElement.classList.add('active');
 
+            // 모든 패널을 숨기고 방금 선택한 패널만 보이게 합니다.
             document.querySelectorAll('.setting-panel').forEach(panel => panel.classList.remove('active'));
             document.getElementById(panelId).classList.add('active');
         }
 
+        // 입력 칸(textarea)에 글을 길게 쓰면 자동으로 상자 높이를 늘려주는 함수입니다.
         function autoExpandTextarea(element) {
-            element.style.height = 'auto';
-            element.style.height = (element.scrollHeight) + 'px';
+            element.style.height = 'auto'; // 원래 높이로 일단 줄인 뒤
+            element.style.height = (element.scrollHeight) + 'px'; // 글씨가 차지하는 높이만큼 쫘악 늘립니다.
         }
 
+        // 처방 구분을 바꿨을 때 '약물'이면 용량/횟수 입력칸을 보여주고, 아니면 숨깁니다.
         function onPrescTypeChange(value) {
             const group = document.getElementById('medDetailGroup');
             if (value === '약물') {
@@ -877,6 +970,7 @@
             }
         }
 
+        // 하단 패널(V/S, I/O)을 접었다 폈다 하는 버튼 기능입니다.
         function toggleBottomPane() {
             const bottomPane = document.getElementById('bottomPane');
             const icon = document.getElementById('resizerIcon');
@@ -893,8 +987,10 @@
             }
         }
 
+        // 프로그램이 시작될 때 서버에서 데이터를 모두 가져오는(fetch) 함수입니다.
         async function fetchInitialData() {
             try {
+                // 여러 데이터를 동시에 가져옵니다.
                 const [deptRes, docRes, diagRes, drugRes, labDbRes, nurseDbRes, patRes] = await Promise.all([
                     fetch(`${API_BASE_URL}/departments`).catch(() => null),
                     fetch(`${API_BASE_URL}/doctors`).catch(() => null),
@@ -905,6 +1001,7 @@
                     fetch(`${API_BASE_URL}/patients`).catch(() => null)
                 ]);
 
+                // 가져온 데이터가 정상이면 빈 상자에 채워 넣습니다.
                 if (deptRes && deptRes.ok) departments = await deptRes.json();
                 if (docRes && docRes.ok) doctors = await docRes.json();
                 if (diagRes && diagRes.ok) diagnosisDatabase = await diagRes.json();
@@ -918,11 +1015,13 @@
             }
         }
 
+        // 로그인 버튼을 누르면 실행되는 함수입니다.
         async function login() {
             const uid = document.getElementById('uid').value.trim();
             const upw = document.getElementById('upw').value.trim();
 
             try {
+                // 아이디와 비밀번호를 서버에 보내 확인을 받습니다.
                 const response = await fetch(`${API_BASE_URL}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -930,26 +1029,30 @@
                 });
 
                 if (response.ok) {
-                    await fetchInitialData();
-                    showView('patients');
+                    await fetchInitialData(); // 데이터를 불러오고
+                    showView('patients');     // 환자 화면으로 넘어갑니다.
                 } else {
                     const data = await response.json();
                     alert(data.message || '아이디 또는 비밀번호가 올바르지 않습니다.');
                 }
             } catch (error) {
+                // 에러가 나더라도 임시로 화면이 넘어가게 만들어져 있네요.
                 console.error('로그인 중 오류 발생:', error);
                 await fetchInitialData();
                 showView('patients');
             }
         }
 
+        // 로그아웃 버튼을 누르면 다시 로그인 창으로 돌아갑니다.
         function handleLogout() { showView('login'); }
 
+        // 기록들을 시간순(과거->최신)으로 정렬해주는 도우미 함수입니다.
         function sortRecordsByTime(recordsArray) {
             if (!Array.isArray(recordsArray)) return;
             recordsArray.sort((a, b) => new Date(a.time) - new Date(b.time));
         }
 
+        // 환자 정보를 서버에 저장하는 함수입니다.
         async function savePatientToBackend(patientData) {
             try {
                 const response = await fetch(`${API_BASE_URL}/patients`, {
@@ -964,6 +1067,7 @@
             }
         }
 
+        // 메인 EMR 화면의 위쪽 탭(처방, 수술 등)을 클릭했을 때 내용물을 바꿔주는 함수입니다.
         function openTopTab(tabId, btn) {
             const pane = btn.closest('.split-pane');
             pane.querySelectorAll('.main-tab-bar .main-tab-btn').forEach(b => b.classList.remove('active'));
@@ -972,6 +1076,7 @@
             document.getElementById(tabId).classList.add('active');
         }
 
+        // 메인 EMR 화면의 아래쪽 탭(V/S, I/O)을 클릭했을 때 내용물을 바꿔주는 함수입니다.
         function openBottomTab(tabId, btn) {
             const pane = btn.closest('.split-pane');
             pane.querySelectorAll('.main-tab-bar .main-tab-btn').forEach(b => b.classList.remove('active'));
@@ -980,7 +1085,9 @@
             document.getElementById(tabId).classList.add('active');
         }
 
+        // 화면을 크게 통째로 바꾸는 함수입니다. (예: 로그인 화면 -> 환자 목록 화면 -> 설정 화면)
         async function showView(viewName) {
+            // 일단 모든 뷰를 숨깁니다.
             document.getElementById('view-login').classList.add('hidden');
             document.getElementById('view-patients').classList.add('hidden');
             document.getElementById('view-settings').classList.add('hidden');
@@ -993,6 +1100,7 @@
                 document.getElementById(`view-${viewName}`).classList.remove('hidden');
             }
 
+            // 설정화면으로 가면 설정을 그려주고, 환자화면으로 가면 환자정보를 그려줍니다.
             if (viewName === 'settings') renderSettings();
             if (viewName === 'patients') {
                 await fetchInitialData();
@@ -1005,7 +1113,9 @@
             }
         }
 
-                function renderSettings() {
+        // 설정 화면의 데이터를 HTML로 예쁘게 그려주는(렌더링) 함수입니다.
+        function renderSettings() {
+            // 진료과 목록을 화면에 그립니다.
             const deptList = document.getElementById('dept-list');
             document.getElementById('dept-count').innerText = `${departments.length}개`;
             deptList.innerHTML = departments.map((dept, index) => `
@@ -1018,9 +1128,11 @@
                 </li>
             `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 진료과가 없습니다.</li>';
 
+            // 셀렉트 박스(선택창)에도 진료과 목록을 채워넣습니다.
             document.getElementById('doc-dept-select').innerHTML = '<option value="">진료과 선택</option>' + departments.map(d => `<option value="${d}">${d}</option>`).join('');
             document.getElementById('diag-dept-select').innerHTML = '<option value="">진료과 선택</option>' + departments.map(d => `<option value="${d}">${d}</option>`).join('');
 
+            // 주치의 목록을 그립니다.
             const docList = document.getElementById('doctor-list');
             document.getElementById('doctor-count').innerText = `${doctors.length}명`;
             docList.innerHTML = doctors.map((doc) => `
@@ -1036,6 +1148,7 @@
                 </li>
             `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 주치의가 없습니다.</li>';
 
+            // KCD 진단명 목록을 그립니다.
             const diagList = document.getElementById('diag-list');
             document.getElementById('diag-count').innerText = `${diagnosisDatabase.length}개`;
             diagList.innerHTML = diagnosisDatabase.map((diag) => `
@@ -1051,6 +1164,7 @@
                 </li>
             `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 진단명이 없습니다.</li>';
 
+            // 처방 약물 목록을 그립니다.
             const drugList = document.getElementById('drug-list');
             document.getElementById('med-count').innerText = `${drugDatabase.length}개`;
             drugList.innerHTML = drugDatabase.map((drug) => `
@@ -1066,6 +1180,7 @@
                 </li>
             `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 처방 데이터가 없습니다.</li>';
 
+            // 검사결과 DB 목록을 그립니다.
             const labdbList = document.getElementById('labdb-list');
             document.getElementById('labdb-count').innerText = `${labDatabase.length}개`;
             labdbList.innerHTML = labDatabase.map((item) => `
@@ -1081,6 +1196,7 @@
                 </li>
             `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 검사 DB가 없습니다.</li>';
 
+            // 간호기록 문구 DB 목록을 그립니다.
             const nursedbList = document.getElementById('nursedb-list');
             document.getElementById('nursedb-count').innerText = `${nurseDatabase.length}개`;
             nursedbList.innerHTML = nurseDatabase.map((item) => `
@@ -1096,16 +1212,18 @@
             `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 간호기록 DB가 없습니다.</li>';
         }
 
+        // 설정 창에서 새 간호기록 문구를 추가할 때 실행됩니다.
         async function handleAddNurseDb(e) {
-            e.preventDefault();
+            e.preventDefault(); // 버튼 눌렀을 때 페이지 새로고침 방지
             const category = document.getElementById('nursedb-category-input').value.trim();
             const content = document.getElementById('nursedb-content-input').value.trim();
 
             if (category && content) {
-                const newItem = { id: Date.now(), category, content };
-                nurseDatabase.push(newItem);
+                const newItem = { id: Date.now(), category, content }; // 새 데이터 생성
+                nurseDatabase.push(newItem); // 배열에 추가
                 
                 try {
+                    // 서버로 보내서 저장
                     await fetch(`${API_BASE_URL}/nurses/db`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1113,12 +1231,14 @@
                     });
                 } catch(e) {}
 
+                // 입력칸 초기화 후 다시 그리기
                 document.getElementById('nursedb-category-input').value = '';
                 document.getElementById('nursedb-content-input').value = '';
                 renderSettings();
             }
         }
 
+        // 간호기록 문구 삭제 함수
         async function deleteNurseDb(id) {
             if (confirm('해당 간호기록 DB 항목을 삭제하시겠습니까?')) {
                 nurseDatabase = nurseDatabase.filter(item => item.id !== id);
@@ -1127,6 +1247,7 @@
             }
         }
 
+        // 새 검사결과 DB 추가 함수
         async function handleAddLabDb(e) {
             e.preventDefault();
             const category = document.getElementById('labdb-category-input').value;
@@ -1153,6 +1274,7 @@
             }
         }
 
+        // 검사결과 DB 삭제 함수
         async function deleteLabDb(id) {
             if (confirm('해당 검사 DB 항목을 삭제하시겠습니까?')) {
                 labDatabase = labDatabase.filter(item => item.id !== id);
@@ -1161,19 +1283,21 @@
             }
         }
 
+        // EMR 차트 내에서 검사 구분을 선택했을 때 세부 검사목록을 바꿔주는 함수
         function onLabCategoryChange(val) {
             const itemSelect = document.getElementById('labItemSelect');
             const customCatInput = document.getElementById('labCategoryCustom');
             const customItemInput = document.getElementById('labItemCustom');
 
-            if (val === 'custom') {
-                customCatInput.style.display = 'inline-block';
-                itemSelect.style.display = 'none';
+            if (val === 'custom') { // 직접 입력을 골랐다면
+                customCatInput.style.display = 'inline-block'; // 직접 입력칸 표시
+                itemSelect.style.display = 'none'; // 선택창 숨김
                 customItemInput.style.display = 'inline-block';
-            } else {
+            } else { // 기존 목록을 골랐다면
                 customCatInput.style.display = 'none';
                 itemSelect.style.display = 'inline-block';
                 
+                // 해당 카테고리에 맞는 검사들만 걸러서 목록을 만듭니다.
                 const filtered = labDatabase.filter(d => d.category === val);
                 itemSelect.innerHTML = '<option value="">검사명 선택</option>' + 
                     filtered.map(d => `<option value="${d.name}" data-ref="${d.refRange||''}" data-unit="${d.unit||''}">${d.name}</option>`).join('') +
@@ -1182,6 +1306,7 @@
             }
         }
 
+        // 세부 검사명을 선택했을 때, 정상수치(RefRange)와 단위(Unit)를 자동으로 채워주는 함수
         function onLabItemChange(select) {
             const customItemInput = document.getElementById('labItemCustom');
             if (select.value === 'custom') {
@@ -1198,6 +1323,7 @@
             }
         }
 
+        // 설정 창: 새 진료과 추가
         async function handleAddDept(e) {
             e.preventDefault();
             const input = document.getElementById('dept-input');
@@ -1208,6 +1334,7 @@
             }
         }
 
+        // 설정 창: 진료과 수정
         async function editDept(index) {
             const current = departments[index];
             const updated = prompt('진료과명을 수정하세요:', current);
@@ -1217,6 +1344,7 @@
             }
         }
 
+        // 설정 창: 진료과 삭제
         async function deleteDept(index) {
             if (confirm(`'${departments[index]}' 진료과를 삭제하시겠습니까?`)) {
                 await fetch(`${API_BASE_URL}/departments/${encodeURIComponent(departments[index])}`, { method: 'DELETE' }).catch(() => null);
@@ -1224,6 +1352,7 @@
             }
         }
 
+        // 설정 창: 새 주치의 추가
         async function handleAddDoctor(e) {
             e.preventDefault();
             const dept = document.getElementById('doc-dept-select').value;
@@ -1235,6 +1364,7 @@
             }
         }
 
+        // 설정 창: 주치의 수정
         async function editDoctor(id) {
             const doc = doctors.find(d => d.id === id);
             if (!doc) return;
@@ -1245,6 +1375,7 @@
             }
         }
 
+        // 설정 창: 주치의 삭제
         async function deleteDoctor(id) {
             if (confirm('해당 주치의를 삭제하시겠습니까?')) {
                 await fetch(`${API_BASE_URL}/doctors/${id}`, { method: 'DELETE' }).catch(() => null);
@@ -1252,6 +1383,7 @@
             }
         }
 
+        // 설정 창: 새 진단명(KCD) 추가
         async function handleAddDiagnosis(e) {
             e.preventDefault();
             const code = document.getElementById('diag-code-input').value.trim();
@@ -1265,6 +1397,7 @@
             }
         }
 
+        // 설정 창: 진단명 수정
         async function editDiagnosis(id) {
             const diag = diagnosisDatabase.find(d => d.id === id);
             if (!diag) return;
@@ -1275,6 +1408,7 @@
             }
         }
 
+        // 설정 창: 진단명 삭제
         async function deleteDiagnosis(id) {
             if (confirm('해당 진단명을 DB에서 삭제하시겠습니까?')) {
                 await fetch(`${API_BASE_URL}/diagnoses/${id}`, { method: 'DELETE' }).catch(() => null);
@@ -1282,6 +1416,7 @@
             }
         }
 
+        // 환자 등록/수정 화면에서 쓸 진단명 선택창을 세팅해줍니다.
         function updateDiagnosisDropdown() {
             const select = document.getElementById('pDiagnosisSelect');
             if(!select) return;
@@ -1291,6 +1426,7 @@
             select.innerHTML = html;
         }
 
+        // '직접 입력'을 고르면 입력창이 뿅 나타나게 하는 함수 (진단명)
         function toggleDiagnosisCustomInput(select) {
             const codeInput = document.getElementById('pDiagnosisCustomCode');
             const customInput = document.getElementById('pDiagnosisCustom');
@@ -1298,28 +1434,31 @@
             else { codeInput.style.display = 'none'; customInput.style.display = 'none'; }
         }
 
+        // '직접 입력'을 고르면 입력창이 뿅 나타나게 하는 함수 (성별)
         function toggleGenderCustomInput(select) {
             const customInput = document.getElementById('pGenderCustom');
             if (select.value === 'custom') { customInput.style.display = 'inline-block'; }
             else { customInput.style.display = 'none'; }
         }
 
+        // 진단명을 선택하면, 해당 진단이 속한 '진료과'로 자동 설정해주는 똑똑한 기능입니다.
         function onDiagnosisSelectChange(select) {
-            toggleDiagnosisCustomInput(select);
+            toggleDiagnosisCustomInput(select); // 직접입력이면 창 열어줌
             const selectedOpt = select.options[select.selectedIndex];
             if(selectedOpt) {
-                const category = selectedOpt.getAttribute('data-category');
+                const category = selectedOpt.getAttribute('data-category'); // 진단명의 소속 진료과 확인
                 if(category) {
                     const pDeptSelect = document.getElementById('pDept');
                     for(let i = 0; i < pDeptSelect.options.length; i++) {
                         if(pDeptSelect.options[i].value === category) {
-                            pDeptSelect.selectedIndex = i; updateDoctorSelectOptions(); break;
+                            pDeptSelect.selectedIndex = i; updateDoctorSelectOptions(); break; // 진료과 변경!
                         }
                     }
                 }
             }
         }
 
+        // 설정 창: 처방 약물 추가
         async function handleAddDrug(e) {
             e.preventDefault();
             const code = document.getElementById('drug-code-input').value.trim();
@@ -1334,6 +1473,7 @@
             }
         }
 
+        // 설정 창: 처방 약물 수정
         async function editDrug(id) {
             const drug = drugDatabase.find(d => d.id === id);
             if (!drug) return;
@@ -1344,6 +1484,7 @@
             }
         }
 
+        // 설정 창: 처방 약물 삭제
         async function deleteDrug(id) {
             if (confirm('해당 처방/약물 데이터를 DB에서 삭제하시겠습니까?')) {
                 await fetch(`${API_BASE_URL}/drugs/${id}`, { method: 'DELETE' }).catch(() => null);
@@ -1351,12 +1492,14 @@
             }
         }
 
+        // 차트 안의 약물 선택창을 갱신하는 기능
         function updateMedDbDropdown() {
             const select = document.getElementById('medDbSelect');
             if(!select) return;
             select.innerHTML = '<option value="">-- DB 처방 선택 --</option>' + drugDatabase.map(d => `<option value="${d.id}">[${d.code}] ${d.name}</option>`).join('');
         }
 
+        // 선택창에서 약을 고르면, 처방코드와 상세내역 칸을 자동으로 채워줍니다.
         function selectMedFromDb(select) {
             const drugId = Number(select.value);
             if(!drugId) return;
@@ -1365,10 +1508,11 @@
                 document.getElementById('prescCode').value = drug.code || '';
                 const prescNote = document.getElementById('prescNote');
                 prescNote.value = drug.name || '';
-                autoExpandTextarea(prescNote);
+                autoExpandTextarea(prescNote); // 글자가 길면 상자를 늘려줌
             }
         }
 
+        // 코드 입력칸에 글씨를 쳤을 때, DB에 있는 코드면 자동으로 약이 선택되는 기능입니다.
         function onMedCodeInput(val) {
             const cleanVal = val.trim().toUpperCase();
             const drug = drugDatabase.find(d => d.code.toUpperCase() === cleanVal);
@@ -1384,12 +1528,14 @@
             }
         }
 
+        // 환자 등록창의 '진료과' 선택지를 세팅합니다.
         function updateDeptSelectOptions() {
             const pDeptSelect = document.getElementById('pDept');
             pDeptSelect.innerHTML = departments.map(d => `<option value="${d}">${d}</option>`).join('');
-            updateDoctorSelectOptions();
+            updateDoctorSelectOptions(); // 진료과가 정해지면 주치의 목록도 세팅
         }
 
+        // 고른 진료과에 소속된 주치의들만 모아서 선택지를 만들어줍니다.
         function updateDoctorSelectOptions() {
             const selectedDept = document.getElementById('pDept').value;
             const pDoctorSelect = document.getElementById('pDoctor');
@@ -1399,8 +1545,10 @@
             } else { pDoctorSelect.innerHTML = '<option value="">등록된 의사 없음</option>'; }
         }
 
+        // 생년월일 6자리(또는 8자리)를 치면 자동으로 나이를 계산해주는 함수입니다.
         function autoCalculateAge(birthVal) {
             const ageInput = document.getElementById('pAge');
+            // 숫자만 남깁니다.
             const cleanBirth = birthVal.replace(/[^0-9]/g, '');
             if (cleanBirth.length !== 6 && cleanBirth.length !== 8) { ageInput.value = ''; return; }
 
@@ -1413,6 +1561,7 @@
             if (cleanBirth.length === 6) {
                 let year2Digit = parseInt(cleanBirth.substring(0, 2), 10);
                 let twoDigitCurrentYear = currentYear % 100;
+                // 1900년대생인지 2000년대생인지 구분
                 birthYear = year2Digit > twoDigitCurrentYear ? 1900 + year2Digit : 2000 + year2Digit;
                 birthMonth = parseInt(cleanBirth.substring(2, 4), 10);
                 birthDay = parseInt(cleanBirth.substring(4, 6), 10);
@@ -1422,12 +1571,15 @@
                 birthDay = parseInt(cleanBirth.substring(6, 8), 10);
             }
 
+            // 잘못된 월/일이면 멈춥니다.
             if (birthMonth < 1 || birthMonth > 12 || birthDay < 1 || birthDay > 31) { ageInput.value = ''; return; }
             let age = currentYear - birthYear;
+            // 생일이 안 지났으면 한 살 뺍니다. (만 나이 계산)
             if (currentMonth < birthMonth || (currentMonth === birthMonth && currentDate < birthDay)) { age--; }
             ageInput.value = age >= 0 ? age : 0;
         }
 
+        // 입력창들에 '현재 시간'을 기본으로 꽂아주는 함수입니다.
         function initCurrentTimeInputs() {
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -1439,6 +1591,7 @@
             }
         }
 
+        // 작성한 환자 폼을 최종적으로 묶어서 저장(또는 수정)하는 기능입니다.
         async function savePatientForm() {
             const name = document.getElementById('pName').value.trim();
             const birth = document.getElementById('pBirth').value.trim();
@@ -1467,6 +1620,7 @@
 
             const cc = document.getElementById('pCC').value.trim() || '특이사항 없음';
 
+            // 지금이 '수정' 중이라면 기존 데이터를 덮어씁니다.
             if(editingPatientIndex !== null) {
                 const p = patients[editingPatientIndex];
                 p.name = name; p.birth = birth; p.age = age; p.gender = gender; p.bloodType = bloodType;
@@ -1476,6 +1630,7 @@
                 await fetch(`${API_BASE_URL}/patients/${p.chartNo}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) }).catch(() => null);
                 alert(`${p.name} 환자 정보가 수정되었습니다.`); editingPatientIndex = null;
             } else {
+                // '신규 등록' 이라면 새 데이터를 만듭니다. 차트번호는 무작위(시간)로 만듭니다.
                 const chartNo = 'P' + String(Date.now()).slice(-5);
                 const newPatient = {
                     chartNo, name, birth, age, gender, bloodType, dept, doctor, room, hd, pod,
@@ -1488,6 +1643,7 @@
             await fetchInitialData(); resetForm(); renderPatientList();
         }
 
+        // 환자 등록/수정 입력칸을 모두 텅 비워주는 함수입니다.
         function resetForm() {
             document.getElementById('pName').value = '';
             document.getElementById('pBirth').value = '';
@@ -1508,11 +1664,13 @@
             document.getElementById('btnCancelEdit').style.display = 'none';
         }
 
+        // 환자 목록 표(HTML 테이블)에 들어갈 내용을 만들어서 화면에 찍어줍니다.
         function renderPatientList() {
             const tbody = document.getElementById('patientTableBody');
             tbody.innerHTML = patients.length ? '' : `<tr><td colspan="9">등록된 환자가 없습니다.</td></tr>`;
             patients.forEach((p, idx) => {
                 const genderStr = p.gender ? ` / ${p.gender}` : '';
+                // <tr> 은 한 줄(행)을 뜻하고, <td>는 칸(열)을 뜻합니다.
                 tbody.innerHTML += `
                     <tr>
                         <td><b>${p.chartNo}</b></td>
@@ -1532,6 +1690,7 @@
             });
         }
 
+        // '수정' 버튼을 눌렀을 때 폼 안에 기존 데이터를 채워넣어 줍니다.
         function editPatient(idx) {
             editingPatientIndex = idx;
             const p = patients[idx];
@@ -1581,8 +1740,10 @@
             document.getElementById('btnCancelEdit').style.display = 'inline-block';
         }
 
+        // 수정 취소 버튼
         function cancelEdit() { resetForm(); }
 
+        // 환자 삭제 기능입니다.
         async function deletePatient(idx) {
             if(confirm(`'${patients[idx].name}' 환자 정보를 삭제하시겠습니까?`)) {
                 const chartNo = patients[idx].chartNo;
@@ -1594,11 +1755,13 @@
             }
         }
 
+        // EMR 차트 안쪽 2열 하단에 있는 작고 빠른 환자 검색 리스트를 그립니다.
         function renderQuickPatientList(filterText = '') {
             const listContainer = document.getElementById('quickPatientList');
             const countSpan = document.getElementById('quickPatientCount');
             if (!listContainer) return;
 
+            // 검색어(filterText)가 포함된 환자만 걸러냅니다.
             const filtered = patients.filter(p => {
                 const keyword = filterText.toLowerCase();
                 return p.name.toLowerCase().includes(keyword) || p.chartNo.toLowerCase().includes(keyword);
@@ -1609,6 +1772,7 @@
                 listContainer.innerHTML = '<div style="padding: 10px; text-align: center; color: #888;">검색 결과가 없습니다.</div>'; return;
             }
 
+            // 검색된 환자 목록을 HTML로 바꿔 넣습니다.
             listContainer.innerHTML = filtered.map((p) => {
                 const originalIndex = patients.findIndex(originalP => originalP.chartNo === p.chartNo);
                 const isSelected = originalIndex === currentPatientIndex;
@@ -1626,18 +1790,22 @@
             }).join('');
         }
 
+        // 검색창에 글자를 칠 때마다 목록을 다시 그리는 함수입니다.
         function filterQuickPatientList() {
             renderQuickPatientList(document.getElementById('quickSearchInput').value);
         }
 
+        // 빠른 목록에서 환자를 클릭하면 상세 차트를 엽니다.
         function selectQuickPatient(index) {
             if (index !== -1) openPatientDetail(index);
         }
 
+        // 환자 상세 EMR 차트 화면을 열어주고 데이터를 전부 세팅하는 함수입니다.
         function openPatientDetail(index) {
-            currentPatientIndex = index;
-            const p = patients[index];
+            currentPatientIndex = index; // 내가 지금 클릭한 환자의 순서 번호를 기억합니다.
+            const p = patients[index]; // 환자 정보를 꺼내옵니다.
 
+            // 1열의 '환자 기본 정보' 카드에 데이터를 채웁니다.
             document.getElementById('dChartNo').innerText = p.chartNo;
             document.getElementById('dName').innerText = p.name;
             document.getElementById('dAgeGender').innerText = `만 ${p.age} 세 / ${p.gender || '-'}`;
@@ -1652,6 +1820,7 @@
             document.getElementById('dPOD').innerText = (p.pod !== undefined && p.pod !== null && p.pod !== '') ? `#${p.pod}` : '-';
             document.getElementById('patientMemo').value = p.memo || '';
 
+            // 나머지 다른 구역(마네킹, 목록, 기록 등)도 이 환자에 맞춰서 새로고침 합니다.
             renderQuickPatientList();
             renderBodyMarks();
             renderAllRecords();
@@ -1660,138 +1829,209 @@
             onLabCategoryChange(document.getElementById('labCategorySelect').value);
             onPrescTypeChange(document.getElementById('prescType').value);
 
+            // 환자 목록 페이지를 숨기고, 상세 차트 페이지를 화면에 보여줍니다.
             document.getElementById('listPage').style.display = 'none';
             document.getElementById('detailPage').style.display = 'flex';
         }
 
+        // 마네킹 탭에서 '앞모습', '뒷모습' 버튼을 눌렀을 때 그림을 바꿔주는 함수입니다.
         function setBodySide(side) {
-            currentBodySide = side;
+            currentBodySide = side; // 앞(front)인지 뒤(back)인지 기억
+            // SVG 그림의 display를 껐다 켰다 해서 보여줍니다.
             document.getElementById('svgFront').style.display = side === 'front' ? 'block' : 'none';
             document.getElementById('svgBack').style.display = side === 'back' ? 'block' : 'none';
+            // 버튼 디자인(색상)도 선택한 버튼에만 진하게 적용(active)합니다.
             document.getElementById('btnSideFront').className = 'sub-tab-btn ' + (side === 'front' ? 'active' : '');
             document.getElementById('btnSideBack').className = 'sub-tab-btn ' + (side === 'back' ? 'active' : '');
+            // 핀 위치도 업데이트합니다.
             renderBodyMarks();
         }
-
+// 마커(핀)의 종류를 설정하는 함수입니다. (예: 수술 부위, 욕창 부위, 적용 기구 등)
         function setMarkType(type) {
-            selectedMarkType = type;
+            // 선택된 마커 종류를 변수에 저장해 둡니다. 나중에 핀을 추가할 때 이 값을 사용해요.
+            selectedMarkType = type; 
+            
+            // 버튼들의 디자인(class)을 업데이트해서, 현재 어떤 버튼이 활성화되었는지 시각적으로 표시해 줍니다.
             document.getElementById('btnTypeOp').className = 'sub-tab-btn ' + (type === 'OP' ? 'active' : '');
             document.getElementById('btnTypeSore').className = 'sub-tab-btn ' + (type === 'SORE' ? 'active' : '');
             document.getElementById('btnTypeDevice').className = 'sub-tab-btn ' + (type === 'DEVICE' ? 'active' : '');
         }
 
+        // 마네킹 이미지 위에 마커(핀)를 새로 추가할 때 실행되는 비동기 함수입니다.
         async function addBodyMark(event) {
+            // 클릭한 위치에 이미 다른 핀(.pin-wrapper)이 있다면 중복해서 추가되지 않도록 막아줍니다.
             if(event.target.closest('.pin-wrapper')) return;
+            
+            // 이미지를 기준으로 클릭한 위치의 X, Y 좌표를 계산합니다. (비율(%)로 계산해서 화면 크기가 변해도 위치를 유지해요.)
             const rect = event.currentTarget.getBoundingClientRect();
             const x = Math.round(((event.clientX - rect.left) / rect.width) * 100);
             const y = Math.round(((event.clientY - rect.top) / rect.height) * 100);
+            
+            // 현재 화면에 보이는 것이 앞모습인지 뒷모습인지 텍스트로 저장합니다.
             const sideText = currentBodySide === 'front' ? '앞모습' : '뒷모습';
             
+            // 어떤 종류의 마커를 찍는지 한글 이름으로 정해줍니다.
             let typeName = '수술 부위';
             if (selectedMarkType === 'SORE') typeName = '욕창 부위';
             else if (selectedMarkType === 'DEVICE') typeName = '적용 기구';
 
+            // 사용자에게 마커에 대한 메모를 입력받는 알림창(prompt)을 띄웁니다.
             const note = prompt(`[${sideText} - ${typeName}] 메모를 입력하세요:`);
-            if(!note) return;
+            if(!note) return; // 메모를 입력하지 않고 취소하면 함수를 종료합니다.
 
+            // 현재 화면에 열려있는 환자 정보를 가져옵니다.
             const p = patients[currentPatientIndex];
+            
+            // 환자 데이터에 마커(bodyMarks)를 저장할 공간이 없다면 새 배열([])을 만들어 줍니다.
             if(!p.bodyMarks) p.bodyMarks = [];
+            
+            // 계산한 좌표, 종류, 메모 정보를 환자의 마커 목록에 추가합니다.
             p.bodyMarks.push({ x, y, side: currentBodySide, type: selectedMarkType, note });
+            
+            // 새롭게 추가된 마커 정보가 담긴 환자 데이터를 서버에 저장합니다.
             await savePatientToBackend(p); 
+            // 데이터가 성공적으로 저장되었으니 화면에 핀을 다시 그려줍니다.
             renderBodyMarks();
         }
 
+        // 이미 추가된 마커(핀)를 클릭했을 때 발생하는 이벤트를 처리하는 함수입니다. (수정 및 삭제 기능)
         function handlePinClick(event, index) {
-            event.stopPropagation();
+            // 이벤트 버블링 방지: 핀을 클릭했을 때 그 아래에 있는 캔버스(마네킹)가 눌린 것으로 인식되지 않게 막아줍니다.
+            event.stopPropagation(); 
+            
+            // 더블 클릭(연속 클릭)을 감지하기 위한 타이머 로직입니다.
             if (pinClickTimer) {
-                clearTimeout(pinClickTimer); pinClickTimer = null;
+                // 타이머가 작동 중일 때 또 클릭했다면(더블 클릭) 삭제 기능이 실행됩니다.
+                clearTimeout(pinClickTimer); 
+                pinClickTimer = null;
                 if (confirm("해당 마커를 삭제하시겠습니까?")) {
                     const p = patients[currentPatientIndex];
-                    p.bodyMarks.splice(index, 1);
-                    savePatientToBackend(p); renderBodyMarks();
+                    p.bodyMarks.splice(index, 1); // 배열에서 선택한 마커 1개를 지웁니다.
+                    savePatientToBackend(p); // 지운 후 서버에 저장
+                    renderBodyMarks(); // 화면을 다시 그립니다.
                 }
             } else {
+                // 처음 클릭했다면 0.25초(250ms) 동안 두 번째 클릭이 오는지 기다립니다.
+                // 두 번째 클릭이 오지 않으면 핀 정보를 수정하는 모달창을 엽니다.
                 pinClickTimer = setTimeout(() => {
-                    pinClickTimer = null; openPinEditModal(index);
+                    pinClickTimer = null; 
+                    openPinEditModal(index);
                 }, 250);
             }
         }
 
+        // 마커의 메모를 수정할 수 있는 모달(팝업창)을 여는 함수입니다.
         function openPinEditModal(index) {
-            targetPinIndex = index;
+            // 어떤 핀을 수정할 것인지 인덱스 번호를 기억해 둡니다.
+            targetPinIndex = index; 
             const p = patients[currentPatientIndex];
+            
+            // 모달창의 입력칸에 기존에 작성해 둔 메모 내용을 채워 넣습니다.
             document.getElementById('modalPinNote').value = p.bodyMarks[index].note || '';
+            // hidden 클래스를 제거해서 숨겨져 있던 모달창을 화면에 보여줍니다.
             document.getElementById('pinEditModal').classList.remove('hidden');
         }
 
+        // 마커 메모 수정 모달창을 닫는 함수입니다.
         function closePinEditModal() {
-            targetPinIndex = null;
+            targetPinIndex = null; // 기억해 둔 인덱스를 초기화합니다.
+            // hidden 클래스를 다시 추가해서 모달창을 숨깁니다.
             document.getElementById('pinEditModal').classList.add('hidden');
         }
 
+        // 수정된 마커 메모를 최종적으로 서버에 저장하는 함수입니다.
         async function submitPinEdit() {
             if (targetPinIndex === null) return;
+            // 입력칸에서 새 메모 내용을 가져오고, 양옆의 불필요한 공백은 잘라냅니다(.trim()).
             const newNote = document.getElementById('modalPinNote').value.trim();
-            if (!newNote) return alert("메모 내용을 입력해 주세요.");
+            if (!newNote) return alert("메모 내용을 입력해 주세요."); // 빈칸 체크
 
+            // 환자 데이터 중 선택한 핀의 메모 내용을 새 내용으로 덮어씁니다.
             const p = patients[currentPatientIndex];
             p.bodyMarks[targetPinIndex].note = newNote;
-            await savePatientToBackend(p); closePinEditModal(); renderBodyMarks();
+            
+            // 서버에 데이터 저장 -> 모달창 닫기 -> 바뀐 내용으로 화면 다시 그리기 순으로 진행됩니다.
+            await savePatientToBackend(p); 
+            closePinEditModal(); 
+            renderBodyMarks();
         }
 
+        // 서버에 저장된 마커(핀) 데이터를 가져와서 화면에 실제로 그려주는 함수입니다.
         function renderBodyMarks() {
             const p = patients[currentPatientIndex];
-            const container = document.getElementById('bodyCanvas');
+            const container = document.getElementById('bodyCanvas'); // 핀이 올라갈 마네킹 영역
+            
+            // 기존에 그려져 있던 핀들을 모두 찾아서 화면에서 지워줍니다. (중복 생성 방지)
             document.querySelectorAll('.pin-wrapper').forEach(el => el.remove());
-            if(!p || !p.bodyMarks) return;
+            if(!p || !p.bodyMarks) return; // 표시할 마커 데이터가 없다면 함수를 종료합니다.
 
+            // 환자의 마커 배열을 처음부터 끝까지 하나씩 확인하며 그립니다.
             p.bodyMarks.forEach((m, idx) => {
+                // 현재 화면이 앞모습일 땐 앞모습 마커만, 뒷모습일 땐 뒷모습 마커만 그려줍니다.
                 if((m.side || 'front') === currentBodySide) {
-                    const wrapper = document.createElement('div');
+                    const wrapper = document.createElement('div'); // 핀을 감싸는 새로운 HTML 요소를 만듭니다.
                     wrapper.className = 'pin-wrapper';
-                    wrapper.style.left = m.x + '%'; wrapper.style.top = m.y + '%';
                     
+                    // 마커 데이터에 저장된 좌표(%)를 사용해 위치를 잡아줍니다.
+                    wrapper.style.left = m.x + '%'; 
+                    wrapper.style.top = m.y + '%';
+                    
+                    // 마커 종류에 따라 핀의 색상을 다르게 지정합니다(클래스명 추가).
                     let pinClass = 'pin-op';
                     if (m.type === 'SORE') pinClass = 'pin-sore';
                     else if (m.type === 'DEVICE') pinClass = 'pin-device';
 
+                    // 말풍선(메모)과 핀 그래픽을 구성하는 HTML 텍스트를 집어넣습니다.
                     wrapper.innerHTML = `
                         <div class="speech-bubble" title="${m.note}">${m.note}</div>
                         <div class="pin ${pinClass}"></div>
                     `;
+                    // 핀을 클릭했을 때 동작할 함수(수정/삭제)를 연결해 줍니다.
                     wrapper.onclick = (e) => handlePinClick(e, idx);
+                    
+                    // 완성된 핀 요소를 캔버스 안에 자식 요소로 추가합니다.
                     container.appendChild(wrapper);
                 }
             });
         }
 
+        // 상세페이지를 숨기고 환자 목록 화면을 보여주는 네비게이션 함수입니다.
         function showListPage() {
             document.getElementById('detailPage').style.display = 'none';
             document.getElementById('listPage').style.display = 'block';
-            renderPatientList();
+            renderPatientList(); // 목록 화면을 최신 데이터로 업데이트합니다.
         }
 
+        // 환자의 특이사항 및 메모 입력칸을 저장하는 비동기 함수입니다.
         async function saveMemo() {
             if(currentPatientIndex === null) return;
             const p = patients[currentPatientIndex];
+            
+            // 입력 폼에 적힌 텍스트를 환자 데이터의 memo 속성에 덮어씁니다.
             p.memo = document.getElementById('patientMemo').value;
-            await savePatientToBackend(p); alert("메모가 저장되었습니다.");
+            await savePatientToBackend(p); 
+            alert("메모가 저장되었습니다.");
         }
 
+        // 수혈 관리에서 '용량 직접입력'을 선택했을 때만 입력칸이 보이도록 제어하는 함수입니다.
         function toggleBloodUnitCustom(select) {
             const customInput = document.getElementById('bloodUnitCustom');
+            // 선택 상자의 값이 'custom'이면 보이게(inline-block), 아니면 숨깁니다(none).
             customInput.style.display = select.value === 'custom' ? 'inline-block' : 'none';
         }
 
+        // 수혈 부작용에서 '직접입력'을 선택했을 때만 입력칸이 보이도록 제어하는 함수입니다.
         function toggleBloodSideCustom(select) {
             const customInput = document.getElementById('bloodSideCustom');
             customInput.style.display = select.value === 'custom' ? 'inline-block' : 'none';
         }
 
+        // 활력징후, 처방, 수술, 간호 등 탭에서 입력한 다양한 의료 기록을 환자 데이터에 추가하는 통합 함수입니다.
         async function addRecord(type) {
             if(currentPatientIndex === null) return;
             const p = patients[currentPatientIndex];
 
+            // 환자 데이터 안에 기록을 담을 방(배열)이 없다면 각각 새로 만들어 줍니다.
             if(!p.records) p.records = {};
             if(!p.records.prescriptions) p.records.prescriptions = [];
             if(!p.records.nurse) p.records.nurse = [];
@@ -1799,23 +2039,32 @@
             if(!p.records.vs) p.records.vs = [];
             if(!p.records.io) p.records.io = [];
 
+            // 넘겨받은 type에 따라 각기 다른 탭의 입력 데이터를 처리합니다.
+            
             if (type === 'vs') {
-                const time = document.getElementById('vsTime').value.replace('T', ' ');
+                // [활력징후 기록 처리]
+                const time = document.getElementById('vsTime').value.replace('T', ' '); // 시간 포맷 변경
                 const bp = document.getElementById('vsBp').value.trim();
                 const hr = document.getElementById('vsHr').value;
                 const rr = document.getElementById('vsRr').value;
                 const bt = document.getElementById('vsBt').value;
                 if(!time) return alert("시간을 입력하세요.");
+                
+                // 새로운 측정 기록을 배열에 추가합니다. 숫자 데이터는 Number()를 써서 숫자형으로 변환합니다.
                 p.records.vs.push({ time, bp, hr: hr ? Number(hr) : null, rr: rr ? Number(rr) : null, bt: bt ? Number(bt) : null });
-                sortRecordsByTime(p.records.vs);
+                sortRecordsByTime(p.records.vs); // 시간을 기준으로 내림차순 정렬
+                
             } else if (type === 'io') {
+                // [섭취/배설량 기록 처리]
                 const time = document.getElementById('ioTime').value.replace('T', ' ');
                 const intake = document.getElementById('ioIntake').value;
                 const output = document.getElementById('ioOutput').value;
                 if(!time) return alert("시간을 입력하세요.");
                 p.records.io.push({ time, intake: Number(intake), output: Number(output) });
                 sortRecordsByTime(p.records.io);
+                
             } else if (type === 'presc') {
+                // [처방 내역 기록 처리]
                 const time = document.getElementById('prescTime').value.replace('T', ' ');
                 const category = document.getElementById('prescType').value;
                 const code = document.getElementById('prescCode').value.trim() || '-';
@@ -1825,25 +2074,31 @@
 
                 if(!note) return alert("처방 내역을 입력하세요.");
 
+                // 카테고리가 '약물'일 경우 용량, 횟수, 경로를 하나로 합쳐서 메모 뒤에 덧붙여 줍니다.
                 if (category === '약물') {
                     const dose = document.getElementById('prescDose').value.trim();
                     const freq = document.getElementById('prescFreq').value.trim();
                     const route = document.getElementById('prescRoute').value.trim();
 
+                    // 값이 있는 것만 골라서(filter) ', ' 로 연결해 문자열로 만듭니다.
                     const details = [dose, freq, route].filter(Boolean).join(', ');
                     if (details) note += ` (${details})`;
                 }
 
                 if(editingPrescIndex !== null) {
+                    // 현재 수정 모드라면, 기존 데이터를 덮어씁니다.
                     p.records.prescriptions[editingPrescIndex] = { ...p.records.prescriptions[editingPrescIndex], time, category, code, note, issuer };
-                    editingPrescIndex = null;
+                    editingPrescIndex = null; // 수정 모드 종료
                 } else {
+                    // 새로운 처방이라면 배열 끝에 새로 추가합니다 (수행 상태는 기본적으로 미수행).
                     p.records.prescriptions.push({ time, category, code, note, issuer, status: '미수행', nurse: '-' });
                 }
                 sortRecordsByTime(p.records.prescriptions); 
-                cancelPrescEdit();
-                prescNoteEl.style.height = 'auto';
+                cancelPrescEdit(); // 입력폼 내용을 리셋합니다.
+                prescNoteEl.style.height = 'auto'; // 높이가 늘어난 텍스트 입력기를 원래대로 되돌립니다.
+                
             } else if (type === 'nurse') {
+                // [간호/투약 기록 처리]
                 const time = document.getElementById('nurseTime').value.replace('T', ' ');
                 const nurseNoteEl = document.getElementById('nurseNote');
                 const note = nurseNoteEl.value.trim();
@@ -1851,9 +2106,11 @@
                 if(!note) return alert("간호/투약 수행 내역을 입력하세요.");
                 p.records.nurse.push({ time, note, nurse: nurseName });
                 sortRecordsByTime(p.records.nurse);
-                nurseNoteEl.value = '';
+                nurseNoteEl.value = ''; // 작성 후 입력칸 비우기
                 nurseNoteEl.style.height = '28px';
+                
             } else if (type === 'surg') {
+                // [수술/동의서 기록 처리]
                 const time = document.getElementById('surgTime').value.replace('T', ' ');
                 const stage = document.getElementById('surgStage').value;
                 const opName = document.getElementById('surgOpName').value.trim();
@@ -1862,23 +2119,32 @@
                 if(!p.records.surg) p.records.surg = [];
                 p.records.surg.push({ time, stage, opName, note });
                 sortRecordsByTime(p.records.surg);
+                // 작성 후 입력칸 비우기
                 document.getElementById('surgOpName').value = '';
                 document.getElementById('surgNote').value = '';
+                
             } else if (type === 'blood') {
+                // [수혈 기록 처리]
                 const time = document.getElementById('bloodTime').value.replace('T', ' ');
                 const bType = document.getElementById('bloodType').value;
                 const code = document.getElementById('bloodCode').value.trim() || '-';
+                
                 const unitSelect = document.getElementById('bloodUnitSelect').value;
+                // '직접입력'을 선택했다면 입력칸의 값을 사용하고, 아니면 선택된 값을 사용합니다.
                 const unit = unitSelect === 'custom' ? document.getElementById('bloodUnitCustom').value.trim() : unitSelect;
                 const vs = document.getElementById('bloodVs').value.trim() || '-';
+                
                 const sideSelect = document.getElementById('bloodSideEffectSelect').value;
                 const sideEffect = sideSelect === 'custom' ? document.getElementById('bloodSideCustom').value.trim() : sideSelect;
+                
                 if(!time) return alert("시간을 입력하세요.");
                 if(!p.records.blood) p.records.blood = [];
                 p.records.blood.push({ time, bType, code, unit, vs, sideEffect });
                 sortRecordsByTime(p.records.blood);
-                document.getElementById('bloodCode').value = '';
+                document.getElementById('bloodCode').value = ''; // 코드 입력칸 비우기
+                
             } else if (type === 'lab_img') {
+                // [검사 결과 기록 처리]
                 const time = document.getElementById('labTime').value.replace('T', ' ');
                 const catSelect = document.getElementById('labCategorySelect').value;
                 const category = catSelect === 'custom' ? (document.getElementById('labCategoryCustom').value.trim() || '기타') : catSelect;
@@ -1896,89 +2162,129 @@
                 p.records.lab.push({ time, category, item, result, refRange, unit });
                 sortRecordsByTime(p.records.lab);
 
-                labResultEl.value = '';
+                labResultEl.value = ''; // 작성 후 입력칸 비우기
                 labResultEl.style.height = '28px';
             }
 
+            // 모든 처리가 끝난 후 환자 데이터를 백엔드 서버에 저장합니다.
             await savePatientToBackend(p);
+            
+            // 데이터가 성공적으로 갱신되었으니, 화면 내의 테이블과 차트를 모두 다시 그려줍니다.
             renderAllRecords();
-            initCurrentTimeInputs();
+            initCurrentTimeInputs(); // 다음 입력을 위해 시간 입력란을 현재 시간으로 맞춰줍니다.
         }
 
+        // 수정 중이던 처방 내역 폼을 취소하고 빈 상태로 되돌리는 함수입니다.
         function cancelPrescEdit() {
-            editingPrescIndex = null;
+            editingPrescIndex = null; // 수정 모드 초기화
+            // 모든 폼 항목 비우기
             document.getElementById('prescCode').value = '';
             document.getElementById('prescNote').value = '';
             document.getElementById('prescDose').value = '';
             document.getElementById('prescFreq').value = '';
             document.getElementById('prescRoute').value = '';
             document.getElementById('medDbSelect').value = '';
+            // 버튼 이름과 상태 원상 복구
             document.getElementById('btnPrescSave').innerText = '처방 입력';
             document.getElementById('btnPrescCancel').style.display = 'none';
         }
 
+        // 기존에 등록된 처방 내역을 수정하기 위해 입력 폼으로 불러오는 함수입니다.
         function editPresc(idx) {
             const p = patients[currentPatientIndex];
             const item = p.records.prescriptions[idx];
-            editingPrescIndex = idx;
+            editingPrescIndex = idx; // 어떤 인덱스를 수정하는 중인지 기록합니다.
+            
+            // 기존 처방 데이터로 화면의 입력칸들을 채웁니다.
             document.getElementById('prescTime').value = item.time.replace(' ', 'T');
             document.getElementById('prescType').value = item.category;
-            onPrescTypeChange(item.category);
+            onPrescTypeChange(item.category); // 약물 탭일 때 추가 입력칸이 보이도록 함수 호출
             document.getElementById('prescCode').value = item.code || '';
+            
             const prescNote = document.getElementById('prescNote');
             prescNote.value = item.note || '';
-            autoExpandTextarea(prescNote);
+            autoExpandTextarea(prescNote); // 텍스트 영역의 높이를 글자 수에 맞게 조절합니다.
+            
             document.getElementById('prescIssuer').value = item.issuer || '';
+            
+            // 등록 버튼을 '수정 완료'로 바꾸고 취소 버튼을 표시합니다.
             document.getElementById('btnPrescSave').innerText = '수정 완료';
             document.getElementById('btnPrescCancel').style.display = 'inline-block';
         }
 
+        // 처방 수행완료 처리(간호사 입력)를 위한 모달창을 띄우는 함수입니다.
         function openNurseInputModal(idx) {
             const p = patients[currentPatientIndex];
             const item = p.records.prescriptions[idx];
+            
+            // 만약 이미 수행완료된 처방이라면, 다시 미수행으로 되돌릴지 묻습니다.
             if(item.status === '수행완료' || item.status === '투약완료') {
                 if(confirm("수행완료 상태를 취소하고 미수행으로 변경하시겠습니까?")) {
-                    item.status = '미수행'; item.nurse = '-';
-                    savePatientToBackend(p); renderAllRecords();
+                    item.status = '미수행'; 
+                    item.nurse = '-';
+                    savePatientToBackend(p); 
+                    renderAllRecords(); // 변경된 상태로 화면 다시 그리기
                 }
-                return;
+                return; // 모달창을 띄우지 않고 함수를 끝냅니다.
             }
+            
+            // 미수행 상태라면 모달을 열기 위해 어떤 처방인지 인덱스를 기록해 둡니다.
             targetPrescModalIndex = idx;
+            
+            // 입력창에 자동으로 현재 한국 표준시를 세팅하기 위한 로직입니다.
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             document.getElementById('modalExecTime').value = now.toISOString().slice(0, 16);
+            
             document.getElementById('modalNurseName').value = '이다은';
+            // hidden 클래스를 제거해 모달창을 화면에 노출합니다.
             document.getElementById('nurseInputModal').classList.remove('hidden');
         }
-
+// 간호사 수행 입력 모달창을 닫는 함수입니다.
         function closeNurseInputModal() {
+            // 어떤 처방을 다루고 있었는지 기억하던 번호(인덱스)를 비워줍니다.
             targetPrescModalIndex = null;
+            // 모달창에 'hidden' 클래스를 추가해서 화면에서 숨깁니다.
             document.getElementById('nurseInputModal').classList.add('hidden');
         }
 
+        // 간호사 수행 정보를 서버에 최종 저장하는 비동기 함수입니다.
         async function submitNurseInput() {
+            // 선택된 처방이 없다면 아무 작업도 하지 않고 함수를 끝냅니다.
             if(targetPrescModalIndex === null) return;
+            
+            // 입력창에서 날짜와 시간을 가져옵니다. 'T' 문자를 공백으로 바꿔서 읽기 편하게 만듭니다.
             const execTime = document.getElementById('modalExecTime').value.replace('T', ' ');
+            // 간호사 이름을 가져오고, 빈칸이면 기본값으로 '간호사'를 사용합니다.
             const nurseName = document.getElementById('modalNurseName').value.trim() || '간호사';
+            // 시간을 입력하지 않았다면 경고창을 띄우고 저장을 막습니다.
             if (!execTime) return alert("수행 일시를 입력하세요.");
 
+            // 현재 선택된 환자 정보와, 그 환자의 처방 기록 중 선택된 항목을 가져옵니다.
             const p = patients[currentPatientIndex];
             const item = p.records.prescriptions[targetPrescModalIndex];
+            
+            // 처방 종류가 '약물'이면 상태를 '투약완료'로, 그 외에는 '수행완료'로 바꿉니다.
             item.status = item.category === '약물' ? '투약완료' : '수행완료';
+            // 간호사 이름 뒤에 수행 시간(연도를 뺀 월-일 시간)을 덧붙여 기록합니다.
             item.nurse = `${nurseName} (${execTime.slice(5)})`;
             
+            // 변경된 환자 정보를 서버에 저장하고, 모달을 닫은 뒤, 화면을 새로고침합니다.
             await savePatientToBackend(p);
             closeNurseInputModal();
             renderAllRecords();
         }
-        // 전체 설정 렌더링 등의 함수는 기존과 동일하게 유지됨.
-        // 불필요하게 스크롤을 늘리지 않도록, 가장 마지막 문제가 발생했던 부분을 보여드립니다.
 
+        // 기록(처방, 간호, 수술 등)을 삭제하는 공통 비동기 함수입니다.
         async function deleteRecord(type, idx) {
             if (currentPatientIndex === null) return;
+            // 정말 삭제할 것인지 사용자에게 한 번 더 물어봅니다. '취소'를 누르면 함수가 종료됩니다.
             if (!confirm("해당 기록을 삭제하시겠습니까?")) return;
 
             const p = patients[currentPatientIndex];
+            
+            // 넘어온 type(종류)에 따라 환자의 어떤 기록 배열에서 데이터를 지울지 결정합니다.
+            // splice(idx, 1)은 배열에서 idx 위치에 있는 데이터 1개를 지우라는 명령어입니다.
             if (type === 'presc') p.records.prescriptions.splice(idx, 1);
             else if (type === 'nurse') p.records.nurse.splice(idx, 1);
             else if (type === 'surg') p.records.surg.splice(idx, 1);
@@ -1987,29 +2293,38 @@
             else if (type === 'vs') p.records.vs.splice(idx, 1);
             else if (type === 'io') p.records.io.splice(idx, 1);
 
+            // 삭제가 완료된 환자 데이터를 서버에 다시 저장하고 화면을 새로고침합니다.
             await savePatientToBackend(p);
-                        renderAllRecords();
+            renderAllRecords();
         }
 
-        /* --- 혈압 문자열(120/80) 파싱 헬퍼 함수 --- */
+        /* --- 혈압 문자열(예: 120/80)을 숫자 두 개로 분리해 주는 도우미 함수 --- */
         function parseBP(bpStr) {
+            // 혈압 값이 없다면 둘 다 빈 값(null)으로 돌려줍니다.
             if (!bpStr) return { sys: null, dia: null };
+            
+            // '/'를 기준으로 글자를 쪼갠 뒤, 각각을 숫자(parseFloat)로 바꿉니다.
             const parts = String(bpStr).split('/').map(s => parseFloat(s.trim()));
+            
+            // 변환된 숫자가 정상적인 숫자(!isNaN)라면 값을 넣고, 아니면 null을 넣습니다.
             return {
-                sys: !isNaN(parts[0]) ? parts[0] : null,
-                dia: !isNaN(parts[1]) ? parts[1] : null
+                sys: !isNaN(parts[0]) ? parts[0] : null, // 수축기 혈압
+                dia: !isNaN(parts[1]) ? parts[1] : null  // 이완기 혈압
             };
         }
 
-        /* --- V/S 체크박스 토글 함수 --- */
+        /* --- 활력징후(V/S) 표나 그래프에서 특정 항목을 켜고 끄는 체크박스 기능 --- */
         function toggleVsMetric(key) {
+            // 선택한 항목(key)의 현재 상태(true/false)를 반대로 뒤집습니다.
             vsVisibility[key] = !vsVisibility[key];
+            // 상태가 바뀌었으니 활력징후 화면을 다시 그립니다.
             renderVsSection();
         }
 
-        /* --- 전체 기록 랜더링 --- */
+        /* --- 환자의 모든 하단 기록(표와 그래프들)을 한 번에 다시 그리는 함수 --- */
         function renderAllRecords() {
             if (currentPatientIndex === null) return;
+            // 각각의 표와 그래프를 그리는 함수들을 차례대로 모두 호출합니다.
             renderPrescriptionTable();
             renderSurgTable();
             renderBloodTable();
@@ -2019,16 +2334,18 @@
             renderIoSection();
         }
 
-        /* --- V/S (활력징후) 피벗 테이블 및 차트 랜더링 --- */
+        /* --- 활력징후(V/S) 표를 만들고 차트를 그리는 함수 --- */
         function renderVsSection() {
             if (currentPatientIndex === null) return;
             const p = patients[currentPatientIndex];
+            // 활력징후 기록이 없다면 빈 배열([])을 준비합니다.
             const vsRecords = (p.records && p.records.vs) ? p.records.vs : [];
 
-            // 1. 피벗 테이블 생성
+            // 1. 표(Table) 생성 구역
             const vsTableBody = document.getElementById('vsTableBody');
             if (!vsTableBody) return;
 
+            // 기록이 하나도 없을 때 보여줄 빈 표의 HTML 구조입니다.
             if (vsRecords.length === 0) {
                 vsTableBody.innerHTML = `
                     <tr>
@@ -2053,6 +2370,7 @@
                     </tr>
                 `;
             } else {
+                // 기록이 있다면 각 행(가로줄)을 담을 글자(문자열) 바구니를 준비합니다.
                 let headerRow = `<tr><th class="vs-header-title">구분 \\ 시간</th>`;
                 let bpRow = `<tr><td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.bp ? 'checked' : ''} onchange="toggleVsMetric('bp')"> 혈압 (BP)</label></td>`;
                 let hrRow = `<tr><td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.hr ? 'checked' : ''} onchange="toggleVsMetric('hr')"> 맥박 (HR)</label></td>`;
@@ -2060,47 +2378,46 @@
                 let btRow = `<tr><td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.bt ? 'checked' : ''} onchange="toggleVsMetric('bt')"> 체온 (BT)</label></td>`;
                 let delRow = `<tr><td class="vs-label" style="background:#fee2e2; color:#ef4444;">삭제</td>`;
 
+                // 기록된 데이터 개수만큼 반복하면서 오른쪽으로 칸(td)을 덧붙여 나갑니다.
                 vsRecords.forEach((r, idx) => {
                     headerRow += `<th class="vs-header-time">${r.time}</th>`;
                     bpRow += `<td class="vs-val">${r.bp || '-'}</td>`;
                     hrRow += `<td class="vs-val">${r.hr || '-'}</td>`;
                     rrRow += `<td class="vs-val">${r.rr || '-'}</td>`;
                     btRow += `<td class="vs-val">${r.bt || '-'}</td>`;
+                    // 마지막 줄에는 삭제 버튼을 만들어 줍니다.
                     delRow += `<td class="vs-val"><button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('vs', ${idx})">✕</button></td>`;
                 });
 
-                headerRow += `</tr>`;
-                bpRow += `</tr>`;
-                hrRow += `</tr>`;
-                rrRow += `</tr>`;
-                btRow += `</tr>`;
-                delRow += `</tr>`;
+                // 각 줄의 태그를 닫아줍니다.
+                headerRow += `</tr>`; bpRow += `</tr>`; hrRow += `</tr>`; rrRow += `</tr>`; btRow += `</tr>`; delRow += `</tr>`;
 
+                // 완성된 모든 줄을 합쳐서 실제 화면(HTML)에 집어넣습니다.
                 vsTableBody.innerHTML = headerRow + bpRow + hrRow + rrRow + btRow + delRow;
             }
 
-            // 2. Chart.js 활력징후 그래프 그리기
+            // 2. Chart.js 라이브러리를 사용해 활력징후 그래프 그리기
             renderVsChart(vsRecords);
         }
 
-        /* --- V/S Chart.js 다중 Y축 차트 랜더링 --- */
+        /* --- 활력징후(V/S) 꺾은선 그래프(차트)를 그리는 함수 --- */
         function renderVsChart(vsRecords) {
             const ctx = document.getElementById('vsChart');
             if (!ctx) return;
 
+            // 이미 그려진 차트가 있다면 지우고 새로 그립니다. (안 그러면 겹쳐서 오류가 납니다)
             if (vsChartInstance) {
                 vsChartInstance.destroy();
             }
 
+            // 차트의 맨 아래(X축)에 들어갈 시간 데이터들만 뽑아냅니다.
             const labels = vsRecords.map(r => r.time);
 
-            // 기본 Y축 최댓값 및 최솟값 (유동적 구간 확장 로직)
-            let maxBP = 200;
-            let maxHR = 200;
-            let maxRR = 80;
-            let minBT = 34;
-            let maxBT = 43;
+            // 그래프가 너무 꽉 차지 않도록 축의 최대/최소 기본값을 넉넉하게 설정합니다.
+            let maxBP = 200, maxHR = 200, maxRR = 80;
+            let minBT = 34, maxBT = 43;
 
+            // 기록된 데이터 중 가장 큰 값이 있다면 축의 범위를 그에 맞춰 늘려주는 로직입니다.
             vsRecords.forEach(r => {
                 const parsed = parseBP(r.bp);
                 if (parsed.sys !== null && parsed.sys > maxBP) maxBP = Math.ceil(parsed.sys + 10);
@@ -2113,122 +2430,66 @@
                 }
             });
 
+            // 차트에 그려질 각 선(데이터셋)의 설정값입니다. 색상, 두께, 숨김 여부 등을 지정합니다.
             const datasets = [
                 {
                     label: '수축기 혈압 (mmHg)',
-                    data: vsRecords.map(r => parseBP(r.bp).sys),
-                    borderColor: '#ef4444',
-                    backgroundColor: '#ef4444',
-                    yAxisID: 'yBP',
-                    hidden: !vsVisibility.bp,
-                    tension: 0.2,
-                    spanGaps: true
+                    data: vsRecords.map(r => parseBP(r.bp).sys), // 수축기 혈압 데이터만 추출
+                    borderColor: '#ef4444', backgroundColor: '#ef4444',
+                    yAxisID: 'yBP', // 왼쪽/오른쪽 중 어느 축을 기준으로 할지 결정
+                    hidden: !vsVisibility.bp, // 체크박스 상태에 따라 선을 숨길지 말지 결정
+                    tension: 0.2, spanGaps: true // 선을 부드럽게 깎고, 중간에 빈 값이 있어도 이어줍니다.
                 },
                 {
                     label: '이완기 혈압 (mmHg)',
                     data: vsRecords.map(r => parseBP(r.bp).dia),
-                    borderColor: '#f97316',
-                    backgroundColor: '#f97316',
-                    borderDash: [4, 4],
-                    yAxisID: 'yBP',
-                    hidden: !vsVisibility.bp,
-                    tension: 0.2,
-                    spanGaps: true
+                    borderColor: '#f97316', backgroundColor: '#f97316',
+                    borderDash: [4, 4], // 선을 점선으로 표시합니다.
+                    yAxisID: 'yBP', hidden: !vsVisibility.bp, tension: 0.2, spanGaps: true
                 },
                 {
                     label: '맥박 (bpm)',
                     data: vsRecords.map(r => r.hr !== null && r.hr !== undefined ? r.hr : null),
-                    borderColor: '#3b82f6',
-                    backgroundColor: '#3b82f6',
-                    yAxisID: 'yHR',
-                    hidden: !vsVisibility.hr,
-                    tension: 0.2,
-                    spanGaps: true
+                    borderColor: '#3b82f6', backgroundColor: '#3b82f6',
+                    yAxisID: 'yHR', hidden: !vsVisibility.hr, tension: 0.2, spanGaps: true
                 },
                 {
                     label: '호흡 (회/분)',
                     data: vsRecords.map(r => r.rr !== null && r.rr !== undefined ? r.rr : null),
-                    borderColor: '#10b981',
-                    backgroundColor: '#10b981',
-                    yAxisID: 'yRR',
-                    hidden: !vsVisibility.rr,
-                    tension: 0.2,
-                    spanGaps: true
+                    borderColor: '#10b981', backgroundColor: '#10b981',
+                    yAxisID: 'yRR', hidden: !vsVisibility.rr, tension: 0.2, spanGaps: true
                 },
                 {
                     label: '체온 (°C)',
                     data: vsRecords.map(r => r.bt !== null && r.bt !== undefined ? r.bt : null),
-                    borderColor: '#8b5cf6',
-                    backgroundColor: '#8b5cf6',
-                    yAxisID: 'yBT',
-                    hidden: !vsVisibility.bt,
-                    tension: 0.2,
-                    spanGaps: true
+                    borderColor: '#8b5cf6', backgroundColor: '#8b5cf6',
+                    yAxisID: 'yBT', hidden: !vsVisibility.bt, tension: 0.2, spanGaps: true
                 }
             ];
 
+            // 위에서 만든 설정값들을 바탕으로 Chart.js에게 그래프를 그리라고 명령합니다.
             vsChartInstance = new Chart(ctx, {
-                type: 'line',
+                type: 'line', // 꺾은선 그래프
                 data: { labels, datasets },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false, // 화면 크기에 맞춰 유연하게 변합니다.
                     plugins: {
-                        legend: {
-                            position: 'top',
-                            labels: { boxWidth: 12, font: { size: 10 } }
-                        },
-                        tooltip: { mode: 'index', intersect: false }
+                        legend: { position: 'top', labels: { boxWidth: 12, font: { size: 10 } } },
+                        tooltip: { mode: 'index', intersect: false } // 마우스를 올렸을 때 정보가 나오는 방식
                     },
                     scales: {
-                        x: {
-                            ticks: { font: { size: 9 } }
-                        },
-                        yBP: {
-                            type: 'linear',
-                            display: vsVisibility.bp,
-                            position: 'left',
-                            min: 0,
-                            suggestedMax: maxBP,
-                            title: { display: true, text: '혈압', color: '#ef4444', font: { size: 10, weight: 'bold' } },
-                            ticks: { color: '#ef4444', font: { size: 9 } }
-                        },
-                        yHR: {
-                            type: 'linear',
-                            display: vsVisibility.hr,
-                            position: 'left',
-                            min: 0,
-                            suggestedMax: maxHR,
-                            title: { display: true, text: '맥박', color: '#3b82f6', font: { size: 10, weight: 'bold' } },
-                            ticks: { color: '#3b82f6', font: { size: 9 } }
-                        },
-                        yRR: {
-                            type: 'linear',
-                            display: vsVisibility.rr,
-                            position: 'left',
-                            min: 0,
-                            suggestedMax: maxRR,
-                            title: { display: true, text: '호흡', color: '#10b981', font: { size: 10, weight: 'bold' } },
-                            ticks: { color: '#10b981', font: { size: 9 } }
-                        },
-                        yBT: {
-                            type: 'linear',
-                            display: vsVisibility.bt,
-                            position: 'left',
-                            suggestedMin: minBT,
-                            suggestedMax: maxBT,
-                            title: { display: true, text: '체온', color: '#8b5cf6', font: { size: 10, weight: 'bold' } },
-                            ticks: { color: '#8b5cf6', font: { size: 9 } }
-                        }
+                        // 각 축(혈압, 맥박, 호흡, 체온)의 디자인과 최대/최소 범위를 세밀하게 지정합니다.
+                        x: { ticks: { font: { size: 9 } } },
+                        yBP: { type: 'linear', display: vsVisibility.bp, position: 'left', min: 0, suggestedMax: maxBP, title: { display: true, text: '혈압', color: '#ef4444', font: { size: 10, weight: 'bold' } }, ticks: { color: '#ef4444', font: { size: 9 } } },
+                        yHR: { type: 'linear', display: vsVisibility.hr, position: 'left', min: 0, suggestedMax: maxHR, title: { display: true, text: '맥박', color: '#3b82f6', font: { size: 10, weight: 'bold' } }, ticks: { color: '#3b82f6', font: { size: 9 } } },
+                        yRR: { type: 'linear', display: vsVisibility.rr, position: 'left', min: 0, suggestedMax: maxRR, title: { display: true, text: '호흡', color: '#10b981', font: { size: 10, weight: 'bold' } }, ticks: { color: '#10b981', font: { size: 9 } } },
+                        yBT: { type: 'linear', display: vsVisibility.bt, position: 'left', suggestedMin: minBT, suggestedMax: maxBT, title: { display: true, text: '체온', color: '#8b5cf6', font: { size: 10, weight: 'bold' } }, ticks: { color: '#8b5cf6', font: { size: 9 } } }
                     }
                 }
             });
-            // 여기에서 에러로 인해 잘려있던 함수호출이 정상적으로 끝납니다.
-            // renderAllRecords(); -> 만약 선언되지 않은 함수라면 지우셔도 됩니다.
-            // 현재 코드 흐름상 UI 업데이트를 위해 존재했을 것으로 보입니다.
         }
 
-                /* --- I/O (섭취/배설) 랜더링 --- */
+        /* --- 섭취/배설(I/O) 표를 그리는 함수 --- */
         function renderIoSection() {
             if (currentPatientIndex === null) return;
             const p = patients[currentPatientIndex];
@@ -2237,6 +2498,7 @@
             const ioTableBody = document.getElementById('ioTableBody');
             if (!ioTableBody) return;
 
+            // V/S 표와 같은 방식으로 가로로 길어지는 표를 만듭니다.
             if (ioRecords.length === 0) {
                 ioTableBody.innerHTML = `
                     <tr><th class="vs-header-title">구분 \\ 시간</th><td class="vs-val" style="color:#94a3b8;">기록 없음</td></tr>
@@ -2260,20 +2522,23 @@
                 ioTableBody.innerHTML = headerRow + intakeRow + outputRow + delRow;
             }
 
+            // I/O 막대그래프를 호출합니다.
             renderIoChart(ioRecords);
         }
 
+        /* --- 섭취/배설(I/O) 막대그래프를 그리는 함수 --- */
         function renderIoChart(ioRecords) {
             const ctx = document.getElementById('ioChart');
             if (!ctx) return;
 
+            // 기존 차트가 있다면 초기화
             if (ioChartInstance) {
                 ioChartInstance.destroy();
             }
 
             const labels = ioRecords.map(r => r.time);
             ioChartInstance = new Chart(ctx, {
-                type: 'bar',
+                type: 'bar', // 막대그래프로 지정
                 data: {
                     labels,
                     datasets: [
@@ -2282,18 +2547,24 @@
                     ]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false,
                     plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 10 } } } },
                     scales: {
                         x: { ticks: { font: { size: 9 } } },
+                        // beginAtZero: true 로 설정하여 값이 적어도 그래프의 바닥이 0부터 시작하게 만듭니다.
                         y: { ticks: { font: { size: 9 } }, beginAtZero: true }
                     }
                 }
             });
         }
 
-        /* --- 상단 탭별 테이블 랜더링 함수들 --- */
+        /* --- 상단 탭별로 표(테이블) 데이터를 화면에 그려주는 함수들 --- */
+        // 아래 함수들은 모두 비슷한 구조를 가지고 있습니다.
+        // 1. 환자의 데이터를 가져온다.
+        // 2. 데이터가 없으면 '기록이 없습니다'라는 안내 문구를 띄운다.
+        // 3. 데이터가 있다면 배열의 map() 기능을 써서 HTML 표 태그(<tr><td>) 모양으로 바꾼 뒤, 화면에 삽입한다.
+
+        // [처방 내역 표 그리기]
         function renderPrescriptionTable() {
             const p = patients[currentPatientIndex];
             const tbody = document.getElementById('prescriptionTable');
@@ -2305,7 +2576,9 @@
                 return;
             }
 
+            // map과 join을 사용해 여러 개의 <tr> 태그를 한 덩어리의 문자열로 이어 붙입니다.
             tbody.innerHTML = records.map((r, idx) => {
+                // 수행 상태에 따라 배지(버튼)의 색상과 글씨를 다르게 설정합니다.
                 const statusBadge = (r.status === '수행완료' || r.status === '투약완료') 
                     ? `<span class="status-badge-complete" onclick="openNurseInputModal(${idx})">✓ ${r.status}</span>`
                     : `<span class="status-badge-pending" onclick="openNurseInputModal(${idx})">⏳ 미수행</span>`;
@@ -2327,6 +2600,7 @@
             }).join('');
         }
 
+        // [간호 기록 표 그리기]
         function renderNurseTable() {
             const p = patients[currentPatientIndex];
             const tbody = document.getElementById('nurseTable');
@@ -2348,6 +2622,7 @@
             `).join('');
         }
 
+        // [수술 및 동의서 기록 표 그리기]
         function renderSurgTable() {
             const p = patients[currentPatientIndex];
             const tbody = document.getElementById('surgTable');
@@ -2370,6 +2645,7 @@
             `).join('');
         }
 
+        // [수혈 기록 표 그리기]
         function renderBloodTable() {
             const p = patients[currentPatientIndex];
             const tbody = document.getElementById('bloodTable');
@@ -2394,6 +2670,7 @@
             `).join('');
         }
 
+        // [진단검사/영상 기록 표 그리기]
         function renderLabTable() {
             const p = patients[currentPatientIndex];
             const tbody = document.getElementById('labTable');
