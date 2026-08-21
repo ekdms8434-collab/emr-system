@@ -67,41 +67,9 @@
         /* 표의 줄에 마우스를 올렸을 때 배경색이 살짝 변하게 합니다. */
         tr:hover { background-color: #f1f5f9; }
 
-       /* 처방전 테이블 전용 디자인 (네이비색 헤더 및 줄높이 최소화) */
-        .prescription-table-theme th { 
-            background-color: var(--panel-header-bg) !important; 
-            color: #ffffff; 
-            font-weight: bold; 
-            padding: 3px 4px !important; 
-            border-bottom: 1px solid #334155; 
-            font-size: 11px; 
-            line-height: 1.2 !important;
-        }
-        .prescription-table-theme td { 
-            padding: 2px 4px !important; /* 상하 여백을 최소화하여 줄높이 축소 */
-            font-size: 10.5px; 
-            line-height: 1.2 !important; /* 줄간격 축소 */
-            white-space: pre-wrap; 
-            word-break: break-word; 
-            vertical-align: middle; /* 내용물 세로 중앙 정렬 */
-        }
-
-        /* 처방전 테이블 내 버튼/배지 간격 및 크기 최소화 */
-        .prescription-table-theme td button {
-            padding: 1px 4px !important;
-            font-size: 10px !important;
-            line-height: 1.1 !important;
-            margin: 0 1px !important;
-            height: auto !important;
-        }
-
-        .prescription-table-theme td .status-badge-complete,
-        .prescription-table-theme td .status-badge-pending {
-            padding: 1px 5px !important;
-            font-size: 10px !important;
-            line-height: 1.1 !important;
-            margin: 0 !important;
-        }
+        /* 처방전 테이블 전용 디자인 (네이비색 헤더) 입니다. */
+        .prescription-table-theme th { background-color: var(--panel-header-bg) !important; color: #ffffff; font-weight: bold; padding: 4px 6px; border-bottom: 1px solid #334155; font-size: 11px; }
+        .prescription-table-theme td { padding: 3px 5px; font-size: 10.5px; line-height: 1.3; white-space: pre-wrap; word-break: break-word; }
 
         /* 활력징후(V/S)와 섭취배설(I/O) 차트를 위한 피벗 테이블(행과 열이 크로스되는 표) 디자인입니다. */
         .vs-pivot-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; background: white; }
@@ -294,28 +262,6 @@
             height: 18px !important;
             margin: 0 1px !important;
         }
-             /* 처방 테이블의 행(Tr)과 셀(Td) 높이 강제 최소화 */
-table.prescription-table-theme tr,
-table.prescription-table-theme tr td,
-table.prescription-table-theme tr th {
-    height: 22px !important;            /* 행 높이 고정 및 최소화 */
-    padding: 1px 4px !important;        /* 셀 내부 여백 최소화 */
-    line-height: 1.1 !important;        /* 줄간격 최소화 */
-    font-size: 10.5px !important;
-    vertical-align: middle !important;  /* 수직 중앙 정렬 */
-}
-
-/* 처방 테이블 내부의 버튼 및 배지 크기 강제 축소 */
-table.prescription-table-theme td button,
-table.prescription-table-theme td .status-badge-complete,
-table.prescription-table-theme td .status-badge-pending {
-    height: 18px !important;            /* 버튼 높이 축소 */
-    padding: 0px 4px !important;        /* 버튼 내부 여백 제거 */
-    line-height: 16px !important;       /* 버튼 텍스트 줄높이 */
-    font-size: 10px !important;
-    margin: 0 !important;
-    display: inline-block !important;
-}
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
