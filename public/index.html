@@ -294,6 +294,28 @@
             height: 18px !important;
             margin: 0 1px !important;
         }
+             /* 처방 테이블의 행(Tr)과 셀(Td) 높이 강제 최소화 */
+table.prescription-table-theme tr,
+table.prescription-table-theme tr td,
+table.prescription-table-theme tr th {
+    height: 22px !important;            /* 행 높이 고정 및 최소화 */
+    padding: 1px 4px !important;        /* 셀 내부 여백 최소화 */
+    line-height: 1.1 !important;        /* 줄간격 최소화 */
+    font-size: 10.5px !important;
+    vertical-align: middle !important;  /* 수직 중앙 정렬 */
+}
+
+/* 처방 테이블 내부의 버튼 및 배지 크기 강제 축소 */
+table.prescription-table-theme td button,
+table.prescription-table-theme td .status-badge-complete,
+table.prescription-table-theme td .status-badge-pending {
+    height: 18px !important;            /* 버튼 높이 축소 */
+    padding: 0px 4px !important;        /* 버튼 내부 여백 제거 */
+    line-height: 16px !important;       /* 버튼 텍스트 줄높이 */
+    font-size: 10px !important;
+    margin: 0 !important;
+    display: inline-block !important;
+}
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
