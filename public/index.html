@@ -67,9 +67,41 @@
         /* 표의 줄에 마우스를 올렸을 때 배경색이 살짝 변하게 합니다. */
         tr:hover { background-color: #f1f5f9; }
 
-        /* 처방전 테이블 전용 디자인 (네이비색 헤더) 입니다. */
-        .prescription-table-theme th { background-color: var(--panel-header-bg) !important; color: #ffffff; font-weight: bold; padding: 4px 6px; border-bottom: 1px solid #334155; font-size: 11px; }
-        .prescription-table-theme td { padding: 1px 5px; font-size: 10.5px; line-height: 1.1; white-space: pre-wrap; word-break: break-word; }
+       /* 처방전 테이블 전용 디자인 (네이비색 헤더 및 줄높이 최소화) */
+        .prescription-table-theme th { 
+            background-color: var(--panel-header-bg) !important; 
+            color: #ffffff; 
+            font-weight: bold; 
+            padding: 3px 4px !important; 
+            border-bottom: 1px solid #334155; 
+            font-size: 11px; 
+            line-height: 1.2 !important;
+        }
+        .prescription-table-theme td { 
+            padding: 2px 4px !important; /* 상하 여백을 최소화하여 줄높이 축소 */
+            font-size: 10.5px; 
+            line-height: 1.2 !important; /* 줄간격 축소 */
+            white-space: pre-wrap; 
+            word-break: break-word; 
+            vertical-align: middle; /* 내용물 세로 중앙 정렬 */
+        }
+
+        /* 처방전 테이블 내 버튼/배지 간격 및 크기 최소화 */
+        .prescription-table-theme td button {
+            padding: 1px 4px !important;
+            font-size: 10px !important;
+            line-height: 1.1 !important;
+            margin: 0 1px !important;
+            height: auto !important;
+        }
+
+        .prescription-table-theme td .status-badge-complete,
+        .prescription-table-theme td .status-badge-pending {
+            padding: 1px 5px !important;
+            font-size: 10px !important;
+            line-height: 1.1 !important;
+            margin: 0 !important;
+        }
 
         /* 활력징후(V/S)와 섭취배설(I/O) 차트를 위한 피벗 테이블(행과 열이 크로스되는 표) 디자인입니다. */
         .vs-pivot-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; background: white; }
