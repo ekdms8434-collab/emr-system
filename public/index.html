@@ -2143,12 +2143,17 @@ function addRecord(type) {
 
                 if(!note) return alert("처방 내역을 입력하세요.");
 
-                // 카테고리가 '약물'일 경우 용량, 횟수, 경로를 하나로 합쳐서 메모 뒤에 덧붙여 줍니다.
-                if (category === '약물') {
-                    const dose = document.getElementById('prescDose').value.trim();
-                    const freq = document.getElementById('prescFreq').value.trim();
-                    const route = document.getElementById('prescRoute').value.trim();
+              // 카테고리가 '약물'일 경우 처방명, 용량, 횟수, 경로를 각각의 셀(td)로 분리합니다.
+if (category === '약물') {
+    const dose = document.getElementById('prescDose').value.trim();
+    const freq = document.getElementById('prescFreq').value.trim();
+    const route = document.getElementById('prescRoute').value.trim();
 
+    note = `<td>${note}</td><td>${dose}</td><td>${freq}</td><td>${route}</td>`;
+} else {
+    // 약물이 아닌 일반 처방일 경우 나머지 3칸은 빈 셀로 채워 줄을 맞춥니다.
+    note = `<td>${note}</td><td></td><td></td><td></td>`;
+}
                     // 값이 있는 것만 골라서(filter) ', ' 로 연결해 문자열로 만듭니다.
                     const details = [dose, freq, route].filter(Boolean).join(', ');
                     if (details) note += ` (${details})`;
