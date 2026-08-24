@@ -580,7 +580,7 @@
                                                     <th style="width:110px;">처방일시</th>
                                                     <th style="width:60px;">구분</th>
                                                     <th style="width:80px;">코드</th>
-                                                    <th>처방내역</th>
+                                                    <th colspan="4">처방내역</th>
                                                     <th style="width:80px;">처방발행자</th>
                                                     <th style="width:90px;">수행여부</th>
                                                     <th style="width:130px;">수행자</th>
@@ -2144,20 +2144,17 @@ function addRecord(type) {
                 if(!note) return alert("처방 내역을 입력하세요.");
 
               // 카테고리가 '약물'일 경우 처방명, 용량, 횟수, 경로를 각각의 셀(td)로 분리합니다.
-// 2157~2160번 줄을 삭제한 최종 모양 (2147번 줄부터)
 if (category === '약물') {
     const dose = document.getElementById('prescDose').value.trim();
     const freq = document.getElementById('prescFreq').value.trim();
     const route = document.getElementById('prescRoute').value.trim();
 
+    // 약물명, 용량, 횟수, 경로를 각각 별도의 td 셀로 생성
     note = `<td>${note}</td><td>${dose}</td><td>${freq}</td><td>${route}</td>`;
 } else {
-    // 약물이 아닌 일반 처방일 경우 나머지 3칸은 빈 셀로 채워 줄을 맞춥니다.
+    // 일반 처방일 경우 4칸 줄맞춤을 위해 빈 td 3개를 추가
     note = `<td>${note}</td><td></td><td></td><td></td>`;
 }
-
-if (editingPrescIndex !== null) {
-    // ... 2162번 줄 이하 코드 계속
                     editingPrescIndex = null; // 수정 모드 종료
                 } else {
                     // 새로운 처방이라면 배열 끝에 새로 추가합니다 (수행 상태는 기본적으로 미수행).
