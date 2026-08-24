@@ -2132,45 +2132,44 @@ function addRecord(type) {
                 p.records.io.push({ time, intake: Number(intake), output: Number(output) });
                 sortRecordsByTime(p.records.io);
                 
-            } else if (type === 'presc') {
-                // [처방 내역 기록 처리]
-                const time = document.getElementById('prescTime').value.replace('T', ' ');
-                const category = document.getElementById('prescType').value;
-                const code = document.getElementById('prescCode').value.trim() || '-';
-                const prescNoteEl = document.getElementById('prescNote');
-                let note = prescNoteEl.value.trim();
-                const issuer = document.getElementById('prescIssuer').value.trim() || '-';
+           } else if (type === 'presc') {
+    // [처방 내역 기록 처리]
+    const time = document.getElementById('prescTime').value.replace('T', ' ');
+    const category = document.getElementById('prescType').value;
+    const code = document.getElementById('prescCode').value.trim() || '-';
+    const prescNoteEl = document.getElementById('prescNote');
+    let note = prescNoteEl.value.trim();
+    const issuer = document.getElementById('prescIssuer').value.trim() || '-';
 
-                if(!note) return alert("처방 내역을 입력하세요.");
+    if (!note) return alert("처방 내역을 입력하세요.");
 
-              // 카테고리가 '약물'일 경우 처방명, 용량, 횟수, 경로를 각각의 셀(td)로 분리합니다.
-if (category === '약물') {
-    const dose = document.getElementById('prescDose').value.trim();
-    const freq = document.getElementById('prescFreq').value.trim();
-    const route = document.getElementById('prescRoute').value.trim();
+    // '약물' 카테고리일 때만 처방내역 칸 안에서 Flex로 4등분 분할
+    if (category === '약물') {
+        const dose = document.getElementById('prescDose').value.trim();
+        const freq = document.getElementById('prescFreq').value.trim();
+        const route = document.getElementById('prescRoute').value.trim();
 
-    // 처방내역 셀(td) 내부에 Flex 레이아웃을 적용하여 4개 항목을 표처럼 분할합니다.
-    note = `<div style="display: flex; align-items: center; width: 100%; font-size: 13px;">` +
-           `<span style="flex: 2; text-align: left; padding-right: 5px;">${note}</span>` +
-           `<span style="flex: 1; text-align: center; border-left: 1px solid #e5e7eb;">${dose}</span>` +
-           `<span style="flex: 1; text-align: center; border-left: 1px solid #e5e7eb;">${freq}</span>` +
-           `<span style="flex: 1; text-align: center; border-left: 1px solid #e5e7eb;">${route}</span>` +
-           `</div>`;
+        note = `<div style="display: flex; align-items: center; width: 100%; font-size: 13px;">` +
+               `<span style="flex: 2; text-align: left; padding-right: 5px;">${note}</span>` +
+               `<span style="flex: 1; text-align: center; border-left: 1px solid #e5e7eb;">${dose}</span>` +
+               `<span style="flex: 1; text-align: center; border-left: 1px solid #e5e7eb;">${freq}</span>` +
+               `<span style="flex: 1; text-align: center; border-left: 1px solid #e5e7eb;">${route}</span>` +
+               `</div>`;
+    }
+
+    if (editingPrescIndex !== null) {
+        // 현재 수정 모드라면, 기존 데이터를 덮어씁니다.
+        p.records.prescriptions[editingPrescIndex] = { ...p.records.prescriptions[editingPrescIndex], time, category, code, note, issuer };
+        editingPrescIndex = null;
+    } else {
+        // 새로운 처방이라면 배열 끝에 새로 추가합니다.
+        p.records.prescriptions.push({ time, category, code, note, issuer, status: '미수행', nurse: '-' });
+    }
+
+    sortRecordsByTime(p.records.prescriptions);
+    cancelPrescEdit();
+    prescNoteEl.style.height = 'auto';
 }
-    if (editingPrescIndex !== null) 
-                    editingPrescIndex = null; // 수정 모드 종료
-                } else {
-                    // 새로운 처방이라면 배열 끝에 새로 추가합니다 (수행 상태는 기본적으로 미수행).
-                    p.records.prescriptions.push({ time, category, code, note, issuer, status: '미수행', nurse: '-' });
-                }
-                sortRecordsByTime(p.records.prescriptions); 
-                cancelPrescEdit(); // 입력폼 내용을 리셋합니다.
-                prescNoteEl.style.height = 'auto'; // 높이가 늘어난 텍스트 입력기를 원래대로 되돌립니다.
-                
-            } else if (type === 'nurse') {
-                // [간호/투약 기록 처리]
-                const time = document.getElementById('nurseTime').value.replace('T', ' ');
-                const nurseNoteEl = document.getElementById('nurseNote');
                 const note = nurseNoteEl.value.trim();
                 const nurseName = document.getElementById('nurseName').value.trim() || '간호사';
                 if(!note) return alert("간호/투약 수행 내역을 입력하세요.");
