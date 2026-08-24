@@ -2164,15 +2164,11 @@ function addRecord(type) {
             p.records.prescriptions.push({ time, category, code, note, issuer, status: '미수행', nurse: '-' });
         }
 
-     sortRecordsByTime(p.records.prescriptions);
+    sortRecordsByTime(p.records.prescriptions);
     cancelPrescEdit();
     prescNoteEl.style.height = 'auto';
 } else if (type === 'nurse') {
     const note = nurseNoteEl.value.trim();
-                const nurseName = document.getElementById('nurseName').value.trim() || '간호사';
-                if(!note) return alert("간호/투약 수행 내역을 입력하세요.");
-                p.records.nurse.push({ time, note, nurse: nurseName });
-                sortRecordsByTime(p.records.nurse);
                 nurseNoteEl.value = ''; // 작성 후 입력칸 비우기
                 nurseNoteEl.style.height = '28px';
                 
