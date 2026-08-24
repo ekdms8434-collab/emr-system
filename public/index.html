@@ -546,7 +546,19 @@
                                     <button class="main-tab-btn" onclick="openTopTab('labTab', this)">🧪 검사 결과</button>
                                     <button class="main-tab-btn" onclick="openTopTab('nurseTab', this)">📝 간호/투약 기록</button>
                                 </div>
-
+<!-- 1. CSS 스타일 정의 (추가된 부분) -->
+<style>
+  .prescription-table-theme th,
+  .prescription-table-theme td {
+      padding: 6px 8px !important;
+      height: auto !important;
+      line-height: 1.3;
+      vertical-align: middle;
+  }
+  .prescription-table-theme tr {
+      height: auto !important;
+  }
+</style>
                                 <!-- 1. 처방내역 탭 화면 -->
                                 <div id="prescriptionTab" class="tab-content active">
                                     <div class="table-scroll-area">
