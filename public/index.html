@@ -2143,17 +2143,17 @@ function addRecord(type) {
 
         if (!note) return alert("처방 내역을 입력하세요.");
 
-        // 약물 카테고리일 때만 처방내역 칸 내부를 Flex로 4등분 분할
+        // '약물'일 경우 처방내역 셀 안에서 표(4칸)처럼 깔끔하게 나누어 표시
         if (category === '약물') {
             const dose = document.getElementById('prescDose').value.trim();
             const freq = document.getElementById('prescFreq').value.trim();
             const route = document.getElementById('prescRoute').value.trim();
 
-            note = `<div style="display: flex; align-items: center; width: 100%; font-size: 13px;">` +
-                   `<span style="flex: 2; text-align: left; padding-right: 5px;">${note}</span>` +
-                   `<span style="flex: 1; text-align: center; border-left: 1px solid #e5e7eb;">${dose}</span>` +
-                   `<span style="flex: 1; text-align: center; border-left: 1px solid #e5e7eb;">${freq}</span>` +
-                   `<span style="flex: 1; text-align: center; border-left: 1px solid #e5e7eb;">${route}</span>` +
+            note = `<div style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse;">` +
+                   `<div style="display: table-cell; width: 45%; padding: 2px 4px; text-align: left; vertical-align: middle;">${note}</div>` +
+                   `<div style="display: table-cell; width: 18%; padding: 2px 4px; text-align: center; vertical-align: middle; border-left: 1px solid #333;">${dose}</div>` +
+                   `<div style="display: table-cell; width: 17%; padding: 2px 4px; text-align: center; vertical-align: middle; border-left: 1px solid #333;">${freq}</div>` +
+                   `<div style="display: table-cell; width: 20%; padding: 2px 4px; text-align: center; vertical-align: middle; border-left: 1px solid #333;">${route}</div>` +
                    `</div>`;
         }
 
@@ -2164,15 +2164,10 @@ function addRecord(type) {
             p.records.prescriptions.push({ time, category, code, note, issuer, status: '미수행', nurse: '-' });
         }
 
-    sortRecordsByTime(p.records.prescriptions);
-    cancelPrescEdit();
-    prescNoteEl.style.height = 'auto';
-} else if (type === 'nurse') {
-    const note = nurseNoteEl.value.trim();
-                nurseNoteEl.value = ''; // 작성 후 입력칸 비우기
-                nurseNoteEl.style.height = '28px';
-                
-            } else if (type === 'surg') {
+        sortRecordsByTime(p.records.prescriptions);
+        cancelPrescEdit();
+        prescNoteEl.style.height = 'auto';
+    } else if (type === 'nurse') {
                 // [수술/동의서 기록 처리]
                 const time = document.getElementById('surgTime').value.replace('T', ' ');
                 const stage = document.getElementById('surgStage').value;
