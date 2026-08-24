@@ -67,10 +67,23 @@
         /* 표의 줄에 마우스를 올렸을 때 배경색이 살짝 변하게 합니다. */
         tr:hover { background-color: #f1f5f9; }
 
-        /* 처방전 테이블 전용 디자인 (네이비색 헤더) 입니다. */
-        .prescription-table-theme th { background-color: var(--panel-header-bg) !important; color: #ffffff; font-weight: bold; padding: 4px 6px; border-bottom: 1px solid #334155; font-size: 11px; }
-        .prescription-table-theme td { padding: 3px 5px; font-size: 10.5px; line-height: 1.3; white-space: pre-wrap; word-break: break-word; }
-
+       /* 처방전 테이블 전용 디자인 (행 높이 최소화 적용) */
+.prescription-table-theme th { 
+    background-color: var(--panel-header-bg) !important; 
+    color: #ffffff; 
+    font-weight: bold; 
+    padding: 2px 4px !important; 
+    font-size: 11px; 
+    line-height: 1.2 !important;
+    border-bottom: 1px solid #334155; 
+}
+.prescription-table-theme td { 
+    padding: 1px 4px !important; 
+    font-size: 10.5px; 
+    line-height: 1.15 !important; 
+    white-space: pre-wrap; 
+    word-break: break-word; 
+}
         /* 활력징후(V/S)와 섭취배설(I/O) 차트를 위한 피벗 테이블(행과 열이 크로스되는 표) 디자인입니다. */
         .vs-pivot-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; background: white; }
         .vs-pivot-table th.vs-header-title { background-color: #e2e8f0; color: #0f172a; width: 120px; text-align: center; font-weight: bold; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; position: sticky; left: 0; top: 0; z-index: 20; }
