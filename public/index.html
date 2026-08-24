@@ -580,7 +580,7 @@
                                                     <th style="width:110px;">처방일시</th>
                                                     <th style="width:60px;">구분</th>
                                                     <th style="width:80px;">코드</th>
-                                                    <th>처방내역</th>
+                                                    <th colspan="4">처방내역</th>
                                                     <th style="width:80px;">처방발행자</th>
                                                     <th style="width:90px;">수행여부</th>
                                                     <th style="width:130px;">수행자</th>
@@ -619,51 +619,7 @@
                                         <button class="btn-slate" onclick="cancelPrescEdit()" id="btnPrescCancel" style="display:none;">취소</button>
                                     </div>
                                 </div>
-<script>
-function addRecord(type) {
-  if (type === 'presc') {
-    const time = document.getElementById('prescTime').value;
-    const prescType = document.getElementById('prescType').value;
-    const code = document.getElementById('prescCode').value;
-    const note = document.getElementById('prescNote').value;
-    const dose = document.getElementById('prescDose').value;
-    const freq = document.getElementById('prescFreq').value;
-    const route = document.getElementById('prescRoute').value;
-    const issuer = document.getElementById('prescIssuer').value;
 
-    // 구분에 따른 칸 분할 처리 (약물=4칸 분할 / 기타=1칸 통합)
-    let detailCells = '';
-    if (prescType === '약물') {
-      detailCells = `
-        <td>${note}</td>
-        <td>${dose}</td>
-        <td>${freq}</td>
-        <td>${route}</td>
-      `;
-    } else {
-      detailCells = `<td colspan="4">${note}</td>`;
-    }
-
-    const trContent = `
-      <tr>
-        <td>${time}</td>
-        <td>${prescType}</td>
-        <td>${code}</td>
-        ${detailCells}
-        <td>${issuer}</td>
-        <td>미수행</td>
-        <td></td>
-        <td>
-          <button type="button">수정</button>
-          <button type="button">삭제</button>
-        </td>
-      </tr>
-    `;
-
-    document.getElementById('prescriptionTable').insertAdjacentHTML('beforeend', trContent);
-  }
-}
-</script>
                                 
                                 <!-- 2. 수술/동의서 탭 화면 -->
                                 <div id="surgTab" class="tab-content">
