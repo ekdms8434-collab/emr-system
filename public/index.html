@@ -546,28 +546,27 @@
                                     <button class="main-tab-btn" onclick="openTopTab('labTab', this)">🧪 검사 결과</button>
                                     <button class="main-tab-btn" onclick="openTopTab('nurseTab', this)">📝 간호/투약 기록</button>
                                 </div>
-                                /* 1. 처방내역 위아래 여백 축소 */
-.prescription-table th,
-.prescription-table td {
+/* 1. 처방내역 위아래 여백 축소 */
+(<td>) class </td> th,
+(<td>) class td {
   padding-top: 4px !important;    /* 위 여백 (필요에 따라 조절) */
   padding-bottom: 4px !important; /* 아래 여백 (필요에 따라 조절) */
   line-height: 1.2 !important;     /* 줄간격 축소 */
 }
 
 /* 2. '관리' 열(수정/삭제) 한 줄 표시 */
-.prescription-table td.action-column,
-.prescription-table th.action-column {
+(<td>) class td.action-column,
+(<td>) class th.action-column {
   white-space: nowrap !important; /* Text/버튼 줄바꿈 방지 */
   min-width: 90px;                /* 두 버튼이 들어갈 최소 너비 확보 */
 }
 
 /* 관리 열 내부 버튼 간격 정렬 */
-.action-column button,
-.action-column a {
+(<td>) class button,
+(<td>) class a {
   display: inline-block !important;
   margin: 0 2px !important;
 }
-
                                 <!-- 1. 처방내역 탭 화면 -->
                                 <div id="prescriptionTab" class="tab-content active">
                                     <div class="table-scroll-area">
