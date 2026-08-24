@@ -2132,40 +2132,42 @@ function addRecord(type) {
                 p.records.io.push({ time, intake: Number(intake), output: Number(output) });
                 sortRecordsByTime(p.records.io);
                 
-           } else if (type === 'presc') {
-    // [처방 내역 기록 처리]
-    const time = document.getElementById('prescTime').value.replace('T', ' ');
-    const category = document.getElementById('prescType').value;
-    const code = document.getElementById('prescCode').value.trim() || '-';
-    const prescNoteEl = document.getElementById('prescNote');
-    let note = prescNoteEl.value.trim();
-    const issuer = document.getElementById('prescIssuer').value.trim() || '-';
+} else if (type === 'presc') {
+        // [처방 내역 기록 처리]
+        const time = document.getElementById('prescTime').value.replace('T', ' ');
+        const category = document.getElementById('prescType').value;
+        const code = document.getElementById('prescCode').value.trim() || '-';
+        const prescNoteEl = document.getElementById('prescNote');
+        let note = prescNoteEl.value.trim();
+        const issuer = document.getElementById('prescIssuer').value.trim() || '-';
 
-    if (!note) return alert("처방 내역을 입력하세요.");
+        if (!note) return alert("처방 내역을 입력하세요.");
 
-    // '약물' 카테고리일 때만 처방내역 칸 안에서 Flex로 4등분 분할
-    if (category === '약물') {
-        const dose = document.getElementById('prescDose').value.trim();
-        const freq = document.getElementById('prescFreq').value.trim();
-        const route = document.getElementById('prescRoute').value.trim();
+        // 약물 카테고리일 때만 처방내역 칸 내부를 Flex로 4등분 분할
+        if (category === '약물') {
+            const dose = document.getElementById('prescDose').value.trim();
+            const freq = document.getElementById('prescFreq').value.trim();
+            const route = document.getElementById('prescRoute').value.trim();
 
-        note = `<div style="display: flex; align-items: center; width: 100%; font-size: 13px;">` +
-               `<span style="flex: 2; text-align: left; padding-right: 5px;">${note}</span>` +
-               `<span style="flex: 1; text-align: center; border-left: 1px solid #e5e7eb;">${dose}</span>` +
-               `<span style="flex: 1; text-align: center; border-left: 1px solid #e5e7eb;">${freq}</span>` +
-               `<span style="flex: 1; text-align: center; border-left: 1px solid #e5e7eb;">${route}</span>` +
-               `</div>`;
+            note = `<div style="display: flex; align-items: center; width: 100%; font-size: 13px;">` +
+                   `<span style="flex: 2; text-align: left; padding-right: 5px;">${note}</span>` +
+                   `<span style="flex: 1; text-align: center; border-left: 1px solid #e5e7eb;">${dose}</span>` +
+                   `<span style="flex: 1; text-align: center; border-left: 1px solid #e5e7eb;">${freq}</span>` +
+                   `<span style="flex: 1; text-align: center; border-left: 1px solid #e5e7eb;">${route}</span>` +
+                   `</div>`;
+        }
+
+        if (editingPrescIndex !== null) {
+            p.records.prescriptions[editingPrescIndex] = { ...p.records.prescriptions[editingPrescIndex], time, category, code, note, issuer };
+            editingPrescIndex = null;
+        } else {
+            p.records.prescriptions.push({ time, category, code, note, issuer, status: '미수행', nurse: '-' });
+        }
+
+        sortRecordsByTime(p.records.prescriptions);
+        cancelPrescEdit();
+        prescNoteEl.style.height = 'auto';
     }
-
-    if (editingPrescIndex !== null) {
-        // 현재 수정 모드라면, 기존 데이터를 덮어씁니다.
-        p.records.prescriptions[editingPrescIndex] = { ...p.records.prescriptions[editingPrescIndex], time, category, code, note, issuer };
-        editingPrescIndex = null;
-    } else {
-        // 새로운 처방이라면 배열 끝에 새로 추가합니다.
-        p.records.prescriptions.push({ time, category, code, note, issuer, status: '미수행', nurse: '-' });
-    }
-
     sortRecordsByTime(p.records.prescriptions);
     cancelPrescEdit();
     prescNoteEl.style.height = 'auto';
