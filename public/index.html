@@ -575,21 +575,18 @@
                                 <div id="prescriptionTab" class="tab-content active">
                                     <div class="table-scroll-area">
                                         <table class="prescription-table-theme">
-                                           <thead>
-    <tr>
-        <th>일시</th>
-        <th>구분</th>
-        <th>처방코드</th>
-        <th>처방명</th>
-        <th>용량</th>
-        <th>횟수</th>
-        <th>경로</th>
-        <th>처방의</th>
-        <th>수행상태</th>
-        <th>간호사</th>
-        <th>관리</th>
-    </tr>
-</thead>
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:110px;">처방일시</th>
+                                                    <th style="width:60px;">구분</th>
+                                                    <th style="width:80px;">코드</th>
+                                                    <th>처방내역</th>
+                                                    <th style="width:80px;">처방발행자</th>
+                                                    <th style="width:90px;">수행여부</th>
+                                                    <th style="width:130px;">수행자</th>
+                                                    <th style="width:75px;">관리</th>
+                                                </tr>
+                                            </thead>
                                             <tbody id="prescriptionTable"></tbody>
                                         </table>
                                     </div>
@@ -2090,94 +2087,41 @@
                 p.records.io.push({ time, intake: Number(intake), output: Number(output) });
                 sortRecordsByTime(p.records.io);
                 
+            } else if (type === 'presc') {
+                // [처방 내역 기록 처리]
+                const time = document.getElementById('prescTime').value.replace('T', ' ');
+                const category = document.getElementById('prescType').value;
+                const code = document.getElementById('prescCode').value.trim() || '-';
+                const prescNoteEl = document.getElementById('prescNote');
+                let note = prescNoteEl.value.trim();
+                const issuer = document.getElementById('prescIssuer').value.trim() || '-';
 
-} else if (type === 'presc') {
-        // [처방 내역 기록 처리]
-        const time = document.getElementById('prescTime').value.replace('T', ' ');
-        let category = document.getElementById('prescType').value;
-        const code = document.getElementById('prescCode').value.trim() || '-';
-        const prescNoteEl = document.getElementById('prescNote');
-        let note = prescNoteEl.value.trim();
-        const issuer = document.getElementById('prescIssuer').value.trim() || '-';
+                if(!note) return alert("처방 내역을 입력하세요.");
 
-        if (!note) return alert("처방 내역을 입력하세요.");
+                // 카테고리가 '약물'일 경우 용량, 횟수, 경로를 하나로 합쳐서 메모 뒤에 덧붙여 줍니다.
+                if (category === '약물') {
+                    const dose = document.getElementById('prescDose').value.trim();
+                    const freq = document.getElementById('prescFreq').value.trim();
+                    const route = document.getElementById('prescRoute').value.trim();
 
-        // 약물 구분 시 입력값 추출
-        let dose = '-', freq = '-', route = '-';
-        if (category === '약물') {
-            category = '<약물>';
-            dose = document.getElementById('prescDose').value.trim() || '-';
-            freq = document.getElementById('prescFreq').value.trim() || '-';
-            route = document.getElementById('prescRoute').value.trim() || '-';
-        }
+                    // 값이 있는 것만 골라서(filter) ', ' 로 연결해 문자열로 만듭니다.
+                    const details = [dose, freq, route].filter(Boolean).join(', ');
+                    if (details) note += ` (${details})`;
+                }
 
-        // 수정 / 신규 추가 처리
-        if (editingPrescIndex !== null) {
-            p.records.prescriptions[editingPrescIndex] = { 
-                ...p.records.prescriptions[editingPrescIndex], 
-                time, category, code, note, dose, freq, route, issuer 
-            };
-            editingPrescIndex = null;
-        } else {
-            p.records.prescriptions.push({ 
-                time, category, code, note, dose, freq, route, issuer, status: '미수행', nurse: '-' 
-            });
-        }
-
-        // 후처리 및 표 렌더링
-        sortRecordsByTime(p.records.prescriptions);
-        cancelPrescEdit();
-        prescNoteEl.style.height = 'auto';
-        renderPrescriptionTable();
-
-    } else if (type === 'nurse') {
-    const newPresc = {
-        time,
-        category,
-        code,
-        note,
-        dose,
-        freq,
-        route,
-        issuer,
-        status: '미수행',
-        nurse: '-'
-    };
-
-    if (editingPrescIndex !== null) {
-        p.records.prescriptions[editingPrescIndex] = newPresc;
-        editingPrescIndex = null;
-    } else {
-        p.records.prescriptions.push(newPresc);
-    }
-
-    sortRecordsByTime(p.records.prescriptions);
-    cancelPrescEdit();
-    prescNoteEl.style.height = 'auto';
-    renderPrescriptions(); // 화면 새로고침 함수 호출
+                if(editingPrescIndex !== null) {
+                    // 현재 수정 모드라면, 기존 데이터를 덮어씁니다.
+                    p.records.prescriptions[editingPrescIndex] = { ...p.records.prescriptions[editingPrescIndex], time, category, code, note, issuer };
+                    editingPrescIndex = null; // 수정 모드 종료
+                } else {
+                    // 새로운 처방이라면 배열 끝에 새로 추가합니다 (수행 상태는 기본적으로 미수행).
+                    p.records.prescriptions.push({ time, category, code, note, issuer, status: '미수행', nurse: '-' });
+                }
+                sortRecordsByTime(p.records.prescriptions); 
+                cancelPrescEdit(); // 입력폼 내용을 리셋합니다.
+                prescNoteEl.style.height = 'auto'; // 높이가 늘어난 텍스트 입력기를 원래대로 되돌립니다.
                 
-if (editingPrescIndex !== null) {
-        // 현재 수정 모드라면, 기존 데이터를 덮어씁니다.
-        p.records.prescriptions[editingPrescIndex] = { 
-            ...p.records.prescriptions[editingPrescIndex], 
-            time, category, code, note, dose, freq, route, issuer 
-        };
-        editingPrescIndex = null; // 수정 모드 종료
-    } else {
-        // 새로운 처방이라면 배열 끝에 새로 추가합니다.
-        p.records.prescriptions.push({ 
-            time, category, code, note, dose, freq, route, issuer, status: '미수행', nurse: '-' 
-        });
-    }
-
-    // 데이터 저장이 완료된 후 정렬, 입력창 리셋, 화면 표 갱신을 실행합니다.
-    sortRecordsByTime(p.records.prescriptions);
-    cancelPrescEdit(); // 입력폼 내용 리셋
-    prescNoteEl.style.height = 'auto';
-    renderPrescriptionTable(); // 표 렌더링 함수 호출 (함수명 확인)
-
-} else if (type === 'nurse') { // 처방(presc) 구문을 닫고 nurse 구문 시작
-                
+            } else if (type === 'nurse') {
                 // [간호/투약 기록 처리]
                 const time = document.getElementById('nurseTime').value.replace('T', ' ');
                 const nurseNoteEl = document.getElementById('nurseNote');
@@ -2188,7 +2132,7 @@ if (editingPrescIndex !== null) {
                 sortRecordsByTime(p.records.nurse);
                 nurseNoteEl.value = ''; // 작성 후 입력칸 비우기
                 nurseNoteEl.style.height = '28px';
-        }
+                
             } else if (type === 'surg') {
                 // [수술/동의서 기록 처리]
                 const time = document.getElementById('surgTime').value.replace('T', ' ');
@@ -2202,7 +2146,7 @@ if (editingPrescIndex !== null) {
                 // 작성 후 입력칸 비우기
                 document.getElementById('surgOpName').value = '';
                 document.getElementById('surgNote').value = '';
-        }
+                
             } else if (type === 'blood') {
                 // [수혈 기록 처리]
                 const time = document.getElementById('bloodTime').value.replace('T', ' ');
@@ -2644,46 +2588,42 @@ if (editingPrescIndex !== null) {
         // 2. 데이터가 없으면 '기록이 없습니다'라는 안내 문구를 띄운다.
         // 3. 데이터가 있다면 배열의 map() 기능을 써서 HTML 표 태그(<tr><td>) 모양으로 바꾼 뒤, 화면에 삽입한다.
 
-// [처방 내역 표 그리기]
-function renderPrescriptionTable() {
-    const p = patients[currentPatientIndex];
-    const tbody = document.getElementById('prescriptionTable');
-    if (!tbody || !p) return;
-    const records = p.records?.prescriptions || [];
+        // [처방 내역 표 그리기]
+        function renderPrescriptionTable() {
+            const p = patients[currentPatientIndex];
+            const tbody = document.getElementById('prescriptionTable');
+            if (!tbody || !p) return;
+            const records = p.records?.prescriptions || [];
 
-    if (records.length === 0) {
-        // 컬럼 수가 11개로 늘어났으므로 colspan="11"로 수정
-        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:#94a3b8;">등록된 처방 내역이 없습니다.</td></tr>`;
-        return;
-    }
+            if (records.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#94a3b8;">등록된 처방 내역이 없습니다.</td></tr>`;
+                return;
+            }
 
-    // map과 join을 사용해 여러 개의 <tr> 태그를 한 덩어리의 문자열로 이어 붙입니다.
-    tbody.innerHTML = records.map((r, idx) => {
-        // 수행 상태에 따라 배지(버튼)의 색상과 글씨를 다르게 설정합니다.
-        const statusBadge = (r.status === '수행완료' || r.status === '투약완료')
-            ? `<span class="status-badge-complete" onclick="openNurseInputModal(${idx})">✓ ${r.status}</span>`
-            : `<span class="status-badge-pending" onclick="openNurseInputModal(${idx})">⏳ 미수행</span>`;
+            // map과 join을 사용해 여러 개의 <tr> 태그를 한 덩어리의 문자열로 이어 붙입니다.
+            tbody.innerHTML = records.map((r, idx) => {
+                // 수행 상태에 따라 배지(버튼)의 색상과 글씨를 다르게 설정합니다.
+                const statusBadge = (r.status === '수행완료' || r.status === '투약완료') 
+                    ? `<span class="status-badge-complete" onclick="openNurseInputModal(${idx})">✓ ${r.status}</span>`
+                    : `<span class="status-badge-pending" onclick="openNurseInputModal(${idx})">⏳ 미수행</span>`;
+                return `
+                    <tr>
+                        <td>${r.time}</td>
+                        <td><b>${r.category}</b></td>
+                        <td><span class="code-badge">${r.code || '-'}</span></td>
+                        <td style="text-align:left;">${r.note}</td>
+                        <td>${r.issuer || '-'}</td>
+                        <td>${statusBadge}</td>
+                        <td>${r.nurse || '-'}</td>
+                        <td>
+                            <button class="btn-slate" style="padding:1px 4px; font-size:10px;" onclick="editPresc(${idx})">수정</button>
+                            <button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('presc', ${idx})">삭제</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
 
-        return `
-            <tr>
-                <td>${r.time}</td>
-                <td><b>${r.category}</b></td>
-                <td><span class="code-badge">${r.code || '-'}</span></td>
-                <td style="text-align:left;">${r.note}</td>
-                <td>${r.dose || '-'}</td>
-                <td>${r.freq || '-'}</td>
-                <td>${r.route || '-'}</td>
-                <td>${r.issuer || '-'}</td>
-                <td>${statusBadge}</td>
-                <td>${r.nurse || '-'}</td>
-                <td>
-                    <button class="btn-slate" style="padding:1px 4px; font-size:10px;" onclick="editPresc(${idx})">수정</button>
-                    <button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deletePresc(${idx})">삭제</button>
-                </td>
-            </tr>
-        `;
-    }).join('');
-}
         // [간호 기록 표 그리기]
         function renderNurseTable() {
             const p = patients[currentPatientIndex];
