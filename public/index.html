@@ -2090,26 +2090,47 @@
                 p.records.io.push({ time, intake: Number(intake), output: Number(output) });
                 sortRecordsByTime(p.records.io);
                 
+
 } else if (type === 'presc') {
-    // [처방 내역 기록 처리]
-    const time = document.getElementById('prescTime').value.replace('T', ' ');
-    let category = document.getElementById('prescType').value;
-    const code = document.getElementById('prescCode').value.trim() || '-';
-    const prescNoteEl = document.getElementById('prescNote');
-    const note = prescNoteEl.value.trim();
-    const issuer = document.getElementById('prescIssuer').value.trim() || '-';
+        // [처방 내역 기록 처리]
+        const time = document.getElementById('prescTime').value.replace('T', ' ');
+        let category = document.getElementById('prescType').value;
+        const code = document.getElementById('prescCode').value.trim() || '-';
+        const prescNoteEl = document.getElementById('prescNote');
+        let note = prescNoteEl.value.trim();
+        const issuer = document.getElementById('prescIssuer').value.trim() || '-';
 
-    if(!note) return alert("처방 내역을 입력하세요.");
+        if (!note) return alert("처방 내역을 입력하세요.");
 
-    // 약물일 경우 개별 입력값을 가져오고 구분을 <약물>로 설정
-    let dose = '-', freq = '-', route = '-';
-    if (category === '약물') {
-        category = '<약물>';
-        dose = document.getElementById('prescDose').value.trim() || '-';
-        freq = document.getElementById('prescFreq').value.trim() || '-';
-        route = document.getElementById('prescRoute').value.trim() || '-';
-    }
+        // 약물 구분 시 입력값 추출
+        let dose = '-', freq = '-', route = '-';
+        if (category === '약물') {
+            category = '<약물>';
+            dose = document.getElementById('prescDose').value.trim() || '-';
+            freq = document.getElementById('prescFreq').value.trim() || '-';
+            route = document.getElementById('prescRoute').value.trim() || '-';
+        }
 
+        // 수정 / 신규 추가 처리
+        if (editingPrescIndex !== null) {
+            p.records.prescriptions[editingPrescIndex] = { 
+                ...p.records.prescriptions[editingPrescIndex], 
+                time, category, code, note, dose, freq, route, issuer 
+            };
+            editingPrescIndex = null;
+        } else {
+            p.records.prescriptions.push({ 
+                time, category, code, note, dose, freq, route, issuer, status: '미수행', nurse: '-' 
+            });
+        }
+
+        // 후처리 및 표 렌더링
+        sortRecordsByTime(p.records.prescriptions);
+        cancelPrescEdit();
+        prescNoteEl.style.height = 'auto';
+        renderPrescriptionTable();
+
+    } else if (type === 'nurse') {
     const newPresc = {
         time,
         category,
