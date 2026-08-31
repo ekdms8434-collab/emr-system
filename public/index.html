@@ -2088,26 +2088,31 @@
                 sortRecordsByTime(p.records.io);
                 
             } else if (type === 'presc') {
-                // [처방 내역 기록 처리]
-                const time = document.getElementById('prescTime').value.replace('T', ' ');
-                const category = document.getElementById('prescType').value;
-                const code = document.getElementById('prescCode').value.trim() || '-';
-                const prescNoteEl = document.getElementById('prescNote');
-                let note = prescNoteEl.value.trim();
-                const issuer = document.getElementById('prescIssuer').value.trim() || '-';
+         // [처방 내역 기록 처리]
+const time = document.getElementById('prescTime').value.replace('T', ' ');
+let category = document.getElementById('prescType').value; // const -> let으로 변경!
+const code = document.getElementById('prescCode').value.trim() || '-';
+const prescNoteEl = document.getElementById('prescNote');
+let note = prescNoteEl.value.trim();
+const issuer = document.getElementById('prescIssuer').value.trim() || '-';
 
-                if(!note) return alert("처방 내역을 입력하세요.");
+if(!note) return alert("처방 내역을 입력하세요.");
 
-                // 카테고리가 '약물'일 경우 용량, 횟수, 경로를 하나로 합쳐서 메모 뒤에 덧붙여 줍니다.
-                if (category === '약물') {
-                    const dose = document.getElementById('prescDose').value.trim();
-                    const freq = document.getElementById('prescFreq').value.trim();
-                    const route = document.getElementById('prescRoute').value.trim();
+// 카테고리가 '약물'일 경우 용량, 횟수, 경로를 합쳐 아랫줄에 덧붙이고, <약물>로 변경합니다.
+if (category === '약물') {
+    const dose = document.getElementById('prescDose').value.trim();
+    const freq = document.getElementById('prescFreq').value.trim();
+    const route = document.getElementById('prescRoute').value.trim();
 
-                    // 값이 있는 것만 골라서(filter) ', ' 로 연결해 문자열로 만듭니다.
-                    const details = [dose, freq, route].filter(Boolean).join(', ');
-                    if (details) note += ` (${details})`;
-                }
+    // 1. 구분자를 ' / '로 변경
+    const details = [dose, freq, route].filter(Boolean).join(' / ');
+    
+    // 2. \n을 추가하여 처방명 아랫 줄에 배치
+    if (details) note += `\n(${details})`;
+
+    // 3. 구분을 <약물> 형태로 변경
+    category = '<약물>';
+}
 
                 if(editingPrescIndex !== null) {
                     // 현재 수정 모드라면, 기존 데이터를 덮어씁니다.
