@@ -580,7 +580,7 @@
                                                     <th style="width:110px;">처방일시</th>
                                                     <th style="width:60px;">구분</th>
                                                     <th style="width:80px;">코드</th>
-                                                    <th colspan="4">처방내역</th>
+                                                    <th>처방내역</th>
                                                     <th style="width:80px;">처방발행자</th>
                                                     <th style="width:90px;">수행여부</th>
                                                     <th style="width:130px;">수행자</th>
@@ -619,52 +619,7 @@
                                         <button class="btn-slate" onclick="cancelPrescEdit()" id="btnPrescCancel" style="display:none;">취소</button>
                                     </div>
                                 </div>
-<script>
-function addRecord(type) {
-  if (type === 'presc') {
-    const time = document.getElementById('prescTime').value;
-    const prescType = document.getElementById('prescType').value;
-    const code = document.getElementById('prescCode').value;
-    const note = document.getElementById('prescNote').value;
-    const dose = document.getElementById('prescDose').value;
-    const freq = document.getElementById('prescFreq').value;
-    const route = document.getElementById('prescRoute').value;
-    const issuer = document.getElementById('prescIssuer').value;
 
-    // 구분에 따른 칸 분할 처리 (약물=4칸 분할 / 기타=1칸 통합)
-    let detailCells = '';
-    if (prescType === '약물') {
-      detailCells = `
-        <td>${note}</td>
-        <td>${dose}</td>
-        <td>${freq}</td>
-        <td>${route}</td>
-      `;
-    } else {
-      detailCells = `<td colspan="4">${note}</td>`;
-    }
-
-    const trContent = `
-      <tr>
-        <td>${time}</td>
-        <td>${prescType}</td>
-        <td>${code}</td>
-        ${detailCells}
-        <td>${issuer}</td>
-        <td>미수행</td>
-        <td></td>
-        <td>
-          <button type="button">수정</button>
-          <button type="button">삭제</button>
-        </td>
-      </tr>
-    `;
-
-    document.getElementById('prescriptionTable').insertAdjacentHTML('beforeend', trContent);
-  }
-}
-</script>
-                                
                                 <!-- 2. 수술/동의서 탭 화면 -->
                                 <div id="surgTab" class="tab-content">
                                     <div class="table-scroll-area">
@@ -2132,42 +2087,53 @@ function addRecord(type) {
                 p.records.io.push({ time, intake: Number(intake), output: Number(output) });
                 sortRecordsByTime(p.records.io);
                 
-} else if (type === 'presc') {
-        // [처방 내역 기록 처리]
-        const time = document.getElementById('prescTime').value.replace('T', ' ');
-        const category = document.getElementById('prescType').value;
-        const code = document.getElementById('prescCode').value.trim() || '-';
-        const prescNoteEl = document.getElementById('prescNote');
-        let note = prescNoteEl.value.trim();
-        const issuer = document.getElementById('prescIssuer').value.trim() || '-';
+            } else if (type === 'presc') {
+                // [처방 내역 기록 처리]
+                const time = document.getElementById('prescTime').value.replace('T', ' ');
+                const category = document.getElementById('prescType').value;
+                const code = document.getElementById('prescCode').value.trim() || '-';
+                const prescNoteEl = document.getElementById('prescNote');
+                let note = prescNoteEl.value.trim();
+                const issuer = document.getElementById('prescIssuer').value.trim() || '-';
 
-        if (!note) return alert("처방 내역을 입력하세요.");
+                if(!note) return alert("처방 내역을 입력하세요.");
 
-        // '약물'일 경우 처방내역 셀 안에서 표(4칸)처럼 깔끔하게 나누어 표시
-        if (category === '약물') {
-            const dose = document.getElementById('prescDose').value.trim();
-            const freq = document.getElementById('prescFreq').value.trim();
-            const route = document.getElementById('prescRoute').value.trim();
+                // 카테고리가 '약물'일 경우 용량, 횟수, 경로를 하나로 합쳐서 메모 뒤에 덧붙여 줍니다.
+                if (category === '약물') {
+                    const dose = document.getElementById('prescDose').value.trim();
+                    const freq = document.getElementById('prescFreq').value.trim();
+                    const route = document.getElementById('prescRoute').value.trim();
 
-            note = `<div style="display: table; width: 100%; table-layout: fixed; border-collapse: collapse;">` +
-                   `<div style="display: table-cell; width: 45%; padding: 2px 4px; text-align: left; vertical-align: middle;">${note}</div>` +
-                   `<div style="display: table-cell; width: 18%; padding: 2px 4px; text-align: center; vertical-align: middle; border-left: 1px solid #333;">${dose}</div>` +
-                   `<div style="display: table-cell; width: 17%; padding: 2px 4px; text-align: center; vertical-align: middle; border-left: 1px solid #333;">${freq}</div>` +
-                   `<div style="display: table-cell; width: 20%; padding: 2px 4px; text-align: center; vertical-align: middle; border-left: 1px solid #333;">${route}</div>` +
-                   `</div>`;
-        }
+                    // 값이 있는 것만 골라서(filter) ', ' 로 연결해 문자열로 만듭니다.
+                    const details = [dose, freq, route].filter(Boolean).join(', ');
+                    if (details) note += ` (${details})`;
+                }
 
-        if (editingPrescIndex !== null) {
-            p.records.prescriptions[editingPrescIndex] = { ...p.records.prescriptions[editingPrescIndex], time, category, code, note, issuer };
-            editingPrescIndex = null;
-        } else {
-            p.records.prescriptions.push({ time, category, code, note, issuer, status: '미수행', nurse: '-' });
-        }
-
-        sortRecordsByTime(p.records.prescriptions);
-        cancelPrescEdit();
-        prescNoteEl.style.height = 'auto';
-    } else if (type === 'nurse') {
+                if(editingPrescIndex !== null) {
+                    // 현재 수정 모드라면, 기존 데이터를 덮어씁니다.
+                    p.records.prescriptions[editingPrescIndex] = { ...p.records.prescriptions[editingPrescIndex], time, category, code, note, issuer };
+                    editingPrescIndex = null; // 수정 모드 종료
+                } else {
+                    // 새로운 처방이라면 배열 끝에 새로 추가합니다 (수행 상태는 기본적으로 미수행).
+                    p.records.prescriptions.push({ time, category, code, note, issuer, status: '미수행', nurse: '-' });
+                }
+                sortRecordsByTime(p.records.prescriptions); 
+                cancelPrescEdit(); // 입력폼 내용을 리셋합니다.
+                prescNoteEl.style.height = 'auto'; // 높이가 늘어난 텍스트 입력기를 원래대로 되돌립니다.
+                
+            } else if (type === 'nurse') {
+                // [간호/투약 기록 처리]
+                const time = document.getElementById('nurseTime').value.replace('T', ' ');
+                const nurseNoteEl = document.getElementById('nurseNote');
+                const note = nurseNoteEl.value.trim();
+                const nurseName = document.getElementById('nurseName').value.trim() || '간호사';
+                if(!note) return alert("간호/투약 수행 내역을 입력하세요.");
+                p.records.nurse.push({ time, note, nurse: nurseName });
+                sortRecordsByTime(p.records.nurse);
+                nurseNoteEl.value = ''; // 작성 후 입력칸 비우기
+                nurseNoteEl.style.height = '28px';
+                
+            } else if (type === 'surg') {
                 // [수술/동의서 기록 처리]
                 const time = document.getElementById('surgTime').value.replace('T', ' ');
                 const stage = document.getElementById('surgStage').value;
