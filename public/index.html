@@ -592,27 +592,39 @@
                                     </div>
                                     
                                     <!-- 처방내역을 새로 입력하는 영역 -->
-                                    <div class="input-bar-bottom" style="gap:5px; background:#f8fafc; padding:8px; border:1px solid var(--border-color); border-radius:3px;">
-                                        <input type="datetime-local" id="prescTime" style="width:135px;">
-                                        <select id="prescType" style="width:75px; font-weight:bold;" onchange="onPrescTypeChange(this.value)">
-                                            <option value="약물">약물</option>
-                                            <option value="처방">처방</option>
-                                            <option value="응급">응급</option>
-                                            <option value="루틴" selected>루틴</option>
-                                            <option value="PRN">PRN</option>
-                                        </select>
-                                        <select id="medDbSelect" onchange="selectMedFromDb(this)" style="width:125px; font-weight:bold; color:var(--primary-navy);">
-                                            <option value="">-- DB 약물 선택 --</option>
-                                        </select>
-                                        <input type="text" id="prescCode" placeholder="코드" style="width:60px;" oninput="onMedCodeInput(this.value)">
-                                        <textarea id="prescNote" class="auto-expand-textarea" placeholder="처방 상세 내역 및 지시사항" rows="1" style="flex:1; min-width: 120px;" oninput="autoExpandTextarea(this)"></textarea>
-                                        
-                                        <!-- 약물을 선택했을 때만 나타나는 용량/횟수/경로 입력칸 -->
-                                        <div id="medDetailGroup" style="display:none; gap:3px; align-items:center;">
-                                            <input type="text" id="prescDose" class="med-detail-input" placeholder="용량">
-                                            <input type="text" id="prescFreq" class="med-detail-input" placeholder="횟수">
-                                            <input type="text" id="prescRoute" class="med-detail-input" placeholder="경로">
-                                        </div>
+                                  <div class="input-bar-bottom" style="gap:5px; background:#f8fafc; padding:8px; border:1px solid var(--border-color); border-radius:3px;">
+    <input type="datetime-local" id="prescTime" style="width:135px;">
+    <!-- 처방 구분 선택 드롭다운 -->
+    <select id="prescType" style="width:75px; font-weight:bold;" onchange="onPrescTypeChange(this.value)">
+        <option value="약물">약물</option>
+        <option value="처방">처방</option>
+        <option value="응급">응급</option>
+        <option value="루틴" selected>루틴</option>
+        <option value="PRN">PRN</option>
+    </select>
+
+    <!-- 약물 선택 시 표출될 DB 선택 및 코드 입력칸 -->
+    <div id="medDbGroup" style="display:none; gap:3px; align-items:center;">
+        <select id="medDbSelect" style="width:125px;" onchange="selectMedFromDb(this)">
+            <option value="">-- DB 처방 선택 --</option>
+        </select>
+        <input type="text" id="prescCode" placeholder="처방코드" style="width:70px;" oninput="onMedCodeInput(this.value)">
+    </div>
+
+    <!-- 처방내역 (공통) -->
+    <input type="text" id="prescNote" placeholder="처방내역" style="flex:1;">
+
+    <!-- 약물 선택 시 표출될 용량/횟수/경로 입력칸 -->
+    <div id="medDetailGroup" style="display:none; gap:3px; align-items:center;">
+        <input type="text" id="prescDose" class="med-detail-input" placeholder="용량">
+        <input type="text" id="prescFreq" class="med-detail-input" placeholder="횟수">
+        <input type="text" id="prescRoute" class="med-detail-input" placeholder="경로">
+    </div>
+
+    <input type="text" id="prescIssuer" placeholder="처방발행자" style="width:70px;">
+    <button class="btn-blue" onclick="addRecord('presc')" id="btnPrescSave">처방 입력</button>
+    <button class="btn-slate" onclick="cancelPrescEdit()" id="btnPrescCancel" style="display:none;">취소</button>
+</div>
 
                                         <input type="text" id="prescIssuer" placeholder="처방발행자" style="width:70px;">
                                         <button class="btn-blue" onclick="addRecord('presc')" id="btnPrescSave">처방 입력</button>
@@ -741,10 +753,6 @@
                                     </div>
                                     <div class="input-bar-bottom">
                                         <input type="datetime-local" id="nurseTime">
-                                        <!-- [신규 추가] 간호기록 DB 선택 드롭다운 -->
-                                        <select id="nursingDbSelect" class="form-control" onchange="applyNursingDbSelection()" style="margin: 5px 0;">
-                                        <option value="">-- 간호기록 DB 선택 --</option>
-                                        </select>
                                         <textarea id="nurseNote" class="auto-expand-textarea" placeholder="간호 처치 내역 및 관찰소견/투약 메모 입력" rows="1" style="flex:1;" oninput="autoExpandTextarea(this)"></textarea>
                                         <input type="text" id="nurseName" placeholder="간호사 이름" style="width:80px;" value="이다은">
                                         <button class="btn-blue" onclick="addRecord('nurse')">입력</button>
@@ -988,15 +996,24 @@
             element.style.height = (element.scrollHeight) + 'px'; // 글씨가 차지하는 높이만큼 쫘악 늘립니다.
         }
 
-        // 처방 구분을 바꿨을 때 '약물'이면 용량/횟수 입력칸을 보여주고, 아니면 숨깁니다.
-        function onPrescTypeChange(value) {
-            const group = document.getElementById('medDetailGroup');
-            if (value === '약물') {
-                group.style.display = 'flex';
-            } else {
-                group.style.display = 'none';
-            }
-        }
+  // 구분 변경 시 '약물'일 때만 세부 입력창 표시
+function onPrescTypeChange(value) {
+    const group = document.getElementById('medDetailGroup');
+    const dbGroup = document.getElementById('medDbGroup');
+    if (value === '약물') {
+        group.style.display = 'flex';
+        if (dbGroup) dbGroup.style.display = 'flex';
+    } else {
+        group.style.display = 'none';
+        if (dbGroup) dbGroup.style.display = 'none';
+        // 약물이 아닌 다른 항목 선택 시 세부 입력값 초기화
+        document.getElementById('prescDose').value = '';
+        document.getElementById('prescFreq').value = '';
+        document.getElementById('prescRoute').value = '';
+        if (document.getElementById('prescCode')) document.getElementById('prescCode').value = '';
+        if (document.getElementById('medDbSelect')) document.getElementById('medDbSelect').value = '';
+    }
+}
 
         // 하단 패널(V/S, I/O)을 접었다 폈다 하는 버튼 기능입니다.
         function toggleBottomPane() {
@@ -2091,27 +2108,48 @@
                 p.records.io.push({ time, intake: Number(intake), output: Number(output) });
                 sortRecordsByTime(p.records.io);
                 
-            } else if (type === 'presc') {
-                // [처방 내역 기록 처리]
-                const time = document.getElementById('prescTime').value.replace('T', ' ');
-                const category = document.getElementById('prescType').value;
-                const code = document.getElementById('prescCode').value.trim() || '-';
-                const prescNoteEl = document.getElementById('prescNote');
-                let note = prescNoteEl.value.trim();
-                const issuer = document.getElementById('prescIssuer').value.trim() || '-';
+            } else // 처방 등록 함수 처리 부분
+if (type === 'presc') {
+    const prescTime = document.getElementById('prescTime').value;
+    const prescType = document.getElementById('prescType').value;
+    const prescCode = document.getElementById('prescCode').value.trim();
+    let prescNote = document.getElementById('prescNote').value.trim();
+    const prescIssuer = document.getElementById('prescIssuer').value.trim();
 
-                if(!note) return alert("처방 내역을 입력하세요.");
+    // 약물 세부 정보 가져오기
+    const dose = document.getElementById('prescDose').value.trim();
+    const freq = document.getElementById('prescFreq').value.trim();
+    const route = document.getElementById('prescRoute').value.trim();
 
-                // 카테고리가 '약물'일 경우 용량, 횟수, 경로를 하나로 합쳐서 메모 뒤에 덧붙여 줍니다.
-                if (category === '약물') {
-                    const dose = document.getElementById('prescDose').value.trim();
-                    const freq = document.getElementById('prescFreq').value.trim();
-                    const route = document.getElementById('prescRoute').value.trim();
+    // 구분값이 '약물'이고 세부 입력값이 있다면 텍스트 조합
+    if (prescType === '약물' && (dose || freq || route)) {
+        const details = [dose, freq, route].filter(Boolean).join(' / ');
+        prescNote = `${prescNote} (${details})`;
+    }
 
-                    // 값이 있는 것만 골라서(filter) ', ' 로 연결해 문자열로 만듭니다.
-                    const details = [dose, freq, route].filter(Boolean).join(', ');
-                    if (details) note += ` (${details})`;
-                }
+    // 신규 처방 객체 생성
+    const newPresc = {
+        id: Date.now(),
+        time: prescTime || new Date().toISOString().slice(0, 16).replace('T', ' '),
+        type: prescType,
+        code: prescCode,
+        note: prescNote,
+        issuer: prescIssuer,
+        status: 'pending',
+        executor: ''
+    };
+
+    // 환자 데이터에 추가 후 테이블 갱신
+    currentPatient.prescriptions.push(newPresc);
+    renderPrescriptions();
+
+    // 입력 필드 초기화
+    document.getElementById('prescNote').value = '';
+    document.getElementById('prescCode').value = '';
+    document.getElementById('prescDose').value = '';
+    document.getElementById('prescFreq').value = '';
+    document.getElementById('prescRoute').value = '';
+}
 
                 if(editingPrescIndex !== null) {
                     // 현재 수정 모드라면, 기존 데이터를 덮어씁니다.
@@ -2721,63 +2759,6 @@
                 </tr>
             `).join('');
         }
-        /**
- * 1. 간호기록 DB 목록을 읽어와 드롭다운 선택지로 채워주는 함수
- */
-function updateNursingDbDropdown() {
-  const selectElement = document.getElementById('nursingDbSelect');
-  if (!selectElement) return;
-
-  // 기존 드롭다운 항목 초기화 (첫 번째 안내 문구만 유지)
-  selectElement.innerHTML = '<option value="">-- 간호기록 DB 선택 --</option>';
-
-  // 간호기록 DB 데이터 불러오기 (기존 프로젝트의 DB 변수명으로 자동 참조)
-  const dbData = window.nursingDbList || JSON.parse(localStorage.getItem('nursingDbList')) || [];
-
-  dbData.forEach(item => {
-    const option = document.createElement('option');
-    
-    // DB 데이터가 객체 형태인 경우와 문자열 형태인 경우 모두 처리
-    if (typeof item === 'object' && item !== null) {
-      option.value = item.content || item.title || '';
-      option.textContent = item.title ? `[${item.category || 'DB'}] ${item.title}` : (item.content || '');
-    } else {
-      option.value = item;
-      option.textContent = item;
-    }
-    
-    selectElement.appendChild(option);
-  });
-}
-
-/**
- * 2. 드롭다운에서 항목을 선택했을 때 [내용 입력란]에 텍스트를 채워주는 함수
- */
-function applyNursingDbSelection() {
-  const selectElement = document.getElementById('nursingDbSelect');
-  const contentInput = document.getElementById('nursingContent'); // 기존 내용 입력창 ID
-
-  if (!selectElement || !contentInput) return;
-
-  const selectedValue = selectElement.value;
-
-  if (selectedValue) {
-    // 내용 입력창이 비어 있으면 바로 넣고, 이미 작성된 내용이 있으면 줄바꿈(\n) 후 덧붙입니다.
-    if (contentInput.value.trim() === '') {
-      contentInput.value = selectedValue;
-    } else {
-      contentInput.value += '\n' + selectedValue;
-    }
-    
-    // 선택 완료 후 드롭다운을 다시 기본 안내 문구로 되돌립니다.
-    selectElement.value = '';
-  }
-}
-
-// 화면이 처음 로드될 때 드롭다운 목록을 불러옵니다.
-document.addEventListener('DOMContentLoaded', function() {
-  updateNursingDbDropdown();
-});
     </script>
 </body>
 </html>
