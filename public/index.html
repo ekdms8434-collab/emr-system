@@ -576,17 +576,20 @@
                                     <div class="table-scroll-area">
                                         <table class="prescription-table-theme">
                                             <thead>
-                                                <tr>
-                                                    <th style="width:110px;">처방일시</th>
-                                                    <th style="width:60px;">구분</th>
-                                                    <th style="width:80px;">코드</th>
-                                                    <th>처방내역</th>
-                                                    <th style="width:80px;">처방발행자</th>
-                                                    <th style="width:90px;">수행여부</th>
-                                                    <th style="width:130px;">수행자</th>
-                                                    <th style="width:75px;">관리</th>
-                                                </tr>
-                                            </thead>
+    <tr>
+        <th>일시</th>
+        <th>구분</th>
+        <th>처방코드</th>
+        <th>처방명</th>
+        <th>용량</th>   <!-- 추가 확인 -->
+        <th>횟수</th>   <!-- 추가 확인 -->
+        <th>경로</th>   <!-- 추가 확인 -->
+        <th>처방의</th>
+        <th>수행상태</th>
+        <th>간호사</th>
+        <th>관리</th>
+    </tr>
+</thead>
                                             <tbody id="prescriptionTable"></tbody>
                                         </table>
                                     </div>
@@ -2087,41 +2090,46 @@
                 p.records.io.push({ time, intake: Number(intake), output: Number(output) });
                 sortRecordsByTime(p.records.io);
                 
-            } else if (type === 'presc') {
-                // [처방 내역 기록 처리]
-                const time = document.getElementById('prescTime').value.replace('T', ' ');
-                const category = document.getElementById('prescType').value;
-                const code = document.getElementById('prescCode').value.trim() || '-';
-                const prescNoteEl = document.getElementById('prescNote');
-                let note = prescNoteEl.value.trim();
-                const issuer = document.getElementById('prescIssuer').value.trim() || '-';
+} else if (type === 'presc') {
+        // [처방 내역 기록 처리]
+        const time = document.getElementById('prescTime').value.replace('T', ' ');
+        let category = document.getElementById('prescType').value; // const -> let 변경
+        const code = document.getElementById('prescCode').value.trim() || '-';
+        const prescNoteEl = document.getElementById('prescNote');
+        const note = prescNoteEl.value.trim();
+        const issuer = document.getElementById('prescIssuer').value.trim() || '-';
 
-                if(!note) return alert("처방 내역을 입력하세요.");
+        if (!note) return alert("처방 내역을 입력하세요.");
 
-                // 카테고리가 '약물'일 경우 용량, 횟수, 경로를 하나로 합쳐서 메모 뒤에 덧붙여 줍니다.
-                if (category === '약물') {
-                    const dose = document.getElementById('prescDose').value.trim();
-                    const freq = document.getElementById('prescFreq').value.trim();
-                    const route = document.getElementById('prescRoute').value.trim();
+        // 약물일 경우 용량, 횟수, 경로를 각각 분리하고 구분을 <약물>로 설정
+        let dose = '-', freq = '-', route = '-';
+        if (category === '약물') {
+            category = '<약물>';
+            dose = document.getElementById('prescDose')?.value.trim() || '-';
+            freq = document.getElementById('prescFreq')?.value.trim() || '-';
+            route = document.getElementById('prescRoute')?.value.trim() || '-';
+        }
 
-                    // 값이 있는 것만 골라서(filter) ', ' 로 연결해 문자열로 만듭니다.
-                    const details = [dose, freq, route].filter(Boolean).join(', ');
-                    if (details) note += ` (${details})`;
-                }
+        if (editingPrescIndex !== null) {
+            // 수정 모드: dose, freq, route를 추가하여 데이터 저장
+            p.records.prescriptions[editingPrescIndex] = { 
+                ...p.records.prescriptions[editingPrescIndex], 
+                time, category, code, note, dose, freq, route, issuer 
+            };
+            editingPrescIndex = null;
+        } else {
+            // 신규 추가: dose, freq, route를 추가하여 데이터 저장
+            p.records.prescriptions.push({ 
+                time, category, code, note, dose, freq, route, issuer, status: '미수행', nurse: '-' 
+            });
+        }
 
-                if(editingPrescIndex !== null) {
-                    // 현재 수정 모드라면, 기존 데이터를 덮어씁니다.
-                    p.records.prescriptions[editingPrescIndex] = { ...p.records.prescriptions[editingPrescIndex], time, category, code, note, issuer };
-                    editingPrescIndex = null; // 수정 모드 종료
-                } else {
-                    // 새로운 처방이라면 배열 끝에 새로 추가합니다 (수행 상태는 기본적으로 미수행).
-                    p.records.prescriptions.push({ time, category, code, note, issuer, status: '미수행', nurse: '-' });
-                }
-                sortRecordsByTime(p.records.prescriptions); 
-                cancelPrescEdit(); // 입력폼 내용을 리셋합니다.
-                prescNoteEl.style.height = 'auto'; // 높이가 늘어난 텍스트 입력기를 원래대로 되돌립니다.
-                
-            } else if (type === 'nurse') {
+        sortRecordsByTime(p.records.prescriptions);
+        cancelPrescEdit();
+        prescNoteEl.style.height = 'auto';
+        renderPrescriptionTable(); // 표 갱신 함수 호출
+
+    } else if (type === 'nurse') {
                 // [간호/투약 기록 처리]
                 const time = document.getElementById('nurseTime').value.replace('T', ' ');
                 const nurseNoteEl = document.getElementById('nurseNote');
