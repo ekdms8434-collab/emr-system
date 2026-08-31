@@ -2606,7 +2606,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
             }
 
             // map과 join을 사용해 여러 개의 <tr> 태그를 한 덩어리의 문자열로 이어 붙입니다.
-          tbody.innerHTML = records.map((r, idx) => {
+         tbody.innerHTML = records.map((r, idx) => {
         const statusBadge = (r.status === '수행완료' || r.status === '투약완료')
             ? `<span class="status-badge-complete" onclick="openNurseInputModal(${idx})">✓ ${r.status}</span>`
             : `<span class="status-badge-pending" onclick="openNurseInputModal(${idx})">⏳ 미수행</span>`;
@@ -2617,9 +2617,12 @@ if (!note) return alert("처방 내역을 입력하세요.");
                 <td><b>${r.category}</b></td>
                 <td><span class="code-badge">${r.code || '-'}</span></td>
                 <td style="text-align:left;">${r.note}</td>
+
+                <!-- 아래 3줄(용량, 횟수, 경로)이 추가되어야 처방의/수행상태가 오른쪽으로 밀립니다 -->
                 <td>${r.dose || '-'}</td>
                 <td>${r.freq || '-'}</td>
                 <td>${r.route || '-'}</td>
+
                 <td>${r.issuer || '-'}</td>
                 <td>${statusBadge}</td>
                 <td>${r.nurse || '-'}</td>
