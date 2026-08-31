@@ -2134,26 +2134,29 @@
     cancelPrescEdit();
     prescNoteEl.style.height = 'auto';
     renderPrescriptions(); // 화면 새로고침 함수 호출
+                
 if (editingPrescIndex !== null) {
-    // 현재 수정 모드라면, 기존 데이터를 덮어씁니다 (dose, freq, route 추가)
-    p.records.prescriptions[editingPrescIndex] = { 
-        ...p.records.prescriptions[editingPrescIndex], 
-        time, category, code, note, dose, freq, route, issuer 
-    };
-    editingPrescIndex = null; // 수정 모드 종료
-} else {
-    // 새로운 처방이라면 배열 끝에 새로 추가합니다 (dose, freq, route 추가)
-    p.records.prescriptions.push({ 
-        time, category, code, note, dose, freq, route, issuer, status: '미수행', nurse: '-' 
-    });
-}
+        // 현재 수정 모드라면, 기존 데이터를 덮어씁니다.
+        p.records.prescriptions[editingPrescIndex] = { 
+            ...p.records.prescriptions[editingPrescIndex], 
+            time, category, code, note, dose, freq, route, issuer 
+        };
+        editingPrescIndex = null; // 수정 모드 종료
+    } else {
+        // 새로운 처방이라면 배열 끝에 새로 추가합니다.
+        p.records.prescriptions.push({ 
+            time, category, code, note, dose, freq, route, issuer, status: '미수행', nurse: '-' 
+        });
+    }
 
-sortRecordsByTime(p.records.prescriptions);
-cancelPrescEdit(); // 입력폼 내용을 리셋합니다.
-prescNoteEl.style.height = 'auto';
-renderPrescriptionTable(); // 표 새로고침 함수 호출
+    // 데이터 저장이 완료된 후 정렬, 입력창 리셋, 화면 표 갱신을 실행합니다.
+    sortRecordsByTime(p.records.prescriptions);
+    cancelPrescEdit(); // 입력폼 내용 리셋
+    prescNoteEl.style.height = 'auto';
+    renderPrescriptionTable(); // 표 렌더링 함수 호출 (함수명 확인)
 
-} else if (type === 'nurse') {
+} else if (type === 'nurse') { // 처방(presc) 구문을 닫고 nurse 구문 시작
+                
                 // [간호/투약 기록 처리]
                 const time = document.getElementById('nurseTime').value.replace('T', ' ');
                 const nurseNoteEl = document.getElementById('nurseNote');
