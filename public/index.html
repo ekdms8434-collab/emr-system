@@ -2104,7 +2104,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
 // 약물 구분 시 개별 값 추출
         let dose = '-', freq = '-', route = '-';
         if (category === '약물') {
-            category = '<약물>';
+            category = '약물';
             dose = document.getElementById('prescDose')?.value.trim() || '-';
             freq = document.getElementById('prescFreq')?.value.trim() || '-';
             route = document.getElementById('prescRoute')?.value.trim() || '-';
@@ -2594,6 +2594,30 @@ if (!note) return alert("처방 내역을 입력하세요.");
         // 3. 데이터가 있다면 배열의 map() 기능을 써서 HTML 표 태그(<tr><td>) 모양으로 바꾼 뒤, 화면에 삽입한다.
 
         // [처방 내역 표 그리기]
+        function deletePresc(index) {
+    if (!confirm("해당 처방 내역을 삭제하시겠습니까?")) return;
+    const p = patients[currentPatientIndex];
+    if (!p || !p.records?.prescriptions) return;
+    p.records.prescriptions.splice(index, 1);
+    renderPrescriptionTable();
+}
+
+function editPresc(index) {
+    const p = patients[currentPatientIndex];
+    if (!p || !p.records?.prescriptions) return;
+    const item = p.records.prescriptions[index];
+    editingPrescIndex = index;
+
+    if (document.getElementById('prescTime')) document.getElementById('prescTime').value = item.time.replace(' ', 'T');
+    if (document.getElementById('prescType')) document.getElementById('prescType').value = item.category.includes('약물') ? '약물' : item.category;
+    if (document.getElementById('prescCode')) document.getElementById('prescCode').value = item.code === '-' ? '' : item.code;
+    if (document.getElementById('prescNote')) document.getElementById('prescNote').value = item.note || '';
+    if (document.getElementById('prescIssuer')) document.getElementById('prescIssuer').value = item.issuer === '-' ? '' : item.issuer;
+
+    if (document.getElementById('prescDose')) document.getElementById('prescDose').value = item.dose === '-' ? '' : (item.dose || '');
+    if (document.getElementById('prescFreq')) document.getElementById('prescFreq').value = item.freq === '-' ? '' : (item.freq || '');
+    if (document.getElementById('prescRoute')) document.getElementById('prescRoute').value = item.route === '-' ? '' : (item.route || '');
+}
         function renderPrescriptionTable() {
             const p = patients[currentPatientIndex];
             const tbody = document.getElementById('prescriptionTable');
@@ -2601,7 +2625,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
             const records = p.records?.prescriptions || [];
 
             if (records.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#94a3b8;">등록된 처방 내역이 없습니다.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:#94a3b8;">등록된 처방 내역이 없습니다.</td></tr>`;
                 return;
             }
 
