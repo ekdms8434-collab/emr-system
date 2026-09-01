@@ -20,8 +20,25 @@
         // TODO: 아래 값을 Supabase 콘솔에서 복사한 값으로 바꾸세요.
         const SUPABASE_URL = 'https://cgakktqycismmptwbgdk.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_GbGfanPQdsijF1HlmHAvYw_JoBGqMZ_';
-        // createClient를 호출하면 supabase 객체가 클라이언트 인스턴스로 덮어써집니다.
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // 안전한 Supabase 클라이언트 초기화 (전역 라이브러리 객체를 직접 참조)
+        (function() {
+            try {
+                const lib = (typeof window !== 'undefined') ? window.supabase || window.Supabase || window.supabaseJs || window.supabasejs : null;
+                if (lib && typeof lib.createClient === 'function') {
+                    // createClient을 제공하는 UMD를 사용하는 경우
+                    window.supabase = lib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                } else if (typeof createClient === 'function') {
+                    // 일부 번들/글로벌 환경에서는 createClient가 전역 함수로 노출되기도 합니다.
+                    window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                } else {
+                    console.error('Supabase 라이브러리를 찾을 수 없습니다. CDN 스크립트가 로드되었는지 확인하세요.');
+                    window.supabase = null;
+                }
+            } catch (e) {
+                console.error('Supabase 초기화 중 오류:', e);
+                window.supabase = null;
+            }
+        })();
     </script>
     
     <!-- CSS 스타일을 정의하는 공간입니다. 웹페이지의 화장(디자인)을 담당합니다. -->
