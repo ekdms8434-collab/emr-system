@@ -1391,7 +1391,8 @@
             const input = document.getElementById('dept-input');
             const val = input.value.trim();
             if (val && !departments.includes(val)) {
-                await supabase.from('departments').insert({ name: val }).catch(() => null);
+                const { data, error } = await supabase.from('departments').insert({ name: val });
+                if (error) { console.error('departments insert error', error); alert('진료과 등록 실패: ' + (error.message || error.description || JSON.stringify(error))); return; }
                 input.value = ''; await fetchInitialData(); renderSettings();
             }
         }
@@ -1401,7 +1402,8 @@
             const current = departments[index];
             const updated = prompt('진료과명을 수정하세요:', current);
             if (updated && updated.trim() !== '') {
-                await supabase.from('departments').update({ name: updated.trim() }).eq('name', current).catch(() => null);
+                const { data, error } = await supabase.from('departments').update({ name: updated.trim() }).eq('name', current);
+                if (error) { console.error('departments update error', error); alert('진료과 수정 실패: ' + (error.message || JSON.stringify(error))); return; }
                 await fetchInitialData(); renderSettings();
             }
         }
@@ -1409,7 +1411,8 @@
         // 설정 창: 진료과 삭제
         async function deleteDept(index) {
             if (confirm(`'${departments[index]}' 진료과를 삭제하시겠습니까?`)) {
-                await supabase.from('departments').delete().eq('name', departments[index]).catch(() => null);
+                const { data, error } = await supabase.from('departments').delete().eq('name', departments[index]);
+                if (error) { console.error('departments delete error', error); alert('진료과 삭제 실패: ' + (error.message || JSON.stringify(error))); return; }
                 await fetchInitialData(); renderSettings();
             }
         }
@@ -1421,7 +1424,8 @@
             const nameInput = document.getElementById('doc-name-input');
             const name = nameInput.value.trim();
             if (dept && name) {
-                await supabase.from('doctors').insert({ name, dept }).catch(() => null);
+                const { data, error } = await supabase.from('doctors').insert({ name, dept });
+                if (error) { console.error('doctors insert error', error); alert('주치의 등록 실패: ' + (error.message || JSON.stringify(error))); return; }
                 nameInput.value = ''; await fetchInitialData(); renderSettings();
             }
         }
@@ -1432,7 +1436,8 @@
             if (!doc) return;
             const newName = prompt('의사 성명을 수정하세요:', doc.name);
             if (newName && newName.trim() !== '') {
-                await supabase.from('doctors').update({ name: newName.trim(), dept: doc.dept }).eq('id', id).catch(() => null);
+                const { data, error } = await supabase.from('doctors').update({ name: newName.trim(), dept: doc.dept }).eq('id', id);
+                if (error) { console.error('doctors update error', error); alert('주치의 수정 실패: ' + (error.message || JSON.stringify(error))); return; }
                 await fetchInitialData(); renderSettings();
             }
         }
@@ -1440,7 +1445,8 @@
         // 설정 창: 주치의 삭제
         async function deleteDoctor(id) {
             if (confirm('해당 주치의를 삭제하시겠습니까?')) {
-                await supabase.from('doctors').delete().eq('id', id).catch(() => null);
+                const { data, error } = await supabase.from('doctors').delete().eq('id', id);
+                if (error) { console.error('doctors delete error', error); alert('주치의 삭제 실패: ' + (error.message || JSON.stringify(error))); return; }
                 await fetchInitialData(); renderSettings();
             }
         }
@@ -1453,7 +1459,8 @@
             const name_en = document.getElementById('diag-en-input').value.trim();
             const category = document.getElementById('diag-dept-select').value;
             if (code && name_ko) {
-                await supabase.from('diagnoses').insert({ code, name_ko, name_en, category }).catch(() => null);
+                const { data, error } = await supabase.from('diagnoses').insert({ code, name_ko, name_en, category });
+                if (error) { console.error('diagnoses insert error', error); alert('진단명 등록 실패: ' + (error.message || JSON.stringify(error))); return; }
                 document.getElementById('diag-code-input').value = ''; document.getElementById('diag-name-input').value = '';
                 await fetchInitialData(); renderSettings();
             }
@@ -1465,7 +1472,8 @@
             if (!diag) return;
             const newName = prompt('한글 진단명을 수정하세요:', diag.name_ko);
             if (newName && newName.trim() !== '') {
-                await supabase.from('diagnoses').update({ name_ko: newName.trim() }).eq('id', id).catch(() => null);
+                const { data, error } = await supabase.from('diagnoses').update({ name_ko: newName.trim() }).eq('id', id);
+                if (error) { console.error('diagnoses update error', error); alert('진단명 수정 실패: ' + (error.message || JSON.stringify(error))); return; }
                 await fetchInitialData(); renderSettings();
             }
         }
@@ -1473,7 +1481,8 @@
         // 설정 창: 진단명 삭제
         async function deleteDiagnosis(id) {
             if (confirm('해당 진단명을 DB에서 삭제하시겠습니까?')) {
-                await supabase.from('diagnoses').delete().eq('id', id).catch(() => null);
+                const { data, error } = await supabase.from('diagnoses').delete().eq('id', id);
+                if (error) { console.error('diagnoses delete error', error); alert('진단명 삭제 실패: ' + (error.message || JSON.stringify(error))); return; }
                 await fetchInitialData(); renderSettings();
             }
         }
@@ -1527,7 +1536,8 @@
             const drugNameInput = document.getElementById('drug-name-input');
             const name = drugNameInput.value.trim();
             if (code && name) {
-                await supabase.from('drugs').insert({ code, name }).catch(() => null);
+                const { data, error } = await supabase.from('drugs').insert({ code, name });
+                if (error) { console.error('drugs insert error', error); alert('처방 DB 등록 실패: ' + (error.message || JSON.stringify(error))); return; }
                 document.getElementById('drug-code-input').value = ''; 
                 drugNameInput.value = '';
                 drugNameInput.style.height = 'auto';
@@ -1541,7 +1551,8 @@
             if (!drug) return;
             const newName = prompt('처방/약물명을 수정하세요:', drug.name);
             if (newName && newName.trim() !== '') {
-                await supabase.from('drugs').update({ name: newName.trim() }).eq('id', id).catch(() => null);
+                const { data, error } = await supabase.from('drugs').update({ name: newName.trim() }).eq('id', id);
+                if (error) { console.error('drugs update error', error); alert('처방 DB 수정 실패: ' + (error.message || JSON.stringify(error))); return; }
                 await fetchInitialData(); renderSettings();
             }
         }
@@ -1549,7 +1560,8 @@
         // 설정 창: 처방 약물 삭제
         async function deleteDrug(id) {
             if (confirm('해당 처방/약물 데이터를 DB에서 삭제하시겠습니까?')) {
-                await supabase.from('drugs').delete().eq('id', id).catch(() => null);
+                const { data, error } = await supabase.from('drugs').delete().eq('id', id);
+                if (error) { console.error('drugs delete error', error); alert('처방 DB 삭제 실패: ' + (error.message || JSON.stringify(error))); return; }
                 await fetchInitialData(); renderSettings();
             }
         }
