@@ -1058,9 +1058,40 @@
                 doctors = docRes.data || [];
                 diagnosisDatabase = diagRes.data || [];
                 drugDatabase = drugRes.data || [];
-                labDatabase = labDbRes.data || [];
+
+                // labdb: DB 컬럼명이 snake_case(ref_range)일 수 있으므로 클라이언트에서 사용하기 쉽게 camelCase로 변환합니다.
+                labDatabase = (labDbRes.data || []).map(r => ({
+                    id: r.id,
+                    category: r.category,
+                    name: r.name,
+                    refRange: r.ref_range || r.refRange || '',
+                    unit: r.unit || ''
+                }));
+
+                // nursedb은 category, content 컬럼을 그대로 사용합니다.
                 nurseDatabase = nurseDbRes.data || [];
-                patients = patRes.data || [];
+
+                // patients: snake_case -> camelCase 매핑
+                patients = (patRes.data || []).map(r => ({
+                    id: r.id,
+                    chartNo: r.chart_no || r.chartNo || null,
+                    name: r.name,
+                    birth: r.birth,
+                    age: r.age,
+                    gender: r.gender,
+                    bloodType: r.blood_type || r.bloodType || '',
+                    dept: r.dept,
+                    doctor: r.doctor,
+                    room: r.room,
+                    hd: r.hd,
+                    pod: r.pod,
+                    diagCode: r.diag_code || r.diagCode || '',
+                    diagnosis: r.diagnosis,
+                    cc: r.cc,
+                    memo: r.memo || '',
+                    bodyMarks: r.body_marks || r.bodyMarks || [],
+                    records: r.records || r.records || { vs: [], io: [], prescriptions: [], nurse: [], surg: [], blood: [], lab: [] }
+                }));
 
             } catch (err) {
                 console.error('Supabase 데이터 로드 오류:', err);
@@ -1145,8 +1176,20 @@
                     records: patientData.records || {}
                 };
 
-                const { error } = await supabase.from('patients').upsert(payload, { onConflict: 'chart_no' });
-                if (error) throw error;
+                const res = await supabase.from('patients').upsert(payload, { onConflict: 'chart_no', returning: 'representation' });
+                // 로그: 전체 응답 확인 (디버깅용)
+                console.log('patients upsert response:', res);
+                if (res.error) {
+                    // Supabase 에러 객체의 세부정보를 출력
+                    console.error('Supabase upsert error details:', {
+                        message: res.error.message,
+                        details: res.error.details,
+                        hint: res.error.hint,
+                        code: res.error.code,
+                        status: res.error.status
+                    });
+                    throw res.error;
+                }
                 return true;
             } catch (error) {
                 console.error('환자 데이터 저장 에러 (Supabase):', error);
@@ -1339,10 +1382,13 @@
             const unit = document.getElementById('labdb-unit-input').value.trim();
 
             if (category && name) {
-                const newItem = { category, name, refRange, unit };
-                const { data, error } = await supabase.from('labdb').insert(newItem).select();
+                // DB 컬럼명이 snake_case(ref_range)인 경우가 있으므로 insert 시에는 DB 컬럼명으로 보냅니다.
+                const dbPayload = { category, name, ref_range: refRange, unit };
+                const { data, error } = await supabase.from('labdb').insert(dbPayload).select();
                 if (error) { console.error('labdb insert error', error); alert('검사 DB 등록 실패: ' + (error.message || JSON.stringify(error))); return; }
-                const inserted = (data && data[0]) ? data[0] : { id: Date.now(), ...newItem };
+                const insertedRaw = (data && data[0]) ? data[0] : { id: Date.now(), ...dbPayload };
+                // 클라이언트에서 사용하기 쉽게 camelCase로 변환
+                const inserted = { id: insertedRaw.id, category: insertedRaw.category, name: insertedRaw.name, refRange: insertedRaw.ref_range || insertedRaw.refRange || '', unit: insertedRaw.unit || '' };
                 labDatabase.push(inserted);
 
                 document.getElementById('labdb-name-input').value = '';
