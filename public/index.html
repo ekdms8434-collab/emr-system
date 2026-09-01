@@ -1289,13 +1289,12 @@
             const content = document.getElementById('nursedb-content-input').value.trim();
 
             if (category && content) {
-                const newItem = { id: Date.now(), category, content }; // 새 데이터 생성
-                nurseDatabase.push(newItem); // 배열에 추가
-                
-                try {
-                    // Supabase에 저장
-                    await supabase.from('nursedb').insert(newItem).catch(() => null);
-                } catch(e) {}
+                const newItem = { category, content };
+                // Supabase에 저장 후 로컬에 반영
+                const { data, error } = await supabase.from('nursedb').insert(newItem).select();
+                if (error) { console.error('nursedb insert error', error); alert('간호기록 DB 등록 실패: ' + (error.message || JSON.stringify(error))); return; }
+                const inserted = (data && data[0]) ? data[0] : { id: Date.now(), ...newItem };
+                nurseDatabase.push(inserted);
 
                 // 입력칸 초기화 후 다시 그리기
                 document.getElementById('nursedb-category-input').value = '';
@@ -1307,8 +1306,9 @@
         // 간호기록 문구 삭제 함수
         async function deleteNurseDb(id) {
             if (confirm('해당 간호기록 DB 항목을 삭제하시겠습니까?')) {
+                const { data, error } = await supabase.from('nursedb').delete().eq('id', id);
+                if (error) { console.error('nursedb delete error', error); alert('간호기록 DB 삭제 실패: ' + (error.message || JSON.stringify(error))); return; }
                 nurseDatabase = nurseDatabase.filter(item => item.id !== id);
-                try { await supabase.from('nursedb').delete().eq('id', id).catch(() => null); } catch(e) {}
                 renderSettings();
             }
         }
@@ -1322,12 +1322,11 @@
             const unit = document.getElementById('labdb-unit-input').value.trim();
 
             if (category && name) {
-                const newItem = { id: Date.now(), category, name, refRange, unit };
-                labDatabase.push(newItem);
-                
-                try {
-                    await supabase.from('labdb').insert(newItem).catch(() => null);
-                } catch(e) {}
+                const newItem = { category, name, refRange, unit };
+                const { data, error } = await supabase.from('labdb').insert(newItem).select();
+                if (error) { console.error('labdb insert error', error); alert('검사 DB 등록 실패: ' + (error.message || JSON.stringify(error))); return; }
+                const inserted = (data && data[0]) ? data[0] : { id: Date.now(), ...newItem };
+                labDatabase.push(inserted);
 
                 document.getElementById('labdb-name-input').value = '';
                 document.getElementById('labdb-ref-input').value = '';
@@ -1339,8 +1338,9 @@
         // 검사결과 DB 삭제 함수
         async function deleteLabDb(id) {
             if (confirm('해당 검사 DB 항목을 삭제하시겠습니까?')) {
+                const { data, error } = await supabase.from('labdb').delete().eq('id', id);
+                if (error) { console.error('labdb delete error', error); alert('검사 DB 삭제 실패: ' + (error.message || JSON.stringify(error))); return; }
                 labDatabase = labDatabase.filter(item => item.id !== id);
-                try { await supabase.from('labdb').delete().eq('id', id).catch(() => null); } catch(e) {}
                 renderSettings();
             }
         }
@@ -1701,7 +1701,8 @@
                 p.dept = dept; p.doctor = doctor; p.room = room; p.hd = hd; p.pod = pod;
                 p.diagCode = diagCode || p.diagCode; p.diagnosis = diagnosis || p.diagnosis; p.cc = cc;
 
-                await savePatientToBackend(p);
+                const ok = await savePatientToBackend(p);
+                if (!ok) { alert('환자 정보 저장에 실패했습니다. 콘솔을 확인하세요.'); return; }
                 alert(`${p.name} 환자 정보가 수정되었습니다.`); editingPatientIndex = null;
             } else {
                 // '신규 등록' 이라면 새 데이터를 만듭니다. 차트번호는 무작위(시간)로 만듭니다.
@@ -1711,7 +1712,9 @@
                     diagCode: diagCode || 'KCD-', diagnosis: diagnosis || '일반 진료', cc, memo: '', bodyMarks: [],
                     records: { vs: [], io: [], prescriptions: [], nurse: [], surg: [], blood: [], lab: [] }
                 };
-                await savePatientToBackend(newPatient); alert("신규 환자가 등록되었습니다.");
+                const ok = await savePatientToBackend(newPatient);
+                if (!ok) { alert('신규 환자 등록에 실패했습니다. 콘솔을 확인하세요.'); return; }
+                alert("신규 환자가 등록되었습니다.");
             }
 
             await fetchInitialData(); resetForm(); renderPatientList();
@@ -1821,9 +1824,8 @@
         async function deletePatient(idx) {
             if(confirm(`'${patients[idx].name}' 환자 정보를 삭제하시겠습니까?`)) {
                 const chartNo = patients[idx].chartNo;
-                try {
-                    await supabase.from('patients').delete().eq('chart_no', chartNo).catch(() => null);
-                } catch(e) {}
+                const { data, error } = await supabase.from('patients').delete().eq('chart_no', chartNo);
+                if (error) { console.error('patients delete error', error); alert('환자 삭제 실패: ' + (error.message || JSON.stringify(error))); return; }
                 await fetchInitialData();
                 renderPatientList();
             }
