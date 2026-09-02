@@ -560,7 +560,7 @@
         </div>
 
         <div id="aiDebriefContent"></div>
-        <button onclick="runAIDebriefWithFile()">분석 시작</button>
+        <button onclick="runGeminiDebriefing()" class="...">🤖 AI 디브리핑 생성</button>
         <button onclick="closeAIDebriefModal()">닫기</button>
     </div>
 </div>
@@ -1306,6 +1306,8 @@ function switchSettingTab(panelId, btnElement) {
 const GEMINI_API_KEY = "AQ.Ab8RN6IVcakzGoaHKH4Lm1Klz7d-I0Y5mdggmD5jZLUWAT8grQ"; 
 
 async function runGeminiDebriefing(patientName = "장아영") {
+    console.log("버튼 클릭됨!"); // <- 이 줄을 추가한 뒤 저장 후 버튼을 눌러보세요.
+    
     const debriefBody = document.getElementById('debrief-body');
     const debriefScore = document.getElementById('debrief-score');
     
