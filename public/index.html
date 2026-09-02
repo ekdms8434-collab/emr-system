@@ -1323,10 +1323,14 @@ async function runGeminiDebriefing(patientName) {
         modal.style.display = 'block';
     }
 
-    try {
-        let pureBase64 = targetScenario.fileData;
-        if (pureBase64.includes(',')) {
-            pureBase64 = pureBase64.split(',')[1];
+try {
+        // targetScenario 정의 여부 안전성 검사
+        let pureBase64 = "";
+        if (typeof targetScenario !== 'undefined' && targetScenario && targetScenario.fileData) {
+            pureBase64 = targetScenario.fileData;
+            if (pureBase64.includes(',')) {
+                pureBase64 = pureBase64.split(',')[1];
+            }
         }
 
         const promptText = `
@@ -1334,7 +1338,7 @@ async function runGeminiDebriefing(patientName) {
 이름: ${patientName}
 
 [학생 작성 EMR 기록]
-${JSON.stringify(studentEMR, null, 2)}
+${typeof studentEMR !== 'undefined' ? JSON.stringify(studentEMR, null, 2) : "EMR 데이터 없음"}
 
 [요청사항]
 1. PDF 시나리오와 비교하여 학생이 놓친 간호사정, 잘못 투여된 처방/약물, 미비한 간호기록(SOAPIE)을 분석해줘.
@@ -1346,6 +1350,17 @@ ${JSON.stringify(studentEMR, null, 2)}
 3. 맨 마지막 줄에는 반드시 "SCORE: [점수]" 형식으로 100점 만점 기준 점수를 적어줘. (예: SCORE: 85)
 `;
 
+        // API 요청 body 생성 (PDF 데이터가 있으면 첨부, 없으면 텍스트만 전송)
+        const parts = [{ text: promptText }];
+        if (pureBase64) {
+            parts.push({
+                inline_data: {
+                    mime_type: "application/pdf",
+                    data: pureBase64
+                }
+            });
+        }
+
         console.log("Gemini API 요청 시작...");
         const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-3.6-flash:generateContent`, {
             method: 'POST',
@@ -1353,19 +1368,7 @@ ${JSON.stringify(studentEMR, null, 2)}
                 'Content-Type': 'application/json',
                 'x-goog-api-key': GEMINI_API_KEY
             },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [
-                        { text: promptText },
-                        {
-                            inline_data: {
-                                mime_type: "application/pdf",
-                                data: pureBase64
-                            }
-                        }
-                    ]
-                }]
-            })
+            body: JSON.stringify({ contents: [{ parts }] })
         });
 
         console.log("HTTP 상태 코드:", response.status);
