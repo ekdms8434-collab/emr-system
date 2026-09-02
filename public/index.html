@@ -560,7 +560,7 @@
         </div>
 
         <div id="aiDebriefContent"></div>
-        <button onclick="runGeminiDebriefing()" class="...">🤖 AI 디브리핑 생성</button>
+        <button onclick="runGeminiDebriefing('장아영')" class="...">🤖 AI 디브리핑 생성</button>
         <button onclick="closeAIDebriefModal()">닫기</button>
     </div>
 </div>
@@ -1303,22 +1303,26 @@ function switchSettingTab(panelId, btnElement) {
             recordsArray.sort((a, b) => new Date(a.time) - new Date(b.time));
         }
 // 🔑 Google AI Studio(https://aistudio.google.com/)에서 발급받은 실제 API 키 입력
-const GEMINI_API_KEY = "AQ.Ab8RN6IVcakzGoaHKH4Lm1Klz7d-I0Y5mdggmD5jZLUWAT8grQ"; 
+const GEMINI_API_KEY = "AQ.Ab8RN6IVcakzGoaHKH4Lm1KIz7d-l0Y5mdggmD5jZLUWAT8grQ";
 
 async function runGeminiDebriefing(patientName = "장아영") {
-    console.log("버튼 클릭됨!"); // <- 이 줄을 추가한 뒤 저장 후 버튼을 눌러보세요.
-    
+    // 1. 모달 및 버튼 요소 가져오기
+    const modal = document.getElementById('debrief-modal');
     const debriefBody = document.getElementById('debrief-body');
     const debriefScore = document.getElementById('debrief-score');
-    
-    // 버튼 중복 클릭 방지 처리
     const debriefBtn = document.querySelector("button[onclick*='runGeminiDebriefing']");
+
+    // 2. 모달 즉시 열기 및 버튼 비활성화
+    if (modal) modal.classList.remove('hidden');
+    if (debriefScore) debriefScore.innerText = "분석 중...";
+    if (debriefBody) debriefBody.innerHTML = `<div class="p-8 text-center text-slate-500 font-medium animate-pulse">🤖 Gemini가 PDF 시나리오와 학생 EMR을 대조 분석 중입니다...</div>`;
+    
     if (debriefBtn) {
         debriefBtn.disabled = true;
         debriefBtn.classList.add('opacity-50', 'cursor-not-allowed');
     }
 
-    // 1. 학생 작성 EMR 및 시나리오 PDF 가져오기
+    // 3. 학생 작성 EMR 및 시나리오 PDF 데이터 확인
     const studentEMR = JSON.parse(localStorage.getItem(`emr_${patientName}`) || '{}');
     const scenarios = JSON.parse(localStorage.getItem('scenarios') || '[]');
     const targetScenario = scenarios.find(s => 
@@ -1332,22 +1336,23 @@ async function runGeminiDebriefing(patientName = "장아영") {
             debriefBtn.disabled = false;
             debriefBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         }
+        if (modal) modal.classList.add('hidden'); // PDF가 없으면 모달 다시 닫기
         return;
     }
 
-    if (debriefBody) debriefBody.innerHTML = `<div class="p-8 text-center text-slate-500 font-medium animate-pulse">🤖 Gemini가 PDF 시나리오와 학생 EMR을 대조 분석 중입니다...</div>`;
-    if (debriefScore) debriefScore.textContent = "분석 중...";
-
     try {
-        // Base64 인코딩 데이터 추출
-        const fileDataParts = targetScenario.fileData.split(',');
-        const pureBase64 = fileDataParts.length > 1 ? fileDataParts[1] : fileDataParts[0];
+        // pureBase64 변환
+        let pureBase64 = targetScenario.fileData;
+        if (pureBase64.includes(',')) {
+            pureBase64 = pureBase64.split(',')[1];
+        }
 
+        // 프롬프트 구성
         const promptText = `
-너는 간호실습 전담 AI 디브리퍼야.
-첨부된 PDF 시나리오(정답 기준)와 아래 [학생 작성 EMR] 데이터를 대조하여 상세 피드백을 작성해줘.
+[환자 정보]
+이름: ${patientName}
 
-[학생 작성 EMR 데이터]
+[학생 작성 EMR 기록]
 ${JSON.stringify(studentEMR, null, 2)}
 
 [요청사항]
@@ -1360,64 +1365,39 @@ ${JSON.stringify(studentEMR, null, 2)}
 3. 맨 마지막 줄에는 반드시 "SCORE: [점수]" 형식으로 100점 만점 기준 점수를 적어줘. (예: SCORE: 85)
 `;
 
-     // 2. Gemini API 호출
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [
-                        { text: promptText },
-                        {
-                            inline_data: {
-                                mime_type: "application/pdf",
-                                data: pureBase64
-                            }
-                        }
-                    ]
-                }]
-            })
-        });
+        // 4. API 호출
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+    method: 'POST',
+    headers: { 
+        'Content-Type': 'application/json' 
+    },
+    body: JSON.stringify({ ... })
+});
 
-        // 3. 분당 요청 횟수 초과(429) 처리
-        if (response.status === 429) {
-            throw new Error("Gemini API 무료 사용량 제한(분당 요청 횟수 초과)입니다. 약 1분 후에 다시 시도해 주세요.");
-        }
+        const data = await response.json();
 
-        const result = await response.json();
+        if (data.candidates && data.candidates[0].content.parts[0].text) {
+            const aiResult = data.candidates[0].content.parts[0].text;
+            
+            // 점수 추출
+            const scoreMatch = aiResult.match(/SCORE:\s*(\d+)/i);
+            if (scoreMatch && debriefScore) {
+                debriefScore.innerText = `${scoreMatch[1]}점`;
+            } else if (debriefScore) {
+                debriefScore.innerText = "완료";
+            }
 
-        if (!response.ok || result.error) {
-            const errorMsg = result.error ? result.error.message : 'API 호출 실패';
-            throw new Error(`API 오류 (${response.status}): ${errorMsg}`);
-        }
-
-        // 4. 응답 결과 화면 출력
-        if (result.candidates && result.candidates[0]?.content?.parts[0]?.text) {
-            const aiReply = result.candidates[0].content.parts[0].text;
-
-            let score = "80";
-            const scoreMatch = aiReply.match(/SCORE:\s*(\d+)/i);
-            if (scoreMatch) score = scoreMatch[1];
-
-            const cleanReply = aiReply.replace(/SCORE:\s*\d+/i, '');
-            if (debriefBody) debriefBody.innerHTML = cleanReply;
-            if (debriefScore) debriefScore.textContent = `${score}점 / 100점`;
+            if (debriefBody) debriefBody.innerHTML = aiResult;
         } else {
-            throw new Error("AI 응답 데이터 형식이 올바르지 않습니다.");
+            throw new Error("AI 응답을 불러오지 못했습니다.");
         }
 
     } catch (error) {
-        console.error('Gemini API 상세 오류:', error);
-        if (debriefBody) {
-            debriefBody.innerHTML = `
-                <div class="p-4 text-red-600 bg-red-50 border border-red-200 rounded-lg text-sm">
-                    <strong>⚠️ AI 분석 생성 실패</strong><br>
-                    <span>${error.message}</span>
-                </div>`;
-        }
-        if (debriefScore) debriefScore.textContent = "오류 발생";
+        console.error("Gemini API 오류:", error);
+        if (debriefScore) debriefScore.innerText = "오류 발생";
+        if (debriefBody) debriefBody.innerHTML = `<div class="p-4 bg-red-50 text-red-600 rounded-lg">분석 중 오류가 발생했습니다: ${error.message}</div>`;
     } finally {
-        // 버튼 다시 활성화
+        // 버튼 상태 원복
         if (debriefBtn) {
             debriefBtn.disabled = false;
             debriefBtn.classList.remove('opacity-50', 'cursor-not-allowed');
