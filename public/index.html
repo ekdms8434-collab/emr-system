@@ -1306,13 +1306,13 @@ function switchSettingTab(panelId, btnElement) {
 const GEMINI_API_KEY = "AQ.Ab8RN6IVcakzGoaHKH4Lm1KIz7d-l0Y5mdggmD5jZLUWAT8grQ";
 
 async function runGeminiDebriefing(patientName = "장아영") {
-    // 1. 모달 및 주요 UI 요소 즉시 가져오기
+    // 1. 모달 및 UI 요소 가져오기
     const modal = document.getElementById('debrief-modal');
     const debriefBody = document.getElementById('debrief-body');
     const debriefScore = document.getElementById('debrief-score');
     const debriefBtn = document.querySelector("button[onclick*='runGeminiDebriefing']");
 
-    // 2. [핵심] 버튼 누르자마자 모달을 화면에 즉시 표시
+    // 2. 모달 즉시 열기
     if (modal) modal.classList.remove('hidden');
     if (debriefScore) debriefScore.innerText = "분석 중...";
     if (debriefBody) debriefBody.innerHTML = `<div class="p-8 text-center text-slate-500 font-medium animate-pulse">🤖 AI가 차트 및 시나리오 지침을 분석하고 있습니다. 잠시만 기다려 주세요...</div>`;
@@ -1322,7 +1322,7 @@ async function runGeminiDebriefing(patientName = "장아영") {
         debriefBtn.classList.add('opacity-50', 'cursor-not-allowed');
     }
 
-    // 3. EMR 및 PDF 시나리오 데이터 존재 여부 확인
+    // 3. EMR 및 PDF 시나리오 데이터 확인
     const studentEMR = JSON.parse(localStorage.getItem(`emr_${patientName}`) || '{}');
     const scenarios = JSON.parse(localStorage.getItem('scenarios') || '[]');
     const targetScenario = scenarios.find(s => 
@@ -1330,7 +1330,6 @@ async function runGeminiDebriefing(patientName = "장아영") {
         (s.fileName && s.fileName.includes(patientName))
     );
 
-    // PDF 시나리오가 없는 경우 모달 내부 안내 후 종료
     if (!targetScenario || !targetScenario.fileData) {
         if (debriefScore) debriefScore.innerText = "확인 필요";
         if (debriefBody) {
@@ -1347,7 +1346,6 @@ async function runGeminiDebriefing(patientName = "장아영") {
     }
 
     try {
-        // Base64 순수 데이터 추출
         let pureBase64 = targetScenario.fileData;
         if (pureBase64.includes(',')) {
             pureBase64 = pureBase64.split(',')[1];
@@ -1370,7 +1368,7 @@ ${JSON.stringify(studentEMR, null, 2)}
 3. 맨 마지막 줄에는 반드시 "SCORE: [점수]" 형식으로 100점 만점 기준 점수를 적어줘. (예: SCORE: 85)
 `;
 
-        // 4. Gemini API 호출
+        // 4. API 호출
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1394,7 +1392,6 @@ ${JSON.stringify(studentEMR, null, 2)}
         if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0].text) {
             const aiResult = data.candidates[0].content.parts[0].text;
             
-            // 점수 추출
             const scoreMatch = aiResult.match(/SCORE:\s*(\d+)/i);
             if (scoreMatch && debriefScore) {
                 debriefScore.innerText = `${scoreMatch[1]}점`;
