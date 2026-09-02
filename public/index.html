@@ -1343,7 +1343,7 @@ async function runGeminiDebriefing(patientName = "장아영") {
         return;
     }
 
-    try {
+try {
         let pureBase64 = targetScenario.fileData;
         if (pureBase64.includes(',')) {
             pureBase64 = pureBase64.split(',')[1];
@@ -1366,12 +1366,8 @@ ${JSON.stringify(studentEMR, null, 2)}
 3. 맨 마지막 줄에는 반드시 "SCORE: [점수]" 형식으로 100점 만점 기준 점수를 적어줘. (예: SCORE: 85)
 `;
 
-        // AQ. 키 호환: v1 엔드포인트 + x-goog-api-key 헤더 + gemini-2.0-flash
-       // 1370번 줄부터 교체
-// gemini-2.0-flash 대신 gemini-3.6-flash 적용
-// 1372번 줄부터 교체 시작
         console.log("Gemini API 요청 시작...");
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-3.6-flash:generateContent`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
@@ -1414,11 +1410,8 @@ ${JSON.stringify(studentEMR, null, 2)}
             }
         }
 
-       if (aiResult) {
+        if (aiResult) {
             console.log("최종 AI 텍스트 추출 성공!");
-            console.log("AI 응답 내용:", aiResult);
-
-            // 점수 추출 처리
             const scoreMatch = aiResult.match(/SCORE:\s*(\d+)/i);
             if (scoreMatch && debriefScore) {
                 debriefScore.innerText = `${scoreMatch[1]}점`;
@@ -1426,20 +1419,19 @@ ${JSON.stringify(studentEMR, null, 2)}
                 debriefScore.innerText = "분석 완료";
             }
 
-            // 모달 본문에 출력
-            if (debriefBody) {
-                debriefBody.innerHTML = aiResult;
-            } else {
-                console.error("debriefBody 요소를 찾을 수 없습니다.");
-            }
+            if (debriefBody) debriefBody.innerHTML = aiResult;
         } else {
             throw new Error("API 응답에서 텍스트 데이터(aiResult)를 추출하지 못했습니다.");
         }
+
     } catch (error) {
         console.error("Gemini API 오류:", error);
         if (debriefScore) debriefScore.innerText = "오류 발생";
         if (debriefBody) {
-            debriefBody.innerHTML = `<div class="p-4 bg-red-50 text-red-600 rounded-lg">분석 중 오류가 발생했습니다: ${error.message}</div>`;
+            debriefBody.innerHTML = `<div class="p-4 bg-red-50 text-red-600 rounded-lg border border-red-200">
+                <strong>[AI 디브리핑 분석 실패]</strong><br>
+                ${error.message}
+            </div>`;
         }
     } finally {
         if (debriefBtn) {
