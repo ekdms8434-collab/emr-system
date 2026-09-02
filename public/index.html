@@ -541,7 +541,7 @@
                 <div class="header-bar" style="margin-bottom: 8px;">
                     <h1>📑 전자의무기록 (EMR Chart)</h1>
                     <div style="display: flex; gap: 6px;">
-                       <button type="button" class="btn-purple" onclick="runGeminiDebriefing('장아영')">🤖 AI 디브리핑 생성</button>
+                       <button type="button" class="btn-purple" onclick="runGeminiDebriefing('장아영')"> 🤖 AI 디브리핑 생성 </button>
                         <button class="btn-blue" onclick="window.print()">🖨️ 차트 인쇄</button>
                         <button class="btn-slate" onclick="showListPage()">← 환자 목록으로 돌아가기</button>
                     </div>
@@ -1302,20 +1302,34 @@ function switchSettingTab(panelId, btnElement) {
             if (!Array.isArray(recordsArray)) return;
             recordsArray.sort((a, b) => new Date(a.time) - new Date(b.time));
         }
-// 🔑 발급받으신 실제 Gemini API 키를 넣어주세요.
-const GEMINI_API_KEY = "AQ.Ab8RN6KZZNOyq_dYwq60cM1R4Szg4HSXcJXnhsG_zP0veF8HRQ"; 
+// 🔑 Google AI Studio(https://aistudio.google.com/)에서 발급받은 실제 API 키 입력
+const GEMINI_API_KEY = "발급받으신_실제_API_키를_여기에_넣으세요"; 
 
 async function runGeminiDebriefing(patientName = "장아영") {
     const debriefBody = document.getElementById('debrief-body');
     const debriefScore = document.getElementById('debrief-score');
+    
+    // 버튼 중복 클릭 방지 처리
+    const debriefBtn = document.querySelector("button[onclick*='runGeminiDebriefing']");
+    if (debriefBtn) {
+        debriefBtn.disabled = true;
+        debriefBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
 
     // 1. 학생 작성 EMR 및 시나리오 PDF 가져오기
     const studentEMR = JSON.parse(localStorage.getItem(`emr_${patientName}`) || '{}');
     const scenarios = JSON.parse(localStorage.getItem('scenarios') || '[]');
-    const targetScenario = scenarios.find(s => s.title.includes(patientName) || s.fileName.includes(patientName));
+    const targetScenario = scenarios.find(s => 
+        (s.title && s.title.includes(patientName)) || 
+        (s.fileName && s.fileName.includes(patientName))
+    );
 
     if (!targetScenario || !targetScenario.fileData) {
         alert(`${patientName} 환자의 PDF 시나리오를 찾을 수 없습니다. [시나리오 관리]에서 PDF를 먼저 등록해 주세요.`);
+        if (debriefBtn) {
+            debriefBtn.disabled = false;
+            debriefBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
         return;
     }
 
@@ -1323,12 +1337,12 @@ async function runGeminiDebriefing(patientName = "장아영") {
     if (debriefScore) debriefScore.textContent = "분석 중...";
 
     try {
-        // Base64 순수 데이터만 안전하게 추출
+        // Base64 인코딩 데이터 추출
         const fileDataParts = targetScenario.fileData.split(',');
         const pureBase64 = fileDataParts.length > 1 ? fileDataParts[1] : fileDataParts[0];
 
         const promptText = `
-너는 간호학과 임상실습 전담 교수 및 시나리오 기반 시뮬레이션 실습 담당 교수야.
+너는 간호실습 전담 AI 디브리퍼야.
 첨부된 PDF 시나리오(정답 기준)와 아래 [학생 작성 EMR] 데이터를 대조하여 상세 피드백을 작성해줘.
 
 [학생 작성 EMR 데이터]
@@ -1344,8 +1358,8 @@ ${JSON.stringify(studentEMR, null, 2)}
 3. 맨 마지막 줄에는 반드시 "SCORE: [점수]" 형식으로 100점 만점 기준 점수를 적어줘. (예: SCORE: 85)
 `;
 
-        // 2. Gemini API 호출 (안정적인 gemini-1.5-flash 모델 사용)
-       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        // 2. Gemini API 호출
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1363,24 +1377,32 @@ ${JSON.stringify(studentEMR, null, 2)}
             })
         });
 
+        // 3. 분당 요청 횟수 초과(429) 처리
+        if (response.status === 429) {
+            throw new Error("Gemini API 무료 사용량 제한(분당 요청 횟수 초과)입니다. 약 1분 후에 다시 시도해 주세요.");
+        }
+
         const result = await response.json();
 
-        // 3. API 응답 에러 검사 (400, 403 등의 오류 메시지 직접 확인)
         if (!response.ok || result.error) {
-            const errorMsg = result.error ? result.error.message : 'Gemini API 호출 실패';
+            const errorMsg = result.error ? result.error.message : 'API 호출 실패';
             throw new Error(`API 오류 (${response.status}): ${errorMsg}`);
         }
 
-        // 4. 정상 답변 추출 및 화면 출력
-        const aiReply = result.candidates[0].content.parts[0].text;
+        // 4. 응답 결과 화면 출력
+        if (result.candidates && result.candidates[0]?.content?.parts[0]?.text) {
+            const aiReply = result.candidates[0].content.parts[0].text;
 
-        let score = "80";
-        const scoreMatch = aiReply.match(/SCORE:\s*(\d+)/i);
-        if (scoreMatch) score = scoreMatch[1];
+            let score = "80";
+            const scoreMatch = aiReply.match(/SCORE:\s*(\d+)/i);
+            if (scoreMatch) score = scoreMatch[1];
 
-        const cleanReply = aiReply.replace(/SCORE:\s*\d+/i, '');
-        if (debriefBody) debriefBody.innerHTML = cleanReply;
-        if (debriefScore) debriefScore.textContent = `${score}점 / 100점`;
+            const cleanReply = aiReply.replace(/SCORE:\s*\d+/i, '');
+            if (debriefBody) debriefBody.innerHTML = cleanReply;
+            if (debriefScore) debriefScore.textContent = `${score}점 / 100점`;
+        } else {
+            throw new Error("AI 응답 데이터 형식이 올바르지 않습니다.");
+        }
 
     } catch (error) {
         console.error('Gemini API 상세 오류:', error);
@@ -1392,10 +1414,15 @@ ${JSON.stringify(studentEMR, null, 2)}
                 </div>`;
         }
         if (debriefScore) debriefScore.textContent = "오류 발생";
+    } finally {
+        // 버튼 다시 활성화
+        if (debriefBtn) {
+            debriefBtn.disabled = false;
+            debriefBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
     }
 }
-
-// 🛡️ 비상용 스마트 디브리핑 생성 함수
+        // 🛡️ 비상용 스마트 디브리핑 생성 함수
 function generateFallbackReport(p, orders, labs, studentNotes) {
     const completedOrders = orders.filter(o => 
         (o.status && (o.status.includes('완료') || o.status.includes('수행'))) ||
