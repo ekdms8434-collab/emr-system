@@ -549,19 +549,25 @@
 
 <!-- 2. AI 사전 디브리핑 모달 팝업창 -->
 <!-- AI 디브리핑 모달 내부 -->
-<div id="aiDebriefModal" class="hidden">
-    <div style="background: white; padding: 20px; border-radius: 8px;">
-        <h3>💡 AI 실습 디브리핑 리포트</h3>
-        
-        <!-- 시나리오 PDF 파일 업로드 영역 -->
+<div id="debrief-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); display: none; align-items: center; justify-content: center; z-index: 9999;">
+    <div style="background: white; padding: 20px; border-radius: 8px; width: min(760px, 90vw); max-height: 80vh; overflow: auto; box-shadow: 0 16px 40px rgba(15, 23, 42, 0.2);">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px;">
+            <h3 style="margin: 0;">💡 AI 실습 디브리핑 리포트</h3>
+            <button type="button" onclick="closeAIDebriefModal()" style="background: none; color: #475569; font-size: 20px; border: none; cursor: pointer;">×</button>
+        </div>
+
         <div style="margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 6px;">
             <label style="font-size: 13px; font-weight: bold;">📄 시나리오 PDF 파일 첨부 (선택):</label>
             <input type="file" id="scenarioPdfInput" accept=".pdf" style="display: block; margin-top: 5px; font-size: 12px;"/>
         </div>
 
-        <div id="aiDebriefContent"></div>
-        <button onclick="runGeminiDebriefing('장아영')" class="...">🤖 AI 디브리핑 생성</button>
-        <button onclick="closeAIDebriefModal()">닫기</button>
+        <div id="debrief-score" style="font-weight: bold; color: #1e3a8a; margin-bottom: 10px;">미분석</div>
+        <div id="debrief-body" style="min-height: 120px; white-space: normal; line-height: 1.6; color: #1e293b;">AI 분석 결과가 여기에 표시됩니다.</div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
+            <button id="debrief-btn" onclick="runGeminiDebriefing('장아영')" class="btn-purple" type="button">🤖 AI 디브리핑 생성</button>
+            <button type="button" class="btn-slate" onclick="closeAIDebriefModal()">닫기</button>
+        </div>
     </div>
 </div>
 
@@ -1305,13 +1311,30 @@ function switchSettingTab(panelId, btnElement) {
 // 1306번 줄 시작
 const GEMINI_API_KEY = "AQ.Ab8RN6IQrdCspYX3bMXQb17HePkDGCo_tokLGn90iGLG4j3FFg";
 
+function showAIDebriefModal() {
+    const modal = document.getElementById('debrief-modal') || document.getElementById('aiDebriefModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    modal.style.position = 'fixed';
+    modal.style.zIndex = '9999';
+}
+
+function closeAIDebriefModal() {
+    const modal = document.getElementById('debrief-modal') || document.getElementById('aiDebriefModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+}
+
 async function runGeminiDebriefing(patientName) {
     const debriefBtn = document.getElementById('debrief-btn');
     const debriefScore = document.getElementById('debrief-score');
-    const debriefBody = document.getElementById('debrief-body');
-    const modal = document.getElementById('debrief-modal');
+    const debriefBody = document.getElementById('debrief-body') || document.getElementById('aiDebriefContent');
+    const modal = document.getElementById('debrief-modal') || document.getElementById('aiDebriefModal');
 
-    // UI 초기화
+    showAIDebriefModal();
+
     if (debriefBtn) {
         debriefBtn.disabled = true;
         debriefBtn.classList.add('opacity-50', 'cursor-not-allowed');
