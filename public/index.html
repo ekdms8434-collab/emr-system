@@ -1302,13 +1302,26 @@ function switchSettingTab(panelId, btnElement) {
             if (!Array.isArray(recordsArray)) return;
             recordsArray.sort((a, b) => new Date(a.time) - new Date(b.time));
         }
-// 🔑 Google AI Studio(https://aistudio.google.com/)에서 발급받은 실제 API 키 입력
-const GEMINI_API_KEY = "발급받으신_실제_API_키를_여기에_넣으세요"; 
+// 🔑 Google AI Studio에서 발급받은 실제 API 키 입력
+const GEMINI_API_KEY = "AQ.Ab8RN6KZZNOyq_dYwq60cM1R4Szg4HSXcJXnhsG_zP0veF8HRQ"; // 👈 여기에 실제 키 입력
 
 async function runGeminiDebriefing(patientName = "장아영") {
+    // 1. 버튼 클릭 감지 콘솔 출력 (디버깅용)
+    console.log("🚀 [AI 디브리핑] 버튼 클릭이 정상 작동했습니다.");
+
+    // 2. 만약 결과창이 모달 팝업 형태라면 hidden 해제
+    const modal = document.getElementById('debrief-modal') || document.getElementById('debriefModal');
+    if (modal) modal.classList.remove('hidden');
+
     const debriefBody = document.getElementById('debrief-body');
     const debriefScore = document.getElementById('debrief-score');
-    
+
+    // 3. 디브리핑 출력 영역 존재 여부 확인
+    if (!debriefBody) {
+        alert("화면에 'debrief-body' ID를 가진 결과 영역이 없습니다. HTML 구조를 확인해 주세요.");
+        return;
+    }
+
     // 버튼 중복 클릭 방지 처리
     const debriefBtn = document.querySelector("button[onclick*='runGeminiDebriefing']");
     if (debriefBtn) {
