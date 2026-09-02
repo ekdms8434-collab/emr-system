@@ -1390,8 +1390,10 @@ ${JSON.stringify(studentEMR, null, 2)}
             }
         }
 
-        if (aiResult) {
+if (aiResult) {
             console.log("최종 AI 텍스트 추출 성공!");
+            
+            // 1. 점수 표시
             const scoreMatch = aiResult.match(/SCORE:\s*(\d+)/i);
             if (scoreMatch && debriefScore) {
                 debriefScore.innerText = `${scoreMatch[1]}점`;
@@ -1399,7 +1401,16 @@ ${JSON.stringify(studentEMR, null, 2)}
                 debriefScore.innerText = "분석 완료";
             }
 
-            if (debriefBody) debriefBody.innerHTML = aiResult;
+            // 2. 모달 내용 채우기
+            if (debriefBody) {
+                debriefBody.innerHTML = aiResult;
+            }
+
+            // 3. 모달 창 화면에 보이기
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.style.display = 'block';
+            }
         } else {
             throw new Error("API 응답에서 텍스트 데이터(aiResult)를 추출하지 못했습니다.");
         }
