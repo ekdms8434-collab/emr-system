@@ -1400,7 +1400,7 @@ ${JSON.stringify(emrData, null, 2)}
 if (aiResult) {
             console.log("최종 AI 텍스트 추출 성공!");
             
-            // 1. 점수 표시
+            // 1. 점수 반영
             const scoreMatch = aiResult.match(/SCORE:\s*(\d+)/i);
             if (scoreMatch && debriefScore) {
                 debriefScore.innerText = `${scoreMatch[1]}점`;
@@ -1408,16 +1408,20 @@ if (aiResult) {
                 debriefScore.innerText = "분석 완료";
             }
 
-            // 2. 모달 내용 채우기
+            // 2. 모달 본문 데이터 삽입
             if (debriefBody) {
                 debriefBody.innerHTML = aiResult;
             }
 
-            // 3. 모달 창 화면에 보이기
-            if (modal) {
-                modal.classList.remove('hidden');
-                modal.style.display = 'block';
+            // 3. 팝업창(모달) 요소 탐색 및 강제 표시
+            const targetModal = modal || document.getElementById('debrief-modal');
+            if (targetModal) {
+                targetModal.classList.remove('hidden');
+                targetModal.style.setProperty('display', 'flex', 'important'); // 화면에 강제 표시
+            } else {
+                console.error("debrief-modal 요소를 DOM에서 찾을 수 없습니다.");
             }
+        }
         } else {
             throw new Error("API 응답에서 텍스트 데이터(aiResult)를 추출하지 못했습니다.");
         }
