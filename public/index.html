@@ -547,42 +547,25 @@
                     </div>
                 </div>
 
-<!-- 🤖 AI 디브리핑 결과 모달 팝업 -->
-<div id="debrief-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
+<!-- 2. AI 사전 디브리핑 모달 팝업창 -->
+<!-- AI 디브리핑 모달 내부 -->
+<div id="aiDebriefModal" class="hidden">
+    <div style="background: white; padding: 20px; border-radius: 8px;">
+        <h3>💡 AI 실습 디브리핑 리포트</h3>
         
-        <!-- 모달 헤더 -->
-        <div class="px-6 py-4 bg-purple-900 text-white flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <span class="text-2xl">🤖</span>
-                <div>
-                    <h3 class="font-bold text-lg">AI 시뮬레이션 디브리핑 리포트</h3>
-                    <p class="text-xs text-purple-200">학생 작성 EMR vs 시나리오 표준 지침 대조 평가</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-4">
-                <div class="bg-purple-800/80 px-3 py-1 rounded-lg border border-purple-600 text-right">
-                    <span class="text-[10px] text-purple-300 block">평가 점수</span>
-                    <span id="debrief-score" class="font-bold text-amber-300 text-base">분석 대기 중</span>
-                </div>
-                <button type="button" onclick="document.getElementById('debrief-modal').classList.add('hidden')" class="text-purple-200 hover:text-white text-2xl font-bold">&times;</button>
-            </div>
+        <!-- 시나리오 PDF 파일 업로드 영역 -->
+        <div style="margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 6px;">
+            <label style="font-size: 13px; font-weight: bold;">📄 시나리오 PDF 파일 첨부 (선택):</label>
+            <input type="file" id="scenarioPdfInput" accept=".pdf" style="display: block; margin-top: 5px; font-size: 12px;"/>
         </div>
 
-        <!-- 모달 본문 (Gemini AI 분석 내용 출력 영역) -->
-        <div id="debrief-body" class="p-6 overflow-y-auto space-y-4 text-slate-700 text-sm leading-relaxed min-h-[300px]">
-            <!-- AI 응답 결과가 이곳에 삽입됩니다 -->
-        </div>
-
-        <!-- 모달 푸터 -->
-        <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
-            <button type="button" onclick="document.getElementById('debrief-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 text-sm font-medium">
-                닫기
-            </button>
-        </div>
-
+        <div id="aiDebriefContent"></div>
+        <button onclick="runAIDebriefWithFile()">분석 시작</button>
+        <button onclick="closeAIDebriefModal()">닫기</button>
     </div>
 </div>
+
+                <div class="emr-grid">
                     
                     <!-- 1열 카드: 환자 기본 정보와 메모를 표시합니다. -->
                     <div class="col-1">
@@ -1319,26 +1302,13 @@ function switchSettingTab(panelId, btnElement) {
             if (!Array.isArray(recordsArray)) return;
             recordsArray.sort((a, b) => new Date(a.time) - new Date(b.time));
         }
-// 🔑 Google AI Studio에서 발급받은 실제 API 키 입력
-const GEMINI_API_KEY = "AQ.Ab8RN6KZZNOyq_dYwq60cM1R4Szg4HSXcJXnhsG_zP0veF8HRQ"; // 👈 여기에 실제 키 입력
+// 🔑 Google AI Studio(https://aistudio.google.com/)에서 발급받은 실제 API 키 입력
+const GEMINI_API_KEY = "발급받으신_실제_API_키를_여기에_넣으세요"; 
 
 async function runGeminiDebriefing(patientName = "장아영") {
-    // 1. 버튼 클릭 감지 콘솔 출력 (디버깅용)
-    console.log("🚀 [AI 디브리핑] 버튼 클릭이 정상 작동했습니다.");
-
-    // 2. 만약 결과창이 모달 팝업 형태라면 hidden 해제
-    const modal = document.getElementById('debrief-modal') || document.getElementById('debriefModal');
-    if (modal) modal.classList.remove('hidden');
-
     const debriefBody = document.getElementById('debrief-body');
     const debriefScore = document.getElementById('debrief-score');
-
-    // 3. 디브리핑 출력 영역 존재 여부 확인
-    if (!debriefBody) {
-        alert("화면에 'debrief-body' ID를 가진 결과 영역이 없습니다. HTML 구조를 확인해 주세요.");
-        return;
-    }
-
+    
     // 버튼 중복 클릭 방지 처리
     const debriefBtn = document.querySelector("button[onclick*='runGeminiDebriefing']");
     if (debriefBtn) {
