@@ -1318,12 +1318,8 @@ async function runGeminiDebriefing(patientName) {
     }
     if (debriefScore) debriefScore.innerText = "분석 중...";
     if (debriefBody) debriefBody.innerHTML = `<div class="text-center py-8 text-gray-500">AI가 EMR 기록과 시나리오를 비교 분석하고 있습니다...</div>`;
-    if (modal) {
-        modal.classList.remove('hidden');
-        modal.style.display = 'block';
-    }
 
-try {
+    try {
         // targetScenario 및 studentEMR 예외 안전 처리
         let pureBase64 = "";
         if (typeof targetScenario !== 'undefined' && targetScenario && targetScenario.fileData) {
@@ -1352,7 +1348,6 @@ ${JSON.stringify(emrData, null, 2)}
 3. 맨 마지막 줄에는 반드시 "SCORE: [점수]" 형식으로 100점 만점 기준 점수를 적어줘. (예: SCORE: 85)
 `;
 
-        // PDF 데이터 존재 여부에 따른 전송 데이터 동적 구성
         const contentsParts = [{ text: promptText }];
         if (pureBase64) {
             contentsParts.push({
@@ -1397,7 +1392,7 @@ ${JSON.stringify(emrData, null, 2)}
             }
         }
 
-if (aiResult) {
+        if (aiResult) {
             console.log("최종 AI 텍스트 추출 성공!");
             
             // 1. 점수 반영
@@ -1413,11 +1408,13 @@ if (aiResult) {
                 debriefBody.innerHTML = aiResult;
             }
 
-            // 3. 팝업창(모달) 요소 탐색 및 강제 표시
+            // 3. 팝업창(모달) 요소 탐색 및 강제 표시 (스타일 강제 지정)
             const targetModal = modal || document.getElementById('debrief-modal');
             if (targetModal) {
                 targetModal.classList.remove('hidden');
-                targetModal.style.setProperty('display', 'flex', 'important'); // 화면에 강제 표시
+                targetModal.style.setProperty('display', 'flex', 'important');
+                targetModal.style.setProperty('z-index', '9999', 'important');
+                targetModal.style.setProperty('position', 'fixed', 'important');
             } else {
                 console.error("debrief-modal 요소를 DOM에서 찾을 수 없습니다.");
             }
