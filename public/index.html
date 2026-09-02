@@ -1302,7 +1302,7 @@ function switchSettingTab(panelId, btnElement) {
             if (!Array.isArray(recordsArray)) return;
             recordsArray.sort((a, b) => new Date(a.time) - new Date(b.time));
         }
-// 🔑 Google AI Studio(https://aistudio.google.com/)에서 발급받은 실제 API 키 입력
+// 1306번 줄 시작
 const GEMINI_API_KEY = "AQ.Ab8RN6IQrdCspYX3bMXQb17HePkDGCo_tokLGn90iGLG4j3FFg";
 
 async function runGeminiDebriefing(patientName = "장아영") {
@@ -1311,6 +1311,7 @@ async function runGeminiDebriefing(patientName = "장아영") {
     const debriefScore = document.getElementById('debrief-score');
     const debriefBtn = document.querySelector("button[onclick*='runGeminiDebriefing']");
 
+    // 모달 즉시 표시
     if (modal) modal.classList.remove('hidden');
     if (debriefScore) debriefScore.innerText = "분석 중...";
     if (debriefBody) debriefBody.innerHTML = `<div class="p-8 text-center text-slate-500 font-medium animate-pulse">🤖 AI가 차트 및 시나리오 지침을 분석하고 있습니다. 잠시만 기다려 주세요...</div>`;
@@ -1365,50 +1366,40 @@ ${JSON.stringify(studentEMR, null, 2)}
 3. 맨 마지막 줄에는 반드시 "SCORE: [점수]" 형식으로 100점 만점 기준 점수를 적어줘. (예: SCORE: 85)
 `;
 
-        // AQ. 키 호환 규격: URL 파라미터 대신 headers에 x-goog-api-key 전달
-// URL에서 ?key=... 삭제 및 headers에 'x-goog-api-key' 추가
-// 수정 후 (v1 버전 + gemini-2.0-flash 적용)
-const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent`, {
-    method: 'POST',
-    headers: { 
-        'Content-Type': 'application/json',
-        'x-goog-api-key': GEMINI_API_KEY
-    },
-    body: JSON.stringify({
-        contents: [{
-            parts: [
-                { text: promptText },
-                {
-                    inline_data: {
-                        mime_type: "application/pdf",
-                        data: pureBase64
-                    }
-                }
-            ]
-        }]
-    })
-});
-const data = await response.json();
-        console.log("Gemini 응답 데이터 전체:", data); // <- 콘솔에서 구조 확인용
+        // AQ. 키 호환: v1 엔드포인트 + x-goog-api-key 헤더 + gemini-2.0-flash
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'x-goog-api-key': GEMINI_API_KEY
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [
+                        { text: promptText },
+                        {
+                            inline_data: {
+                                mime_type: "application/pdf",
+                                data: pureBase64
+                            }
+                        }
+                    ]
+                }]
+            })
+        });
 
-        // 에러 응답이 돌아온 경우 예외 처리
+        const data = await response.json();
+
         if (data.error) {
-            throw new Error(data.error.message || "API 오류가 발생했습니다.");
+            throw new Error(data.error.message || "API 요청 오류");
         }
 
-        // 유연한 텍스트 추출 (다양한 응답 구조 대응)
         let aiResult = "";
-        if (data.candidates && data.candidates[0]) {
-            const cand = data.candidates[0];
-            if (cand.content && cand.content.parts && cand.content.parts[0]) {
-                aiResult = cand.content.parts[0].text;
-            } else if (cand.text) {
-                aiResult = cand.text;
-            }
+        if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0]) {
+            aiResult = data.candidates[0].content.parts[0].text;
         }
 
         if (aiResult) {
-            // 점수 추출
             const scoreMatch = aiResult.match(/SCORE:\s*(\d+)/i);
             if (scoreMatch && debriefScore) {
                 debriefScore.innerText = `${scoreMatch[1]}점`;
@@ -1418,9 +1409,22 @@ const data = await response.json();
 
             if (debriefBody) debriefBody.innerHTML = aiResult;
         } else {
-            // 응답은 왔으나 텍스트가 없는 경우 (Safety Filter 등)
-            throw new Error("AI가 답변을 생성하지 못했습니다. (응답 차단 또는 데이터 수신 실패)");
+            throw new Error("AI 응답을 불러올 수 없습니다.");
         }
+
+    } catch (error) {
+        console.error("Gemini API 오류:", error);
+        if (debriefScore) debriefScore.innerText = "오류 발생";
+        if (debriefBody) {
+            debriefBody.innerHTML = `<div class="p-4 bg-red-50 text-red-600 rounded-lg">분석 중 오류가 발생했습니다: ${error.message}</div>`;
+        }
+    } finally {
+        if (debriefBtn) {
+            debriefBtn.disabled = false;
+            debriefBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+}
         // 🛡️ 비상용 스마트 디브리핑 생성 함수
 function generateFallbackReport(p, orders, labs, studentNotes) {
     const completedOrders = orders.filter(o => 
