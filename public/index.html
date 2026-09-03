@@ -541,7 +541,7 @@
                 <div class="header-bar" style="margin-bottom: 8px;">
                     <h1>📑 전자의무기록 (EMR Chart)</h1>
                     <div style="display: flex; gap: 6px;">
-                       <button type="button" class="btn-purple" onclick="runGeminiDebriefing('장아영')"> 🤖 AI 디브리핑 생성 </button>
+                       <button type="button" class="btn-purple" onclick="runGeminiDebriefing()"> 🤖 AI 디브리핑 생성 </button>
                         <button class="btn-blue" onclick="window.print()">🖨️ 차트 인쇄</button>
                         <button class="btn-slate" onclick="showListPage()">← 환자 목록으로 돌아가기</button>
                     </div>
@@ -565,7 +565,7 @@
         <div id="debrief-body" style="min-height: 120px; white-space: normal; line-height: 1.6; color: #1e293b;">AI 분석 결과가 여기에 표시됩니다.</div>
 
         <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
-            <button id="debrief-btn" onclick="runGeminiDebriefing('장아영')" class="btn-purple" type="button">🤖 AI 디브리핑 생성</button>
+            <button id="debrief-btn" onclick="runGeminiDebriefing()" class="btn-purple" type="button">🤖 AI 디브리핑 생성</button>
             <button type="button" class="btn-slate" onclick="closeAIDebriefModal()">닫기</button>
         </div>
     </div>
@@ -1327,7 +1327,46 @@ function closeAIDebriefModal() {
     modal.style.display = 'none';
 }
 
-async function runGeminiDebriefing(patientName) {
+function getCurrentPatientName() {
+    const patientNameEl = document.getElementById('dName');
+    if (patientNameEl && patientNameEl.textContent && patientNameEl.textContent.trim()) {
+        return patientNameEl.textContent.trim();
+    }
+
+    if (typeof currentPatientIndex !== 'undefined' && currentPatientIndex !== null && Array.isArray(patients) && patients[currentPatientIndex]) {
+        return patients[currentPatientIndex].name || '환자';
+    }
+
+    return '환자';
+}
+
+function getSelectedScenarioFromStorage() {
+    const scenarioId = localStorage.getItem('selectedScenarioId');
+    if (!scenarioId) return null;
+
+    try {
+        const scenarios = JSON.parse(localStorage.getItem('scenarios') || '[]');
+        return scenarios.find(item => String(item.id) === String(scenarioId)) || null;
+    } catch (error) {
+        console.warn('시나리오 로딩 중 오류:', error);
+        return null;
+    }
+}
+
+function getFileBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = reader.result || '';
+            const base64 = typeof result === 'string' && result.includes(',') ? result.split(',')[1] : result;
+            resolve(base64);
+        };
+        reader.onerror = () => reject(new Error('PDF 파일을 Base64로 변환하지 못했습니다.'));
+        reader.readAsDataURL(file);
+    });
+}
+
+async function runGeminiDebriefing(patientName = getCurrentPatientName()) {
     const debriefBtn = document.getElementById('debrief-btn');
     const debriefScore = document.getElementById('debrief-score');
     const debriefBody = document.getElementById('debrief-body') || document.getElementById('aiDebriefContent');
@@ -1343,20 +1382,26 @@ async function runGeminiDebriefing(patientName) {
     if (debriefBody) debriefBody.innerHTML = `<div class="text-center py-8 text-gray-500">AI가 EMR 기록과 시나리오를 비교 분석하고 있습니다...</div>`;
 
     try {
-        // targetScenario 및 studentEMR 예외 안전 처리
-        let pureBase64 = "";
-        if (typeof targetScenario !== 'undefined' && targetScenario && targetScenario.fileData) {
-            pureBase64 = targetScenario.fileData;
+        let pureBase64 = '';
+        const selectedScenario = getSelectedScenarioFromStorage();
+        if (selectedScenario && selectedScenario.fileData) {
+            pureBase64 = selectedScenario.fileData;
             if (pureBase64.includes(',')) {
                 pureBase64 = pureBase64.split(',')[1];
             }
         }
 
+        const scenarioPdfInput = document.getElementById('scenarioPdfInput');
+        if (!pureBase64 && scenarioPdfInput && scenarioPdfInput.files && scenarioPdfInput.files[0]) {
+            pureBase64 = await getFileBase64(scenarioPdfInput.files[0]);
+        }
+
         const emrData = typeof studentEMR !== 'undefined' ? studentEMR : {};
+        const finalPatientName = patientName || getCurrentPatientName();
 
         const promptText = `
 [환자 정보]
-이름: ${patientName}
+이름: ${finalPatientName}
 
 [학생 작성 EMR 기록]
 ${JSON.stringify(emrData, null, 2)}
@@ -1375,79 +1420,90 @@ ${JSON.stringify(emrData, null, 2)}
         if (pureBase64) {
             contentsParts.push({
                 inline_data: {
-                    mime_type: "application/pdf",
+                    mime_type: 'application/pdf',
                     data: pureBase64
                 }
             });
         }
 
-        console.log("Gemini API 요청 시작...");
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-3.6-flash:generateContent`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'x-goog-api-key': GEMINI_API_KEY
-            },
-            body: JSON.stringify({
-                contents: [{ parts: contentsParts }]
-            })
-        });
+        const modelCandidates = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+        let response;
+        let data;
+        let lastError = null;
 
-        console.log("HTTP 상태 코드:", response.status);
-        const data = await response.json();
-        console.log("Gemini API 전체 응답 객체:", data);
+        for (const modelName of modelCandidates) {
+            try {
+                console.log(`Gemini API 요청 시작 (모델: ${modelName})...`);
+                response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-goog-api-key': GEMINI_API_KEY
+                    },
+                    body: JSON.stringify({
+                        contents: [{ parts: contentsParts }]
+                    })
+                });
 
-        if (!response.ok || data.error) {
-            const errorMsg = data.error?.message || `HTTP 오류 발생 (코드: ${response.status})`;
-            throw new Error(errorMsg);
+                data = await response.json();
+                console.log(`Gemini ${modelName} 응답 상태:`, response.status);
+                console.log('Gemini API 응답 객체:', data);
+
+                if (response.ok && !data.error) {
+                    break;
+                }
+
+                lastError = data.error?.message || `HTTP 오류 발생 (코드: ${response.status})`;
+            } catch (error) {
+                lastError = error.message;
+            }
         }
 
-        let aiResult = "";
+        if (!response || !response.ok || data?.error) {
+            throw new Error(lastError || 'Gemini API 호출에 실패했습니다.');
+        }
+
+        let aiResult = '';
         const candidate = data.candidates && data.candidates[0];
 
         if (candidate) {
             if (candidate.content && candidate.content.parts && candidate.content.parts[0]) {
-                aiResult = candidate.content.parts[0].text;
+                aiResult = candidate.content.parts[0].text || '';
             } else if (candidate.text) {
                 aiResult = candidate.text;
-            } else if (candidate.finishReason && candidate.finishReason !== "STOP") {
+            } else if (candidate.finishReason && candidate.finishReason !== 'STOP') {
                 throw new Error(`답변이 차단되었습니다 (사유: ${candidate.finishReason})`);
             }
         }
 
         if (aiResult) {
-            console.log("최종 AI 텍스트 추출 성공!");
-            
-            // 1. 점수 반영
+            console.log('최종 AI 텍스트 추출 성공!');
+
             const scoreMatch = aiResult.match(/SCORE:\s*(\d+)/i);
             if (scoreMatch && debriefScore) {
                 debriefScore.innerText = `${scoreMatch[1]}점`;
             } else if (debriefScore) {
-                debriefScore.innerText = "분석 완료";
+                debriefScore.innerText = '분석 완료';
             }
 
-            // 2. 모달 본문 데이터 삽입
             if (debriefBody) {
                 debriefBody.innerHTML = aiResult;
             }
 
-            // 3. 팝업창(모달) 요소 탐색 및 강제 표시 (스타일 강제 지정)
             const targetModal = modal || document.getElementById('debrief-modal');
             if (targetModal) {
                 targetModal.classList.remove('hidden');
                 targetModal.style.setProperty('display', 'flex', 'important');
                 targetModal.style.setProperty('z-index', '9999', 'important');
                 targetModal.style.setProperty('position', 'fixed', 'important');
-            } else {
-                console.error("debrief-modal 요소를 DOM에서 찾을 수 없습니다.");
             }
         } else {
-            throw new Error("API 응답에서 텍스트 데이터(aiResult)를 추출하지 못했습니다.");
+            throw new Error('API 응답에서 텍스트 데이터(aiResult)를 추출하지 못했습니다.');
         }
 
     } catch (error) {
-        console.error("Gemini API 오류:", error);
-        if (debriefScore) debriefScore.innerText = "오류 발생";
+        console.error('Gemini API 오류:', error);
+        if (debriefScore) debriefScore.innerText = '오류 발생';
         if (debriefBody) {
             debriefBody.innerHTML = `<div class="p-4 bg-red-50 text-red-600 rounded-lg border border-red-200">
                 <strong>[AI 디브리핑 분석 실패]</strong><br>
@@ -1761,100 +1817,83 @@ async function handleUploadScenario(event) {
     reader.readAsDataURL(file);
 }
 
-// 2. 시나리오 목록 안전 렌더링 함수 (Null 에러 방지)
+function getScenarioListFromStorage() {
+    try {
+        return JSON.parse(localStorage.getItem('scenarios') || '[]');
+    } catch (error) {
+        console.warn('시나리오 목록 로딩 실패:', error);
+        return [];
+    }
+}
+
+function selectScenarioForDebriefing(id) {
+    const scenarios = getScenarioListFromStorage();
+    const target = scenarios.find(item => String(item.id) === String(id));
+    if (!target) return;
+
+    localStorage.setItem('selectedScenarioId', String(id));
+    renderScenarioList();
+}
+
 function renderScenarioList() {
     const listEl = document.getElementById('scenario-list');
     const countEl = document.getElementById('scenario-count');
-    
-    // HTML에 요소가 없으면 실행 중단 (null 에러 방지)
+
     if (!listEl) return;
 
-    const scenarios = JSON.parse(localStorage.getItem('scenarios') || '[]');
+    const scenarios = getScenarioListFromStorage();
+    const selectedScenarioId = localStorage.getItem('selectedScenarioId');
 
-    // 카운터 표시
     if (countEl) {
         countEl.textContent = `${scenarios.length}개`;
     }
 
-    // 목록이 비어있는 경우
     if (scenarios.length === 0) {
         listEl.innerHTML = `<li class="p-8 text-center text-slate-400 text-[13px]">등록된 시나리오가 없습니다.</li>`;
         return;
     }
 
-    // 목록 HTML 생성
-    listEl.innerHTML = scenarios.map(item => `
-        <li class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
-            <div>
-                <div class="font-bold text-slate-800 text-[14px]">${item.title}</div>
-                <div class="text-[12px] text-slate-400 mt-0.5">📄 ${item.fileName} | 등록일: ${item.date}</div>
-            </div>
-            <div class="flex gap-2">
-                <button onclick="deleteScenario(${item.id})" class="px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded text-[12px] font-medium transition-colors">삭제</button>
-            </div>
-        </li>
-    `).join('');
+    listEl.innerHTML = scenarios.map(item => {
+        const isSelected = String(item.id) === String(selectedScenarioId);
+        return `
+            <li class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-none ${isSelected ? 'bg-indigo-50' : ''}">
+                <div>
+                    <div class="font-bold text-slate-800 text-[14px]">${item.title}</div>
+                    <div class="text-[12px] text-slate-400 mt-0.5">📄 ${item.fileName} | 등록일: ${item.date}</div>
+                </div>
+                <div class="flex gap-2 items-center">
+                    <button onclick="selectScenarioForDebriefing(${item.id})" class="px-3 py-1.5 ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'} rounded-lg text-[12px] font-bold transition-colors">
+                        ${isSelected ? '선택됨' : '선택'}
+                    </button>
+                    <button onclick="deleteScenario(${item.id})" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-[12px] font-bold transition-colors">삭제</button>
+                </div>
+            </li>
+        `;
+    }).join('');
 }
 
-// 3. 시나리오 삭제 함수
 function deleteScenario(id) {
     if (!confirm('해당 시나리오를 삭제하시겠습니까?')) return;
-    
-    let scenarios = JSON.parse(localStorage.getItem('scenarios') || '[]');
-    scenarios = scenarios.filter(s => s.id !== id);
+
+    const scenarios = getScenarioListFromStorage().filter(s => String(s.id) !== String(id));
     localStorage.setItem('scenarios', JSON.stringify(scenarios));
-    
+
+    const selectedScenarioId = localStorage.getItem('selectedScenarioId');
+    if (String(selectedScenarioId) === String(id)) {
+        localStorage.removeItem('selectedScenarioId');
+    }
+
     renderScenarioList();
 }
 
-// 시나리오 목록 화면 출력
-function renderScenarioList() {
-    const scenarioList = JSON.parse(localStorage.getItem('scenarioList') || '[]');
-    const countEl = document.getElementById('scenario-count');
-    const listEl = document.getElementById('scenario-list');
+let scenarioList = getScenarioListFromStorage();
 
-    if (countEl) countEl.innerText = `${scenarioList.length}개`;
-    if (!listEl) return;
-
-    if (scenarioList.length === 0) {
-        listEl.innerHTML = `<li class="p-3 text-[12px] text-gray-400 text-center">등록된 시나리오 DB가 없습니다.</li>`;
-        return;
-    }
-
-    listEl.innerHTML = scenarioList.map((item, index) => `
-        <li class="p-3 flex justify-between items-center text-[12px] hover:bg-slate-50">
-            <div class="flex items-center gap-3">
-                <span class="bg-slate-100 text-slate-800 font-bold px-2 py-0.5 rounded text-[11px]">PDF</span>
-                <div>
-                    <p class="font-bold text-gray-800">${item.title}</p>
-                    <p class="text-gray-400 text-[11px]">📄 ${item.fileName} <span class="ml-2">| 등록일: ${item.date}</span></p>
-                </div>
-            </div>
-            <button onclick="deleteScenario(${index})" class="text-red-500 hover:underline text-[12px]">삭제</button>
-        </li>
-    `).join('');
-}
-
-// 시나리오 삭제
-function deleteScenario(index) {
-    if (confirm('해당 시나리오를 삭제하시겠습니까?')) {
-        const scenarioList = JSON.parse(localStorage.getItem('scenarioList') || '[]');
-        scenarioList.splice(index, 1);
-        localStorage.setItem('scenarioList', JSON.stringify(scenarioList));
-        renderScenarioList();
-    }
-}
-// 💡 시나리오 데이터를 저장하는 배열 (브라우저 로컬 저장소 연동)
-let scenarioList = JSON.parse(localStorage.getItem('scenarioList') || '[]');
-
-// 1. 페이지가 처음 로드될 때 시나리오 목록을 그려줍니다.
 document.addEventListener('DOMContentLoaded', () => {
     renderScenarioList();
 });
 
-// 2. 시나리오 업로드 처리 함수 (용량 초과 및 예외 처리 포함)
 function handleUploadScenario(event) {
-    if (event) event.preventDefault(); // 폼 제출 시 페이지 뒤로가기/새로고침 방지
+    if (event) event.preventDefault();
 
     const titleInput = document.getElementById('scenarioTitleInput');
     const fileInput = document.getElementById('scenarioFileInput');
@@ -1867,7 +1906,6 @@ function handleUploadScenario(event) {
     const file = fileInput.files[0];
     const title = titleInput && titleInput.value.trim() ? titleInput.value.trim() : file.name;
 
-    // 📄 PDF 용량 체크 (약 3.5MB 초과 시 LocalStorage 용량 제한 위험)
     if (file.size > 3.5 * 1024 * 1024) {
         alert('파일 용량이 너무 큽니다. (3.5MB 이하의 PDF만 등록 가능합니다.)');
         return;
@@ -1877,8 +1915,7 @@ function handleUploadScenario(event) {
     reader.onload = function (e) {
         try {
             const fileData = e.target.result;
-            const scenarios = JSON.parse(localStorage.getItem('scenarios') || '[]');
-            
+            const scenarios = getScenarioListFromStorage();
             const newScenario = {
                 id: Date.now(),
                 title: title,
@@ -1889,16 +1926,13 @@ function handleUploadScenario(event) {
 
             scenarios.push(newScenario);
             localStorage.setItem('scenarios', JSON.stringify(scenarios));
+            localStorage.setItem('selectedScenarioId', String(newScenario.id));
 
-            // 입력창 초기화
             if (titleInput) titleInput.value = '';
             fileInput.value = '';
 
             alert('시나리오가 성공적으로 등록되었습니다.');
-            
-            // 목록 즉시 재렌더링
             renderScenarioList();
-
         } catch (error) {
             console.error('저장 실패:', error);
             alert('저장 공간이 부족하여 등록에 실패했습니다. (기존 시나리오를 지우거나 더 적은 용량의 PDF를 올려주세요.)');
@@ -1906,49 +1940,6 @@ function handleUploadScenario(event) {
     };
 
     reader.readAsDataURL(file);
-}
-
-// 3. 시나리오 목록 렌더링 함수
-function renderScenarioList() {
-    const listEl = document.getElementById('scenario-list');
-    const countEl = document.getElementById('scenario-count');
-
-    if (!listEl) return;
-
-    const scenarios = JSON.parse(localStorage.getItem('scenarios') || '[]');
-
-    // 카운트 표시
-    if (countEl) {
-        countEl.textContent = `${scenarios.length}개`;
-    }
-
-    // 목록이 없는 경우
-    if (scenarios.length === 0) {
-        listEl.innerHTML = `<li class="p-8 text-center text-slate-400 text-[13px]">등록된 시나리오가 없습니다.</li>`;
-        return;
-    }
-
-    // 목록이 있는 경우 HTML 생성
-    listEl.innerHTML = scenarios.map(item => `
-        <li class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-none">
-            <div>
-                <div class="font-bold text-slate-800 text-[14px]">${item.title}</div>
-                <div class="text-[12px] text-slate-400 mt-0.5">📄 ${item.fileName} | 등록일: ${item.date}</div>
-            </div>
-            <button onclick="deleteScenario(${item.id})" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-[12px] font-bold transition-colors">삭제</button>
-        </li>
-    `).join('');
-}
-
-// 4. 시나리오 삭제 함수
-function deleteScenario(id) {
-    if (!confirm('해당 시나리오를 삭제하시겠습니까?')) return;
-    
-    let scenarios = JSON.parse(localStorage.getItem('scenarios') || '[]');
-    scenarios = scenarios.filter(s => s.id !== id);
-    localStorage.setItem('scenarios', JSON.stringify(scenarios));
-    
-    renderScenarioList();
 }
 
         // 간호기록 문구 삭제 함수
