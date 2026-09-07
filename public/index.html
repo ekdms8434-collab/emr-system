@@ -84,7 +84,7 @@
         .btn-purple { background-color: #8b5cf6; }
         .btn-orange { background-color: #f97316; } .btn-orange:hover { background-color: #ea580c; }
 /* =================================================== */
-/* 🚀 [신규 추가] AI 디브리핑 버튼 및 리포트 상자 스타일 */
+/* 🚀 n8n 챗봇 버튼 및 모달 스타일 */
 /* =================================================== */
 .btn-purple {
     background-color: #7c3aed;
@@ -100,7 +100,7 @@
     background-color: #6d28d9;
 }
 
-/* 🚀 AI 디브리핑 모달 팝업 스타일 */
+/* 🚀 n8n 챗봇 모달 팝업 스타일 */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -545,29 +545,26 @@
                     <div style="display: flex; gap: 6px;">
                         <button class="btn-blue" onclick="downloadEmrTxt()">📄 EMR 요약 TXT 다운로드</button>
                         <button class="btn-blue" onclick="window.print()">🖨️ 차트 인쇄</button>
-                        <button class="btn-purple" onclick="runGeminiDebriefing()" title="AI 피드백">🤖 AI 피드백</button>
+                        <button class="btn-purple" onclick="openN8nChatbot()" title="n8n 챗봇">🤖 n8n 챗봇</button>
                         <button class="btn-slate" onclick="showListPage()">← 환자 목록으로 돌아가기</button>
                     </div>
                 </div>
 
-<!-- 2. AI 사전 디브리핑 모달 팝업창 -->
-<!-- AI 디브리핑 모달 내부 -->
-<div id="debrief-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); display: none; align-items: center; justify-content: center; z-index: 9999;">
-    <div style="background: white; padding: 20px; border-radius: 8px; width: min(760px, 90vw); max-height: 80vh; overflow: auto; box-shadow: 0 16px 40px rgba(15, 23, 42, 0.2);">
+<!-- n8n 챗봇 모달 -->
+<div id="n8n-chatbot-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); display: none; align-items: center; justify-content: center; z-index: 9999;">
+    <div style="background: white; padding: 16px; border-radius: 12px; width: min(900px, 92vw); height: min(82vh, 760px); box-shadow: 0 16px 40px rgba(15, 23, 42, 0.2); display: flex; flex-direction: column;">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px;">
-            <h3 style="margin: 0;">💡 AI 실습 디브리핑 리포트</h3>
-            <button type="button" onclick="closeAIDebriefModal()" style="background: none; color: #475569; font-size: 20px; border: none; cursor: pointer;">×</button>
+            <h3 style="margin: 0; font-size: 16px;">💬 n8n 챗봇 피드백</h3>
+            <button type="button" onclick="closeN8nChatbotModal()" style="background: none; color: #475569; font-size: 22px; border: none; cursor: pointer;">×</button>
         </div>
 
-        <!-- 사용자 추가 요청 입력란 제거: 요구대로 단순화 -->
-
-        <div id="debrief-score" style="font-weight: bold; color: #1e3a8a; margin-bottom: 10px;">미분석</div>
-        <div id="debrief-body" style="min-height: 120px; white-space: normal; line-height: 1.6; color: #1e293b;">AI 분석 결과가 여기에 표시됩니다.</div>
-
-        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px;">
-            <button id="debrief-btn" onclick="runGeminiDebriefing()" class="btn-purple" type="button">🤖 AI 디브리핑 생성</button>
-            <button type="button" class="btn-slate" onclick="closeAIDebriefModal()">닫기</button>
-        </div>
+        <iframe
+            id="n8nChatbotFrame"
+            title="n8n chatbot"
+            src="https://emr-chatbot.onrender.com/form/4eb78219-78f9-48e5-8f80-fa21e6942f6b"
+            style="width:100%; height:100%; border:1px solid #e2e8f0; border-radius:10px; background:#fff;"
+            allow="clipboard-write; microphone; camera"
+        ></iframe>
     </div>
 </div>
 
@@ -690,6 +687,7 @@
                                     <button class="main-tab-btn active" onclick="openTopTab('prescriptionTab', this)">📋 처방내역</button>
                                     <button class="main-tab-btn" onclick="openTopTab('labTab', this)">🧪 검사 결과</button>
                                     <button class="main-tab-btn" onclick="openTopTab('nurseTab', this)">📝 간호/투약 기록</button>
+                                    <button class="main-tab-btn" onclick="openTopTab('documentTab', this)">📄 서류 및 동의서</button>
                                 </div>
 <!-- 처방내역 테이블 전용 스타일 정의 -->
 <style>
@@ -749,13 +747,12 @@
                                             <option value="루틴" selected>루틴</option>
                                             <option value="PRN">PRN</option>
                                         </select>
-                                        <select id="medDbSelect" onchange="selectMedFromDb(this)" style="width:125px; font-weight:bold; color:var(--primary-navy);">
-                                            <option value="">-- DB 약물 선택 --</option>
+                                        <select id="medDbSelect" onchange="selectMedFromDb(this)" style="width:170px; font-weight:bold; color:var(--primary-navy);">
+                                            <option value="">-- 처방명 선택 --</option>
                                         </select>
                                         <input type="text" id="prescCode" placeholder="코드" style="width:60px;" oninput="onMedCodeInput(this.value)">
                                         <textarea id="prescNote" class="auto-expand-textarea" placeholder="처방 상세 내역 및 지시사항" rows="1" style="flex:1; min-width: 120px;" oninput="autoExpandTextarea(this)"></textarea>
                                         
-                                        <!-- 약물을 선택했을 때만 나타나는 용량/횟수/경로 입력칸 -->
                                         <div id="medDetailGroup" style="display:none; gap:3px; align-items:center;">
                                             <input type="text" id="prescDose" class="med-detail-input" placeholder="용량">
                                             <input type="text" id="prescFreq" class="med-detail-input" placeholder="횟수">
@@ -788,15 +785,11 @@
                                     <div class="input-bar-bottom">
                                         <input type="datetime-local" id="labTime" style="width:140px;">
                                         <select id="labCategorySelect" onchange="onLabCategoryChange(this.value)" style="width:90px;">
-                                            <option value="혈액/진단">혈액/진단</option>
-                                            <option value="영상의학">영상의학</option>
-                                            <option value="기능검사">기능검사</option>
-                                            <option value="조직병리">조직병리</option>
                                             <option value="custom">-- 기타직접 --</option>
                                         </select>
                                         <input type="text" id="labCategoryCustom" placeholder="구분 입력" style="display:none; width:70px;">
 
-                                        <select id="labItemSelect" onchange="onLabItemChange(this)" style="width:120px;"></select>
+                                        <select id="labItemSelect" onchange="onLabItemChange(this)" style="width:150px;"></select>
                                         <input type="text" id="labItemCustom" placeholder="검사명 입력" style="display:none; width:100px;">
 
                                         <textarea id="labResult" class="auto-expand-textarea" placeholder="결과/판독소견" rows="1" style="flex:1;" oninput="autoExpandTextarea(this)"></textarea>
@@ -824,9 +817,23 @@
                                     </div>
                                     <div class="input-bar-bottom">
                                         <input type="datetime-local" id="nurseTime">
+                                        <select id="nurseTemplateSelect" onchange="applySelectedNurseTemplate(this.value)" style="width:170px;">
+                                            <option value="">-- 간호기록명 선택 --</option>
+                                        </select>
                                         <textarea id="nurseNote" class="auto-expand-textarea" placeholder="간호 처치 내역 및 관찰소견/투약 메모 입력" rows="1" style="flex:1;" oninput="autoExpandTextarea(this)"></textarea>
                                         <input type="text" id="nurseName" placeholder="간호사 이름" style="width:80px;" value="이다은">
                                         <button class="btn-blue" onclick="addRecord('nurse')">입력</button>
+                                    </div>
+                                </div>
+
+                                <!-- 6. 서류 및 동의서 탭 화면 -->
+                                <div id="documentTab" class="tab-content">
+                                    <div class="table-scroll-area">
+                                        <div id="documentList" style="display:flex; flex-direction:column; gap:8px; padding:8px;"></div>
+                                    </div>
+                                    <div class="input-bar-bottom" style="padding:8px; border:1px solid var(--border-color); border-radius:4px; background:#f8fafc; gap:8px;">
+                                        <button class="btn-blue" onclick="openNursingAssessmentEditor()">간호정보조사지 작성</button>
+                                        <button class="btn-slate" onclick="openDocumentUploadFallback()">PDF 서류 업로드</button>
                                     </div>
                                 </div>
 
@@ -860,6 +867,7 @@
                                         <input type="number" id="vsHr" placeholder="맥박" style="width:55px;">
                                         <input type="number" id="vsRr" placeholder="호흡" style="width:55px;">
                                         <input type="number" step="0.1" id="vsBt" placeholder="체온" style="width:55px;">
+                                        <input type="number" id="vsSpo2" placeholder="SpO2" style="width:60px; min-width:60px;">
                                         <button class="btn-blue" onclick="addRecord('vs')">기록 입력</button>
                                     </div>
                                 </div>
@@ -889,137 +897,114 @@
         </div>
     </div>
 
-    <!-- 3. 시스템 설정 화면 (처음엔 감춰져 있습니다.) -->
+    <!-- 3. 시스템 설정 화면 -->
     <main id="view-settings" class="hidden w-full p-4">
-        <!-- 설정 화면 상단 제목과 뒤로 가기 버튼 -->
         <div class="flex items-center justify-between border-b pb-4 px-2">
             <div>
                 <h2 class="text-[21px] font-bold text-slate-900">시스템 설정</h2>
-                <p class="text-[15px] text-gray-500">진료과, 주치의, 진단코드(KCD), 처방 DB, 검사결과 DB 및 간호기록 DB를 관리합니다.</p>
+                <p class="text-[15px] text-gray-500">진료과, 주치의, 진단명, 처방, 검사결과, 간호기록 템플릿을 관리합니다.</p>
             </div>
-            <button onclick="showView('patients')" class="px-3 py-1.5 border rounded-lg text-[15px] text-gray-600 hover:bg-gray-50">← 환자 목록으로 돌아가기</button>
+            <div class="flex items-center gap-2">
+                <button onclick="goToEmrChartFromSettings()" class="px-3 py-1.5 border rounded-lg text-[15px] text-gray-600 hover:bg-gray-50">← EMR 차트로 돌아가기</button>
+                <button onclick="showView('patients')" class="px-3 py-1.5 border rounded-lg text-[15px] text-gray-600 hover:bg-gray-50">← 환자 목록으로 돌아가기</button>
+            </div>
         </div>
 
-        <!-- 설정 화면의 하위 탭 버튼들입니다. -->
         <div class="flex border-b border-gray-300 mt-6 gap-1">
             <button class="setting-tab-btn active" onclick="switchSettingTab('dept-panel', this)">🏥 진료과 관리</button>
             <button class="setting-tab-btn" onclick="switchSettingTab('doctor-panel', this)">👨‍⚕️ 주치의 관리</button>
-            <button class="setting-tab-btn" onclick="switchSettingTab('diag-panel', this)">🩺 KCD 관리</button>
+            <button class="setting-tab-btn" onclick="switchSettingTab('diag-panel', this)">🩺 진단명 관리</button>
             <button class="setting-tab-btn" onclick="switchSettingTab('drug-panel', this)">💊 처방 관리</button>
             <button class="setting-tab-btn" onclick="switchSettingTab('labdb-panel', this)">🧪 검사결과 관리</button>
             <button class="setting-tab-btn" onclick="switchSettingTab('nursedb-panel', this)">📝 간호기록 템플릿</button>
         </div>
 
-<div class="mt-4 w-full">
-
-    <!-- 1. 진료과 관리 패널 -->
-    <div id="dept-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex flex-col min-h-[500px] w-full">
-        <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
-            <span>🏥 진료과 관리</span>
-            <span id="dept-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full font-medium">0개</span>
-        </h3>
-        <form onsubmit="handleAddDept(event)" class="flex gap-2 items-center max-w-xl">
-            <input type="text" id="deptNameInput" required placeholder="신규 진료과명 입력 (예: 정형외과)" class="flex-1 px-3 py-2 border rounded-lg text-[13px]">
-            <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[13px] rounded-lg font-bold shrink-0 transition-colors">+ 진료과 추가</button>
-        </form>
-        <ul id="dept-list" class="divide-y divide-slate-100 border rounded-lg overflow-y-auto flex-1 min-h-[350px]"></ul>
-    </div>
-
-    <!-- 2. 주치의 관리 패널 -->
-    <div id="doctor-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex flex-col min-h-[500px] w-full hidden">
-        <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
-            <span>👨‍⚕️ 주치의 관리</span>
-            <span id="doctor-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full font-medium">0개</span>
-        </h3>
-        <form onsubmit="handleAddDoctor(event)" class="flex gap-2 items-center max-w-2xl">
-            <input type="text" id="doctorNameInput" required placeholder="의사명 입력" class="w-48 px-3 py-2 border rounded-lg text-[13px]">
-            <select id="doctorDeptSelect" required class="w-48 px-3 py-2 border rounded-lg text-[13px]">
-                <option value="">진료과 선택</option>
-            </select>
-            <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[13px] rounded-lg font-bold shrink-0 transition-colors">+ 주치의 등록</button>
-        </form>
-        <ul id="doctor-list" class="divide-y divide-slate-100 border rounded-lg overflow-y-auto flex-1 min-h-[350px]"></ul>
-    </div>
-
-    <!-- 3. KCD DB 관리 패널 -->
-    <div id="diag-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex flex-col min-h-[500px] w-full hidden">
-        <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
-            <span>🩺 KCD DB 관리</span>
-            <span id="diag-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full font-medium">0개</span>
-        </h3>
-        <form onsubmit="handleAddDiag(event)" class="grid grid-cols-1 md:grid-cols-4 gap-2 max-w-4xl">
-            <input type="text" id="kcdCodeInput" required placeholder="KCD 코드 (예: S82.1)" class="px-3 py-2 border rounded-lg text-[13px]">
-            <input type="text" id="kcdKorInput" required placeholder="한글 진단명" class="px-3 py-2 border rounded-lg text-[13px]">
-            <input type="text" id="kcdEngInput" placeholder="영문 진단명 (선택)" class="px-3 py-2 border rounded-lg text-[13px]">
-            <div class="flex gap-2">
-                <select id="kcdDeptSelect" class="flex-1 px-3 py-2 border rounded-lg text-[13px]">
-                    <option value="">진료과 선택</option>
-                </select>
-                <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[13px] rounded-lg font-bold shrink-0 transition-colors">+ 등록</button>
+        <div class="mt-4 w-full">
+            <div id="dept-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex flex-col min-h-[500px] w-full">
+                <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
+                    <span>🏥 진료과 관리</span>
+                    <span id="dept-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full font-medium">0개</span>
+                </h3>
+                <form onsubmit="handleAddDept(event)" class="flex gap-2 items-center max-w-xl">
+                    <input type="text" id="deptNameInput" required placeholder="신규 진료과명 입력" class="flex-1 px-3 py-2 border rounded-lg text-[13px]">
+                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[13px] rounded-lg font-bold shrink-0 transition-colors">+ 진료과 추가</button>
+                </form>
+                <ul id="dept-list" class="divide-y divide-slate-100 border rounded-lg overflow-y-auto flex-1 min-h-[350px]"></ul>
             </div>
-        </form>
-        <ul id="diag-list" class="divide-y divide-slate-100 border rounded-lg overflow-y-auto flex-1 min-h-[350px]"></ul>
-    </div>
 
-    <!-- 4. 처방 DB 관리 패널 -->
-    <div id="drug-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex flex-col min-h-[500px] w-full hidden">
-        <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
-            <span>💊 처방 DB 관리</span>
-            <span id="drug-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full font-medium">0개</span>
-        </h3>
-        <form onsubmit="handleAddDrug(event)" class="flex gap-2 items-center max-w-3xl">
-            <input type="text" id="drugCodeInput" required placeholder="처방코드" class="w-32 px-3 py-2 border rounded-lg text-[13px]">
-            <input type="text" id="drugNameInput" required placeholder="약품/처방명" class="flex-1 px-3 py-2 border rounded-lg text-[13px]">
-            <select id="drugCategorySelect" class="w-36 px-3 py-2 border rounded-lg text-[13px]">
-                <option value="내복약">내복약</option>
-                <option value="외용약">외용약</option>
-                <option value="주사제">주사제</option>
-                <option value="처치/수술">처치/수술</option>
-            </select>
-            <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[13px] rounded-lg font-bold shrink-0 transition-colors">+ 처방 등록</button>
-        </form>
-        <ul id="drug-list" class="divide-y divide-slate-100 border rounded-lg overflow-y-auto flex-1 min-h-[350px]"></ul>
-    </div>
+            <div id="doctor-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex flex-col min-h-[500px] w-full hidden">
+                <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
+                    <span>👨‍⚕️ 주치의 관리</span>
+                    <span id="doctor-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full font-medium">0개</span>
+                </h3>
+                <form onsubmit="handleAddDoctor(event)" class="flex gap-2 items-center max-w-2xl">
+                    <input type="text" id="doctorNameInput" required placeholder="의사명 입력" class="w-48 px-3 py-2 border rounded-lg text-[13px]">
+                    <select id="doctorDeptSelect" required class="w-48 px-3 py-2 border rounded-lg text-[13px]">
+                        <option value="">진료과 선택</option>
+                    </select>
+                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[13px] rounded-lg font-bold shrink-0 transition-colors">+ 주치의 등록</button>
+                </form>
+                <ul id="doctor-list" class="divide-y divide-slate-100 border rounded-lg overflow-y-auto flex-1 min-h-[350px]"></ul>
+            </div>
 
-    <!-- 5. 검사결과 DB 관리 패널 -->
-    <div id="labdb-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex flex-col min-h-[500px] w-full hidden">
-        <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
-            <span>🧪 검사결과 DB 관리</span>
-            <span id="labdb-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full font-medium">0개</span>
-        </h3>
-        <form onsubmit="handleAddLabDb(event)" class="flex gap-2 items-center max-w-3xl">
-            <input type="text" id="labNameInput" required placeholder="검사항목명 (예: HbA1c)" class="flex-1 px-3 py-2 border rounded-lg text-[13px]">
-            <input type="text" id="labRefInput" placeholder="참고치 (예: 4.0 - 6.0)" class="w-40 px-3 py-2 border rounded-lg text-[13px]">
-            <input type="text" id="labUnitInput" placeholder="단위 (예: %)" class="w-28 px-3 py-2 border rounded-lg text-[13px]">
-            <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[13px] rounded-lg font-bold shrink-0 transition-colors">+ 검사 등록</button>
-        </form>
-        <ul id="labdb-list" class="divide-y divide-slate-100 border rounded-lg overflow-y-auto flex-1 min-h-[350px]"></ul>
-    </div>
+            <div id="diag-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex flex-col min-h-[500px] w-full hidden">
+                <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
+                    <span>🩺 진단명 관리</span>
+                    <span id="diag-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full font-medium">0개</span>
+                </h3>
+                <form onsubmit="handleAddDiag(event)" class="grid grid-cols-1 md:grid-cols-3 gap-2 max-w-4xl">
+                    <input type="text" id="kcdCodeInput" required placeholder="질병코드 (예: K35.8)" class="px-3 py-2 border rounded-lg text-[13px]">
+                    <input type="text" id="kcdKorInput" required placeholder="한글 진단명" class="px-3 py-2 border rounded-lg text-[13px]">
+                    <div class="flex gap-2">
+                        <input type="text" id="kcdEngInput" placeholder="영문 진단명" class="flex-1 px-3 py-2 border rounded-lg text-[13px]">
+                        <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[13px] rounded-lg font-bold shrink-0 transition-colors">+ 등록</button>
+                    </div>
+                </form>
+                <ul id="diag-list" class="divide-y divide-slate-100 border rounded-lg overflow-y-auto flex-1 min-h-[350px]"></ul>
+            </div>
 
-    <!-- 6. 간호기록 템플릿 관리 패널 -->
-    <div id="nursedb-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex flex-col min-h-[500px] w-full hidden">
-        <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
-            <span>📝 간호기록 템플릿 관리</span>
-            <span id="nursedb-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full font-medium">0개</span>
-        </h3>
-        <form onsubmit="handleAddNurseDb(event)" class="flex gap-2 items-center max-w-3xl">
-            <select id="nurseCategorySelect" class="w-36 px-3 py-2 border rounded-lg text-[13px]">
-                <option value="사정">사정</option>
-                <option value="진단">진단</option>
-                <option value="계획">계획</option>
-                <option value="수행">수행</option>
-                <option value="평가">평가</option>
-                <option value="일반">일반</option>
-            </select>
-            <input type="text" id="nurseContentInput" required placeholder="상투문구 및 템플릿 내용 입력" class="flex-1 px-3 py-2 border rounded-lg text-[13px]">
-            <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[13px] rounded-lg font-bold shrink-0 transition-colors">+ 템플릿 등록</button>
-        </form>
-        <ul id="nursedb-list" class="divide-y divide-slate-100 border rounded-lg overflow-y-auto flex-1 min-h-[350px]"></ul>
-    </div>
+            <div id="drug-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex flex-col min-h-[500px] w-full hidden">
+                <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
+                    <span>💊 처방 관리</span>
+                    <span id="drug-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full font-medium">0개</span>
+                </h3>
+                <form onsubmit="handleAddDrug(event)" class="flex gap-2 items-center max-w-4xl">
+                    <input type="text" id="drugCodeInput" required placeholder="처방코드" class="w-32 px-3 py-2 border rounded-lg text-[13px]">
+                    <input type="text" id="drugNameInput" required placeholder="처방명" class="w-48 px-3 py-2 border rounded-lg text-[13px]">
+                    <textarea id="drugContentInput" rows="1" placeholder="처방 내용" class="auto-expand-textarea px-3 py-2 border rounded-lg text-[13px]" style="min-height: 38px; max-height: 420px; min-width: 180px; width: 220px; resize: none; overflow-y: hidden; flex: 0 0 auto;" oninput="autoExpandTextarea(this)"></textarea>
+                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[13px] rounded-lg font-bold shrink-0 transition-colors">+ 처방 등록</button>
+                </form>
+                <ul id="drug-list" class="divide-y divide-slate-100 border rounded-lg overflow-y-auto flex-1 min-h-[350px]"></ul>
+            </div>
 
-</div>
+            <div id="labdb-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex flex-col min-h-[500px] w-full hidden">
+                <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
+                    <span>🧪 검사결과 관리</span>
+                    <span id="labdb-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full font-medium">0개</span>
+                </h3>
+                <form onsubmit="handleAddLabDb(event)" class="flex gap-2 items-center max-w-4xl">
+                    <input type="text" id="labCategoryInput" required placeholder="구분" class="w-28 px-3 py-2 border rounded-lg text-[13px]">
+                    <input type="text" id="labNameInput" required placeholder="검사명" class="flex-1 px-3 py-2 border rounded-lg text-[13px]">
+                    <input type="text" id="labRefInput" placeholder="정상수치 범위" class="w-40 px-3 py-2 border rounded-lg text-[13px]">
+                    <input type="text" id="labUnitInput" placeholder="단위" class="w-28 px-3 py-2 border rounded-lg text-[13px]">
+                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[13px] rounded-lg font-bold shrink-0 transition-colors">+ 검사 등록</button>
+                </form>
+                <ul id="labdb-list" class="divide-y divide-slate-100 border rounded-lg overflow-y-auto flex-1 min-h-[350px]"></ul>
+            </div>
 
-</div> <!-- 👈 mt-4 w-full 감싸는 태그 닫기 -->
+            <div id="nursedb-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex flex-col min-h-[500px] w-full hidden">
+                <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
+                    <span>📝 간호기록 템플릿</span>
+                    <span id="nursedb-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full font-medium">0개</span>
+                </h3>
+                <form onsubmit="handleAddNurseDb(event)" class="flex gap-2 items-center max-w-4xl">
+                    <input type="text" id="nurseNameInput" required placeholder="간호기록명" class="w-48 px-3 py-2 border rounded-lg text-[13px]">
+                    <textarea id="nurseContentInput" rows="1" required placeholder="간호기록 내용 입력" class="auto-expand-textarea px-3 py-2 border rounded-lg text-[13px]" style="min-height: 38px; max-height: 420px; min-width: 180px; width: 220px; resize: none; overflow-y: hidden; flex: 0 0 auto;" oninput="autoExpandTextarea(this)"></textarea>
+                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[13px] rounded-lg font-bold shrink-0 transition-colors">+ 템플릿 등록</button>
+                </form>
+                <ul id="nursedb-list" class="divide-y divide-slate-100 border rounded-lg overflow-y-auto flex-1 min-h-[350px]"></ul>
+            </div>
+        </div>
     </main>
 
     <!-- JavaScript 로직 시작 - 데이터를 관리하고 화면을 움직이게 하는 뇌 역할입니다. -->
@@ -1046,7 +1031,7 @@
         let ioChartInstance = null;     // I/O 그래프 객체
 
         // V/S 항목 중 어떤 것을 차트에 보여줄지 숨길지 결정하는 값입니다.
-        let vsVisibility = { bp: true, hr: true, rr: true, bt: true };
+        let vsVisibility = { bp: true, hr: true, rr: true, bt: true, spo2: true };
 
         let pinClickTimer = null;
         let targetPinIndex = null;
@@ -1074,17 +1059,25 @@
 
         // 입력 칸(textarea)에 글을 길게 쓰면 자동으로 상자 높이를 늘려주는 함수입니다.
         function autoExpandTextarea(element) {
-            element.style.height = 'auto'; // 원래 높이로 일단 줄인 뒤
-            element.style.height = (element.scrollHeight) + 'px'; // 글씨가 차지하는 높이만큼 쫘악 늘립니다.
+            const style = window.getComputedStyle(element);
+            const paddingX = parseFloat(style.paddingLeft || '0') + parseFloat(style.paddingRight || '0');
+            const lineHeight = parseFloat(style.lineHeight || '18');
+            const text = element.value || '';
+            const lines = text.split('\n');
+            const longestLine = lines.reduce((max, line) => Math.max(max, line.length), 0);
+            const estimatedWidth = Math.max(220, (longestLine * (parseFloat(style.fontSize || '11') * 0.62)) + paddingX + 14);
+            const maxWidth = 800;
+
+            element.style.width = Math.min(estimatedWidth, maxWidth) + 'px';
+            element.style.height = 'auto';
+            element.style.height = Math.max(element.scrollHeight, lineHeight * Math.max(lines.length, 1) + 12) + 'px';
         }
 
-        // 처방 구분을 바꿨을 때 '약물'이면 용량/횟수 입력칸을 보여주고, 아니면 숨깁니다.
+        // 처방 구분에 관계없이 용량/횟수/경로 입력칸은 항상 보이도록 설정합니다.
         function onPrescTypeChange(value) {
             const group = document.getElementById('medDetailGroup');
-            if (value === '약물') {
+            if (group) {
                 group.style.display = 'flex';
-            } else {
-                group.style.display = 'none';
             }
         }
 
@@ -1105,60 +1098,75 @@
             }
         }
 
+        function loadSettingsData() {
+            try {
+                const raw = JSON.parse(localStorage.getItem('emr_settings') || '{}');
+                departments = Array.isArray(raw.departments) ? raw.departments : [];
+                doctors = Array.isArray(raw.doctors) ? raw.doctors : [];
+                diagnosisDatabase = Array.isArray(raw.diagnoses) ? raw.diagnoses : [];
+                drugDatabase = Array.isArray(raw.prescriptions) ? raw.prescriptions : [];
+                labDatabase = Array.isArray(raw.labdb) ? raw.labdb : [];
+                nurseDatabase = Array.isArray(raw.nurseTemplates) ? raw.nurseTemplates : [];
+            } catch (error) {
+                console.warn('설정 데이터 로드 실패:', error);
+                departments = [];
+                doctors = [];
+                diagnosisDatabase = [];
+                drugDatabase = [];
+                labDatabase = [];
+                nurseDatabase = [];
+            }
+        }
+
+        function saveSettingsData() {
+            const payload = {
+                departments,
+                doctors,
+                diagnoses: diagnosisDatabase,
+                prescriptions: drugDatabase,
+                labdb: labDatabase,
+                nurseTemplates: nurseDatabase
+            };
+            localStorage.setItem('emr_settings', JSON.stringify(payload));
+        }
+
         // 프로그램이 시작될 때 서버에서 데이터를 모두 가져오는(fetch) 함수입니다.
         async function fetchInitialData() {
             try {
-                // Supabase에서 필요한 테이블을 동시에 조회합니다.
-                const [deptRes, docRes, diagRes, drugRes, labDbRes, nurseDbRes, patRes] = await Promise.all([
-                    supabase.from('departments').select('name'),
-                    supabase.from('doctors').select('*'),
-                    supabase.from('diagnoses').select('*'),
-                    supabase.from('drugs').select('*'),
-                    supabase.from('labdb').select('*'),
-                    supabase.from('nursedb').select('*'),
-                    supabase.from('patients').select('*')
-                ]);
+                loadSettingsData();
 
-                departments = (deptRes.data || []).map(d => d.name);
-                doctors = docRes.data || [];
-                diagnosisDatabase = diagRes.data || [];
-                drugDatabase = drugRes.data || [];
+                const { data: patRes, error: patError } = await supabase.from('patients').select('*');
+                if (patError) throw patError;
 
-                labDatabase = (labDbRes.data || []).map(r => ({
-                    id: r.id,
-                    category: r.category,
-                    name: r.name,
-                    refRange: r.ref_range || r.refRange || '',
-                    unit: r.unit || ''
-                }));
-
-                nurseDatabase = nurseDbRes.data || [];
-
-                patients = (patRes.data || []).map(r => ({
-                    id: r.id,
-                    chartNo: r.chart_no || r.chartNo || null,
-                    name: r.name,
-                    birth: r.birth,
-                    age: r.age,
-                    gender: r.gender,
-                    height: r.height || r.height_cm || '',
-                    weight: r.weight || r.weight_kg || '',
-                    bloodType: r.blood_type || r.bloodType || '',
-                    dept: r.dept,
-                    doctor: r.doctor,
-                    room: r.room,
-                    hd: r.hd,
-                    pod: r.pod,
-                    diagCode: r.diag_code || r.diagCode || '',
-                    diagnosis: r.diagnosis,
-                    cc: r.cc,
-                    memo: r.memo || '',
-                    bodyMarks: r.body_marks || r.bodyMarks || [],
-                    records: r.records || { vs: [], io: [], prescriptions: [], nurse: [], lab: [] }
-                }));
+                patients = (patRes || []).map(r => {
+                    const recordObj = r.records || { vs: [], io: [], prescriptions: [], nurse: [], lab: [] };
+                    const profile = recordObj.profile || {};
+                    return {
+                        id: r.id,
+                        chartNo: r.chart_no || r.chartNo || null,
+                        name: r.name,
+                        birth: r.birth,
+                        age: r.age,
+                        gender: r.gender,
+                        height: r.height || r.height_cm || profile.height || '',
+                        weight: r.weight || r.weight_kg || profile.weight || '',
+                        bloodType: r.blood_type || r.bloodType || '',
+                        dept: r.dept,
+                        doctor: r.doctor,
+                        room: r.room,
+                        hd: r.hd,
+                        pod: r.pod,
+                        diagCode: r.diag_code || r.diagCode || '',
+                        diagnosis: r.diagnosis,
+                        cc: r.cc,
+                        memo: r.memo || '',
+                        bodyMarks: r.body_marks || r.bodyMarks || [],
+                        records: recordObj
+                    };
+                });
 
             } catch (err) {
-                console.error('Supabase 데이터 로드 오류:', err);
+                console.error('데이터 로드 오류:', err);
             }
         }
 
@@ -1221,22 +1229,25 @@
             if (!Array.isArray(recordsArray)) return;
             recordsArray.sort((a, b) => new Date(a.time) - new Date(b.time));
         }
-// 1306번 줄 시작
-const GEMINI_API_KEY = "AQ.Ab8RN6IQrdCspYX3bMXQb17HePkDGCo_tokLGn90iGLG4j3FFg";
-// 테스트용: AI 호출 대신 모의(Mock) 응답을 사용하려면 true로 설정하세요.
-const USE_MOCK_DEBRIEF = true;
+const N8N_CHATBOT_URL = 'https://emr-chatbot.onrender.com/webhook/f944a844-cd48-4aeb-bf36-e4b337724993/chat';
 
-function showAIDebriefModal() {
-    const modal = document.getElementById('debrief-modal') || document.getElementById('aiDebriefModal');
+function openN8nChatbot() {
+    const modal = document.getElementById('n8n-chatbot-modal');
     if (!modal) return;
+
+    const iframe = document.getElementById('n8nChatbotFrame');
+    if (iframe) {
+        iframe.src = N8N_CHATBOT_URL;
+    }
+
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
     modal.style.position = 'fixed';
     modal.style.zIndex = '9999';
 }
 
-function closeAIDebriefModal() {
-    const modal = document.getElementById('debrief-modal') || document.getElementById('aiDebriefModal');
+function closeN8nChatbotModal() {
+    const modal = document.getElementById('n8n-chatbot-modal');
     if (!modal) return;
     modal.classList.add('hidden');
     modal.style.display = 'none';
@@ -1255,250 +1266,27 @@ function getCurrentPatientName() {
     return '환자';
 }
 
-function getFileBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-            const result = reader.result || '';
-            const base64 = typeof result === 'string' && result.includes(',') ? result.split(',')[1] : result;
-            resolve(base64);
-        };
-        reader.onerror = () => reject(new Error('PDF 파일을 Base64로 변환하지 못했습니다.'));
-        reader.readAsDataURL(file);
-    });
-}
-
-
-async function runGeminiDebriefing(patientName = getCurrentPatientName()) {
-    const debriefBtn = document.getElementById('debrief-btn');
-    const debriefScore = document.getElementById('debrief-score');
-    const debriefBody = document.getElementById('debrief-body') || document.getElementById('aiDebriefContent');
-    const modal = document.getElementById('debrief-modal') || document.getElementById('aiDebriefModal');
-
-    showAIDebriefModal();
-
-    if (debriefBtn) {
-        debriefBtn.disabled = true;
-        debriefBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    }
-    if (debriefScore) debriefScore.innerText = "분석 중...";
-    if (debriefBody) debriefBody.innerHTML = `<div class="text-center py-8 text-gray-500">AI가 EMR 기록과 시나리오를 비교 분석하고 있습니다...</div>`;
-
-    try {
-        // Mock 모드가 켜져 있으면 실제 API 호출을 건너뛰고 가짜 피드백을 보여줍니다.
-        if (typeof USE_MOCK_DEBRIEF !== 'undefined' && USE_MOCK_DEBRIEF) {
-            const p = patients[currentPatientIndex] || { name: finalPatientName };
-            const mockHtml = `
-                <p><strong>🎯 간호사정 비교 및 누락 항목</strong></p>
-                <ul>
-                    <li>기록된 활력징후와 기본 정보는 잘 정리되어 있습니다.</li>
-                    <li>누락: 투약 후 관찰(증상/부작용)과 재평가 내용이 충분하지 않습니다.</li>
-                </ul>
-                <p><strong>💊 처방 & 투약 수행 정확도</strong></p>
-                <ul>
-                    <li>대부분 처방 이행은 적절하나 일부 투약에서 용량/경로 표기가 불명확합니다.</li>
-                </ul>
-                <p><strong>📝 간호기록(SOAPIE) 완성도 평가</strong></p>
-                <ul>
-                    <li>Subjective/Objective는 기재되어 있으나 Assessment/Plan/Intervention 중 일부가 미비합니다.</li>
-                    <li>특히 평가(평가 후 변화) 항목 보강이 필요합니다.</li>
-                </ul>
-                <p><strong>💡 총평 및 핵심 개선 조언</strong></p>
-                <ul>
-                    <li>투약 후 관찰 항목을 표준 템플릿으로 추가하세요.</li>
-                    <li>중요 소견은 날짜/시간과 함께 구체적으로 기록하세요.</li>
-                </ul>
-            `;
-
-            if (debriefScore) debriefScore.innerText = '분석 완료';
-            if (debriefBody) debriefBody.innerHTML = mockHtml;
-            if (debriefBtn) { debriefBtn.disabled = false; debriefBtn.classList.remove('opacity-50', 'cursor-not-allowed'); }
-            return;
-        }
-
-        let pureBase64 = '';
-
-        // EMR 데이터가 전역 studentEMR로 이미 제공되어 있으면 JSON으로, 아니면 요약 텍스트로 만들어 보냅니다.
-        let emrDataText;
-        if (typeof studentEMR !== 'undefined' && studentEMR) {
-            try { emrDataText = JSON.stringify(studentEMR, null, 2); }
-            catch (e) { emrDataText = String(studentEMR); }
-        } else {
-            emrDataText = buildEmrTxtExport();
-        }
-
-        const finalPatientName = patientName || getCurrentPatientName();
-
-        const promptText = `
-[환자 정보]
-이름: ${finalPatientName}
-
-[학생 작성 EMR 기록]
-${emrDataText}
-
-[요청사항]
-1. 시나리오와 비교하여 학생이 놓친 간호사정, 잘못 투여된 처방/약물, 미비한 간호기록(SOAPIE)을 분석해줘.
-2. 아래 4가지 목차로 구분하여 HTML 태그(<p>, <ul>, <li>, <strong>)를 사용해 작성해줘.
-   - 🎯 간호사정 비교 및 누락 항목
-   - 💊 처방 & 투약 수행 정확도
-   - 📝 간호기록(SOAPIE) 완성도 평가
-   - 💡 총평 및 핵심 개선 조언
-3. 맨 마지막 줄에는 반드시 "SCORE: [점수]" 형식으로 100점 만점 기준 점수를 적어줘. (예: SCORE: 85)
-`;
-
-        const contentsParts = [{ text: promptText }];
-        if (pureBase64) {
-            contentsParts.push({
-                inline_data: {
-                    mime_type: 'application/pdf',
-                    data: pureBase64
-                }
-            });
-        }
-
-        const modelCandidates = ['gemini-2.5-flash', 'gemini-2.0-flash'];
-        let response;
-        let data;
-        let lastError = null;
-
-        for (const modelName of modelCandidates) {
-            try {
-                console.log(`Gemini API 요청 시작 (모델: ${modelName})...`);
-                response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-goog-api-key': GEMINI_API_KEY
-                    },
-                    body: JSON.stringify({
-                        contents: [{ parts: contentsParts }]
-                    })
-                });
-
-                data = await response.json();
-                console.log(`Gemini ${modelName} 응답 상태:`, response.status);
-                console.log('Gemini API 응답 객체:', data);
-
-                if (response.ok && !data.error) {
-                    break;
-                }
-
-                lastError = data.error?.message || `HTTP 오류 발생 (코드: ${response.status})`;
-            } catch (error) {
-                lastError = error.message;
-            }
-        }
-
-        if (!response || !response.ok || data?.error) {
-            throw new Error(lastError || 'Gemini API 호출에 실패했습니다.');
-        }
-
-        let aiResult = '';
-        const candidate = data.candidates && data.candidates[0];
-
-        if (candidate) {
-            if (candidate.content && candidate.content.parts && candidate.content.parts[0]) {
-                aiResult = candidate.content.parts[0].text || '';
-            } else if (candidate.text) {
-                aiResult = candidate.text;
-            } else if (candidate.finishReason && candidate.finishReason !== 'STOP') {
-                throw new Error(`답변이 차단되었습니다 (사유: ${candidate.finishReason})`);
-            }
-        }
-
-        if (aiResult) {
-            console.log('최종 AI 텍스트 추출 성공!');
-
-            // 점수(SCORE: 숫자) 표시는 제거합니다 — 결과에서 SCORE 토큰을 모두 삭제
-            aiResult = aiResult.replace(/SCORE:\s*\d+\s*/ig, '');
-            if (debriefScore) debriefScore.innerText = '분석 완료';
-            if (debriefBody) {
-                debriefBody.innerHTML = aiResult;
-            }
-
-            const targetModal = modal || document.getElementById('debrief-modal');
-            if (targetModal) {
-                targetModal.classList.remove('hidden');
-                targetModal.style.setProperty('display', 'flex', 'important');
-                targetModal.style.setProperty('z-index', '9999', 'important');
-                targetModal.style.setProperty('position', 'fixed', 'important');
-            }
-        } else {
-            throw new Error('API 응답에서 텍스트 데이터(aiResult)를 추출하지 못했습니다.');
-        }
-
-    } catch (error) {
-        console.error('Gemini API 오류:', error);
-        if (debriefScore) debriefScore.innerText = '오류 발생';
-        if (debriefBody) {
-            debriefBody.innerHTML = `<div class="p-4 bg-red-50 text-red-600 rounded-lg border border-red-200">
-                <strong>[AI 디브리핑 분석 실패]</strong><br>
-                ${error.message}
-            </div>`;
-        }
-    } finally {
-        if (debriefBtn) {
-            debriefBtn.disabled = false;
-            debriefBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        }
-    }
-}
-        // 🛡️ 비상용 스마트 디브리핑 생성 함수
-function generateFallbackReport(p, orders, labs, studentNotes) {
-    const completedOrders = orders.filter(o => 
-        (o.status && (o.status.includes('완료') || o.status.includes('수행'))) ||
-        (o.state && (o.state.includes('완료') || o.state.includes('수행')))
-    ).length;
-
-    return `
-        <div style="line-height: 1.6; color: #1e293b;">
-            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-                <b style="color: #166534; font-size: 15px;">📋 [AI 1차 디브리핑 분석 리포트]</b><br/>
-                <span style="font-size: 13px; color: #374151;">
-                    <b>환자:</b> ${p.name || '미상'} (${p.age || 0}세/${p.gender || '-'}) | <b>진단명:</b> ${p.diagnosis || '상세불명의 질환'}
-                </span>
-            </div>
-
-            <div style="margin-bottom: 14px;">
-                <b style="color: #0f766e;">1. 🎯 학습 목표 달성도 평가</b>
-                <ul style="margin: 6px 0 0 18px; padding: 0; font-size: 13px; color: #334155;">
-                    <li><b>사정 및 중재 이행:</b> EMR 차트 내 수행 데이터 검토 완료.</li>
-                </ul>
-            </div>
-
-            <div style="margin-bottom: 14px;">
-                <b style="color: #0f766e;">2. ✅ 처방 및 간호 중재 이행률</b>
-                <ul style="margin: 6px 0 0 18px; padding: 0; font-size: 13px; color: #334155;">
-                    <li><b>처방 이행:</b> 총 ${orders.length}건 중 <b>${completedOrders}건 수행 완료</b> (${orders.length - completedOrders}건 미수행).</li>
-                </ul>
-            </div>
-
-            <div style="margin-bottom: 14px;">
-                <b style="color: #0f766e;">3. 📝 간호 기록 피드백</b>
-                <ul style="margin: 6px 0 0 18px; padding: 0; font-size: 13px; color: #334155;">
-                    <li><b>잘한 점:</b> 처방된 약제 및 수액에 대한 투약 기록 갱신 완료.</li>
-                    <li><b>보완할 점:</b> 작성된 간호메모("${studentNotes.substring(0, 20)}...")에 투약 후 환자 반응 및 추적 관찰 내용 보완 필요.</li>
-                </ul>
-            </div>
-
-            <div style="margin-bottom: 10px;">
-                <b style="color: #0f766e;">4. 💬 교수-학생 면담 질문 2가지</b>
-                <ol style="margin: 6px 0 0 18px; padding: 0; font-size: 13px; color: #334155;">
-                    <li>환자의 현재 상태에서 가장 우선순위가 높은 간호 중재는 무엇인가요?</li>
-                    <li>투약 후 발생할 수 있는 주요 부작용과 관찰 지표는 무엇인가요?</li>
-                </ol>
-            </div>
-        </div>
-    `;
-}
 // 환자 정보를 서버에 저장하는 함수입니다. (숫자 형변환 및 안전한 디버깅 보장)
         async function savePatientToBackend(patientData) {
             try {
                 const ageVal = parseInt(patientData.age, 10);
                 const hdVal = parseInt(patientData.hd, 10);
                 const podVal = parseInt(patientData.pod, 10);
-                const heightVal = parseFloat(patientData.height);
-                const weightVal = parseFloat(patientData.weight);
+
+                const existingRecords = patientData.records && typeof patientData.records === 'object' ? patientData.records : {};
+                const profile = existingRecords.profile || {};
+
+                if (patientData.height !== undefined && patientData.height !== null && patientData.height !== '') {
+                    profile.height = patientData.height;
+                }
+                if (patientData.weight !== undefined && patientData.weight !== null && patientData.weight !== '') {
+                    profile.weight = patientData.weight;
+                }
+
+                const recordsPayload = {
+                    ...existingRecords,
+                    profile
+                };
 
                 const payload = {
                     chart_no: patientData.chartNo,
@@ -1506,8 +1294,6 @@ function generateFallbackReport(p, orders, labs, studentNotes) {
                     birth: patientData.birth,
                     age: isNaN(ageVal) ? 0 : ageVal,
                     gender: patientData.gender,
-                    height: isNaN(heightVal) ? null : heightVal,
-                    weight: isNaN(weightVal) ? null : weightVal,
                     blood_type: patientData.bloodType,
                     dept: patientData.dept,
                     doctor: patientData.doctor,
@@ -1519,7 +1305,7 @@ function generateFallbackReport(p, orders, labs, studentNotes) {
                     cc: patientData.cc,
                     memo: patientData.memo || '',
                     body_marks: patientData.bodyMarks || [],
-                    records: patientData.records || {}
+                    records: recordsPayload
                 };
 
                 // Supabase upsert 실행
@@ -1593,9 +1379,7 @@ function generateFallbackReport(p, orders, labs, studentNotes) {
             }
         }
 
-        // 설정 화면의 데이터를 HTML로 예쁘게 그려주는(렌더링) 함수입니다.
         function renderSettings() {
-            // 진료과 목록을 화면에 그립니다.
             const deptList = document.getElementById('dept-list');
             document.getElementById('dept-count').innerText = `${departments.length}개`;
             deptList.innerHTML = departments.map((dept, index) => `
@@ -1608,11 +1392,16 @@ function generateFallbackReport(p, orders, labs, studentNotes) {
                 </li>
             `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 진료과가 없습니다.</li>';
 
-            // 셀렉트 박스(선택창)에도 진료과 목록을 채워넣습니다.
-            document.getElementById('doc-dept-select').innerHTML = '<option value="">진료과 선택</option>' + departments.map(d => `<option value="${d}">${d}</option>`).join('');
-            document.getElementById('diag-dept-select').innerHTML = '<option value="">진료과 선택</option>' + departments.map(d => `<option value="${d}">${d}</option>`).join('');
+            const doctorDeptSelect = document.getElementById('doctorDeptSelect');
+            if (doctorDeptSelect) {
+                doctorDeptSelect.innerHTML = '<option value="">진료과 선택</option>' + departments.map(d => `<option value="${d}">${d}</option>`).join('');
+            }
 
-            // 주치의 목록을 그립니다.
+            const kcdDeptSelect = document.getElementById('kcdDeptSelect');
+            if (kcdDeptSelect) {
+                kcdDeptSelect.innerHTML = '<option value="">진료과 선택</option>' + departments.map(d => `<option value="${d}">${d}</option>`).join('');
+            }
+
             const docList = document.getElementById('doctor-list');
             document.getElementById('doctor-count').innerText = `${doctors.length}명`;
             docList.innerHTML = doctors.map((doc) => `
@@ -1628,7 +1417,6 @@ function generateFallbackReport(p, orders, labs, studentNotes) {
                 </li>
             `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 주치의가 없습니다.</li>';
 
-            // KCD 진단명 목록을 그립니다.
             const diagList = document.getElementById('diag-list');
             document.getElementById('diag-count').innerText = `${diagnosisDatabase.length}개`;
             diagList.innerHTML = diagnosisDatabase.map((diag) => `
@@ -1636,6 +1424,7 @@ function generateFallbackReport(p, orders, labs, studentNotes) {
                     <div>
                         <span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-900 font-bold">${diag.code}</span>
                         <span class="font-bold text-gray-800 ml-1">${diag.name_ko}</span>
+                        <span class="text-gray-500 ml-1">${diag.name_en || ''}</span>
                     </div>
                     <div class="space-x-1">
                         <button onclick="editDiagnosis(${diag.id})" class="text-slate-800 hover:underline font-bold">수정</button>
@@ -1644,14 +1433,14 @@ function generateFallbackReport(p, orders, labs, studentNotes) {
                 </li>
             `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 진단명이 없습니다.</li>';
 
-            // 처방 약물 목록을 그립니다.
             const drugList = document.getElementById('drug-list');
-            document.getElementById('med-count').innerText = `${drugDatabase.length}개`;
+            document.getElementById('drug-count').innerText = `${drugDatabase.length}개`;
             drugList.innerHTML = drugDatabase.map((drug) => `
                 <li class="p-2.5 flex justify-between items-center text-[12px]">
                     <div>
                         <span class="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-slate-800 font-bold">${drug.code}</span>
-                        <span class="font-bold text-gray-800 ml-1 whitespace-pre-wrap">${drug.name}</span>
+                        <span class="font-bold text-gray-800 ml-1">${drug.name}</span>
+                        <span class="text-gray-500 ml-1">${drug.content || ''}</span>
                     </div>
                     <div class="space-x-1">
                         <button onclick="editDrug(${drug.id})" class="text-slate-800 hover:underline font-bold">수정</button>
@@ -1660,80 +1449,524 @@ function generateFallbackReport(p, orders, labs, studentNotes) {
                 </li>
             `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 처방 데이터가 없습니다.</li>';
 
-            // 검사결과 DB 목록을 그립니다.
             const labdbList = document.getElementById('labdb-list');
             document.getElementById('labdb-count').innerText = `${labDatabase.length}개`;
             labdbList.innerHTML = labDatabase.map((item) => `
                 <li class="p-2.5 flex justify-between items-center text-[12px]">
                     <div>
-                        <span class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-bold">[${item.category}]</span>
                         <span class="font-bold text-gray-800 ml-1">${item.name}</span>
-                        <span class="text-gray-400 text-[10px] block">범위: ${item.refRange || '없음'} ${item.unit || ''}</span>
+                        <span class="text-gray-400 text-[10px] block">구분: ${item.category || '기본'} · 범위: ${item.refRange || '없음'} ${item.unit || ''}</span>
                     </div>
                     <div class="space-x-1">
+                        <button onclick="editLabDb(${item.id})" class="text-slate-800 hover:underline font-bold">수정</button>
                         <button onclick="deleteLabDb(${item.id})" class="text-red-500 hover:underline">삭제</button>
                     </div>
                 </li>
-            `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 검사 DB가 없습니다.</li>';
+            `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 검사명이 없습니다.</li>';
 
-            // 간호기록 문구 DB 목록을 그립니다.
             const nursedbList = document.getElementById('nursedb-list');
             document.getElementById('nursedb-count').innerText = `${nurseDatabase.length}개`;
             nursedbList.innerHTML = nurseDatabase.map((item) => `
                 <li class="p-2.5 flex justify-between items-center text-[12px]">
-                    <div class="max-w-[150px] overflow-hidden">
-                        <span class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-bold">[${item.category}]</span>
+                    <div class="max-w-[180px] overflow-hidden">
+                        <span class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-bold">${item.name || item.title || '간호기록'}</span>
                         <p class="font-medium text-gray-800 mt-1 truncate">${item.content}</p>
                     </div>
                     <div class="space-x-1">
+                        <button onclick="editNurseDb(${item.id})" class="text-slate-800 hover:underline font-bold">수정</button>
                         <button onclick="deleteNurseDb(${item.id})" class="text-red-500 hover:underline">삭제</button>
                     </div>
                 </li>
-            `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 간호기록 DB가 없습니다.</li>';
-        }
-        // 간호기록 문구 삭제 함수
-        async function deleteNurseDb(id) {
-            if (confirm('해당 간호기록 DB 항목을 삭제하시겠습니까?')) {
-                const { data, error } = await supabase.from('nursedb').delete().eq('id', id);
-                if (error) { console.error('nursedb delete error', error); alert('간호기록 DB 삭제 실패: ' + (error.message || JSON.stringify(error))); return; }
-                nurseDatabase = nurseDatabase.filter(item => item.id !== id);
-                renderSettings();
+            `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 간호기록 템플릿이 없습니다.</li>';
+
+            const nurseTemplateSelect = document.getElementById('nurseTemplateSelect');
+            if (nurseTemplateSelect) {
+                nurseTemplateSelect.innerHTML = '<option value="">-- 간호기록명 선택 --</option>' + nurseDatabase.map(item => `<option value="${item.id}">${item.name || item.title || '간호기록'}</option>`).join('');
+                nurseTemplateSelect.value = '';
             }
+
+            updateDeptSelectOptions();
+            updateDiagnosisDropdown();
+            updateMedDbDropdown();
+            updateLabSelectionOptions();
         }
 
-        // 새 검사결과 DB 추가 함수
-        async function handleAddLabDb(e) {
+        function applySelectedNurseTemplate(templateId) {
+            const note = document.getElementById('nurseNote');
+            const nameInput = document.getElementById('nurseTemplateName');
+            if (!note) return;
+            if (!templateId) return;
+            const template = nurseDatabase.find(item => String(item.id) === String(templateId));
+            if (!template) return;
+            if (nameInput) nameInput.value = template.name || template.title || '';
+            note.value = template.content || '';
+            autoExpandTextarea(note);
+        }
+
+        function updateLabSelectionOptions() {
+            const labCategorySelect = document.getElementById('labCategorySelect');
+            const labItemSelect = document.getElementById('labItemSelect');
+            if (!labCategorySelect || !labItemSelect) return;
+
+            const categories = Array.from(new Set(
+                labDatabase.map(item => (item.category && item.category.trim()) || '기본')
+            )).filter(Boolean);
+
+            const categoryOptions = ['<option value="custom">-- 기타직접 --</option>'];
+            if (categories.length) {
+                categoryOptions.push(...categories.map(cat => `<option value="${cat}">${cat}</option>`));
+            } else {
+                categoryOptions.push('<option value="기본">기본</option>');
+            }
+
+            labCategorySelect.innerHTML = categoryOptions.join('');
+
+            const currentSelection = categories.includes(labCategorySelect.value) ? labCategorySelect.value : (categories[0] || '기본');
+            labCategorySelect.value = currentSelection;
+            onLabCategoryChange(currentSelection);
+        }
+
+        function handleAddDept(e) {
             e.preventDefault();
-            const category = document.getElementById('labdb-category-input').value;
-            const name = document.getElementById('labdb-name-input').value.trim();
-            const refRange = document.getElementById('labdb-ref-input').value.trim();
-            const unit = document.getElementById('labdb-unit-input').value.trim();
-
-            if (category && name) {
-                // DB 컬럼명이 snake_case(ref_range)인 경우가 있으므로 insert 시에는 DB 컬럼명으로 보냅니다.
-                const dbPayload = { category, name, ref_range: refRange, unit };
-                const { data, error } = await supabase.from('labdb').insert(dbPayload).select();
-                if (error) { console.error('labdb insert error', error); alert('검사 DB 등록 실패: ' + (error.message || JSON.stringify(error))); return; }
-                const insertedRaw = (data && data[0]) ? data[0] : { id: Date.now(), ...dbPayload };
-                // 클라이언트에서 사용하기 쉽게 camelCase로 변환
-                const inserted = { id: insertedRaw.id, category: insertedRaw.category, name: insertedRaw.name, refRange: insertedRaw.ref_range || insertedRaw.refRange || '', unit: insertedRaw.unit || '' };
-                labDatabase.push(inserted);
-
-                document.getElementById('labdb-name-input').value = '';
-                document.getElementById('labdb-ref-input').value = '';
-                document.getElementById('labdb-unit-input').value = '';
+            const input = document.getElementById('deptNameInput');
+            const val = input.value.trim();
+            if (val && !departments.includes(val)) {
+                departments.push(val);
+                saveSettingsData();
+                input.value = '';
                 renderSettings();
             }
         }
 
-        // 검사결과 DB 삭제 함수
-        async function deleteLabDb(id) {
-            if (confirm('해당 검사 DB 항목을 삭제하시겠습니까?')) {
-                const { data, error } = await supabase.from('labdb').delete().eq('id', id);
-                if (error) { console.error('labdb delete error', error); alert('검사 DB 삭제 실패: ' + (error.message || JSON.stringify(error))); return; }
-                labDatabase = labDatabase.filter(item => item.id !== id);
+        function handleAddDoctor(e) {
+            e.preventDefault();
+            const dept = document.getElementById('doctorDeptSelect').value;
+            const nameInput = document.getElementById('doctorNameInput');
+            const name = nameInput.value.trim();
+            if (dept && name) {
+                doctors.push({ id: Date.now(), name, dept });
+                saveSettingsData();
+                nameInput.value = '';
                 renderSettings();
             }
+        }
+
+        function handleAddDiag(e) {
+            e.preventDefault();
+            const code = document.getElementById('kcdCodeInput').value.trim();
+            const name_ko = document.getElementById('kcdKorInput').value.trim();
+            const name_en = document.getElementById('kcdEngInput').value.trim();
+            const category = document.getElementById('kcdDeptSelect').value;
+            if (code && name_ko) {
+                diagnosisDatabase.push({ id: Date.now(), code, name_ko, name_en, category });
+                saveSettingsData();
+                document.getElementById('kcdCodeInput').value = '';
+                document.getElementById('kcdKorInput').value = '';
+                document.getElementById('kcdEngInput').value = '';
+                renderSettings();
+            }
+        }
+
+        function handleAddDrug(e) {
+            e.preventDefault();
+            const code = document.getElementById('drugCodeInput').value.trim();
+            const name = document.getElementById('drugNameInput').value.trim();
+            const content = document.getElementById('drugContentInput').value.trim();
+            if (code && name) {
+                drugDatabase.push({ id: Date.now(), code, name, content });
+                saveSettingsData();
+                document.getElementById('drugCodeInput').value = '';
+                document.getElementById('drugNameInput').value = '';
+                document.getElementById('drugContentInput').value = '';
+                renderSettings();
+            }
+        }
+
+        function handleAddLabDb(e) {
+            e.preventDefault();
+            const category = document.getElementById('labCategoryInput').value.trim() || '기본';
+            const name = document.getElementById('labNameInput').value.trim();
+            const refRange = document.getElementById('labRefInput').value.trim();
+            const unit = document.getElementById('labUnitInput').value.trim();
+            if (name) {
+                labDatabase.push({ id: Date.now(), name, refRange, unit, category });
+                saveSettingsData();
+                document.getElementById('labCategoryInput').value = '';
+                document.getElementById('labNameInput').value = '';
+                document.getElementById('labRefInput').value = '';
+                document.getElementById('labUnitInput').value = '';
+                renderSettings();
+            }
+        }
+
+        function handleAddNurseDb(e) {
+            e.preventDefault();
+            const name = document.getElementById('nurseNameInput').value.trim();
+            const content = document.getElementById('nurseContentInput').value.trim();
+            if (name && content) {
+                nurseDatabase.push({ id: Date.now(), name, category: '일반', content });
+                saveSettingsData();
+                document.getElementById('nurseNameInput').value = '';
+                document.getElementById('nurseContentInput').value = '';
+                renderSettings();
+            }
+        }
+
+        function editDept(index) {
+            const current = departments[index];
+            if (current === undefined) return;
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed'; overlay.style.top = '0'; overlay.style.left = '0';
+            overlay.style.width = '100vw'; overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(15, 23, 42, 0.45)'; overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center'; overlay.style.justifyContent = 'center'; overlay.style.zIndex = '2000';
+
+            const modal = document.createElement('div');
+            modal.style.width = '360px'; modal.style.maxWidth = '90vw'; modal.style.background = '#fff';
+            modal.style.borderRadius = '12px'; modal.style.boxShadow = '0 16px 40px rgba(15, 23, 42, 0.18)';
+            modal.style.padding = '20px'; modal.style.boxSizing = 'border-box';
+            modal.innerHTML = `
+                <div style="font-size:16px; font-weight:bold; margin-bottom:12px; color:#0f172a;">진료과 수정</div>
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">진료과명</div>
+                    <input id="deptEditInput" value="${current.replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; box-sizing:border-box; font-size:13px;" />
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:8px;">
+                    <button type="button" id="deptEditCancel" style="padding:8px 14px; border-radius:8px; background:#e2e8f0; color:#0f172a; font-weight:bold; border:none; cursor:pointer;">취소</button>
+                    <button type="button" id="deptEditSave" style="padding:8px 14px; border-radius:8px; background:#1d4ed8; color:white; font-weight:bold; border:none; cursor:pointer;">저장</button>
+                </div>
+            `;
+
+            const closeModal = () => overlay.remove();
+            modal.querySelector('#deptEditCancel').addEventListener('click', closeModal);
+            modal.querySelector('#deptEditSave').addEventListener('click', () => {
+                const value = modal.querySelector('#deptEditInput').value.trim();
+                if (!value) { alert('진료과명은 비워둘 수 없습니다.'); return; }
+                departments[index] = value;
+                saveSettingsData(); renderSettings(); closeModal();
+            });
+
+            overlay.appendChild(modal); document.body.appendChild(overlay);
+        }
+
+        function deleteDept(index) {
+            if (confirm(`'${departments[index]}' 진료과를 삭제하시겠습니까?`)) {
+                departments.splice(index, 1);
+                saveSettingsData();
+                renderSettings();
+            }
+        }
+
+        function editDoctor(id) {
+            const doc = doctors.find(d => d.id === id);
+            if (!doc) return;
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed'; overlay.style.top = '0'; overlay.style.left = '0';
+            overlay.style.width = '100vw'; overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(15, 23, 42, 0.45)'; overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center'; overlay.style.justifyContent = 'center'; overlay.style.zIndex = '2000';
+
+            const modal = document.createElement('div');
+            modal.style.width = '420px'; modal.style.maxWidth = '90vw'; modal.style.background = '#fff';
+            modal.style.borderRadius = '12px'; modal.style.boxShadow = '0 16px 40px rgba(15, 23, 42, 0.18)';
+            modal.style.padding = '20px'; modal.style.boxSizing = 'border-box';
+            modal.innerHTML = `
+                <div style="font-size:16px; font-weight:bold; margin-bottom:12px; color:#0f172a;">주치의 수정</div>
+                <div style="display:grid; gap:12px;">
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">의사명</div>
+                        <input id="doctorEditName" value="${(doc.name || '').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; box-sizing:border-box; font-size:13px;" />
+                    </div>
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">진료과</div>
+                        <select id="doctorEditDept" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; box-sizing:border-box; font-size:13px;">
+                            ${departments.map(d => `<option value="${d}" ${d === (doc.dept || '') ? 'selected' : ''}>${d}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:18px;">
+                    <button type="button" id="doctorEditCancel" style="padding:8px 14px; border-radius:8px; background:#e2e8f0; color:#0f172a; font-weight:bold; border:none; cursor:pointer;">취소</button>
+                    <button type="button" id="doctorEditSave" style="padding:8px 14px; border-radius:8px; background:#1d4ed8; color:white; font-weight:bold; border:none; cursor:pointer;">저장</button>
+                </div>
+            `;
+
+            const closeModal = () => overlay.remove();
+            modal.querySelector('#doctorEditCancel').addEventListener('click', closeModal);
+            modal.querySelector('#doctorEditSave').addEventListener('click', () => {
+                const name = modal.querySelector('#doctorEditName').value.trim();
+                const dept = modal.querySelector('#doctorEditDept').value.trim();
+                if (!name) { alert('의사명은 비워둘 수 없습니다.'); return; }
+                doc.name = name; doc.dept = dept; saveSettingsData(); renderSettings(); closeModal();
+            });
+
+            overlay.appendChild(modal); document.body.appendChild(overlay);
+        }
+
+        function deleteDoctor(id) {
+            if (confirm('해당 주치의를 삭제하시겠습니까?')) {
+                doctors = doctors.filter(item => item.id !== id);
+                saveSettingsData();
+                renderSettings();
+            }
+        }
+
+        function editDiagnosis(id) {
+            const diag = diagnosisDatabase.find(d => d.id === id);
+            if (!diag) return;
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed'; overlay.style.top = '0'; overlay.style.left = '0';
+            overlay.style.width = '100vw'; overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(15, 23, 42, 0.45)'; overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center'; overlay.style.justifyContent = 'center'; overlay.style.zIndex = '2000';
+
+            const modal = document.createElement('div');
+            modal.style.width = '440px'; modal.style.maxWidth = '90vw'; modal.style.background = '#fff';
+            modal.style.borderRadius = '12px'; modal.style.boxShadow = '0 16px 40px rgba(15, 23, 42, 0.18)';
+            modal.style.padding = '20px'; modal.style.boxSizing = 'border-box';
+            modal.innerHTML = `
+                <div style="font-size:16px; font-weight:bold; margin-bottom:12px; color:#0f172a;">진단명 수정</div>
+                <div style="display:grid; gap:12px;">
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">질병코드</div>
+                        <input id="diagEditCode" value="${(diag.code || '').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; box-sizing:border-box; font-size:13px;" />
+                    </div>
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">한글 진단명</div>
+                        <input id="diagEditNameKo" value="${(diag.name_ko || '').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; box-sizing:border-box; font-size:13px;" />
+                    </div>
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">영문 진단명</div>
+                        <input id="diagEditNameEn" value="${(diag.name_en || '').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; box-sizing:border-box; font-size:13px;" />
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:18px;">
+                    <button type="button" id="diagEditCancel" style="padding:8px 14px; border-radius:8px; background:#e2e8f0; color:#0f172a; font-weight:bold; border:none; cursor:pointer;">취소</button>
+                    <button type="button" id="diagEditSave" style="padding:8px 14px; border-radius:8px; background:#1d4ed8; color:white; font-weight:bold; border:none; cursor:pointer;">저장</button>
+                </div>
+            `;
+
+            const closeModal = () => overlay.remove();
+            modal.querySelector('#diagEditCancel').addEventListener('click', closeModal);
+            modal.querySelector('#diagEditSave').addEventListener('click', () => {
+                const code = modal.querySelector('#diagEditCode').value.trim();
+                const nameKo = modal.querySelector('#diagEditNameKo').value.trim();
+                const nameEn = modal.querySelector('#diagEditNameEn').value.trim();
+                if (!code || !nameKo) { alert('질병코드와 한글 진단명은 필수입니다.'); return; }
+                diag.code = code; diag.name_ko = nameKo; diag.name_en = nameEn; saveSettingsData(); renderSettings(); closeModal();
+            });
+
+            overlay.appendChild(modal); document.body.appendChild(overlay);
+        }
+
+        function deleteDiagnosis(id) {
+            if (confirm('해당 진단명을 삭제하시겠습니까?')) {
+                diagnosisDatabase = diagnosisDatabase.filter(item => item.id !== id);
+                saveSettingsData();
+                renderSettings();
+            }
+        }
+
+        function editDrug(id) {
+            const drug = drugDatabase.find(d => d.id === id);
+            if (!drug) return;
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed'; overlay.style.top = '0'; overlay.style.left = '0';
+            overlay.style.width = '100vw'; overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(15, 23, 42, 0.45)'; overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center'; overlay.style.justifyContent = 'center'; overlay.style.zIndex = '2000';
+
+            const modal = document.createElement('div');
+            modal.style.width = '420px'; modal.style.maxWidth = '90vw'; modal.style.background = '#fff';
+            modal.style.borderRadius = '12px'; modal.style.boxShadow = '0 16px 40px rgba(15, 23, 42, 0.18)';
+            modal.style.padding = '20px'; modal.style.boxSizing = 'border-box';
+            modal.innerHTML = `
+                <div style="font-size:16px; font-weight:bold; margin-bottom:12px; color:#0f172a;">처방 수정</div>
+                <div style="display:grid; gap:12px;">
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">처방코드</div>
+                        <input id="drugEditCode" value="${(drug.code || '').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; box-sizing:border-box; font-size:13px;" />
+                    </div>
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">처방명</div>
+                        <input id="drugEditName" value="${(drug.name || '').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; box-sizing:border-box; font-size:13px;" />
+                    </div>
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">처방 내용</div>
+                        <input id="drugEditContent" value="${(drug.content || '').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; box-sizing:border-box; font-size:13px;" />
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:18px;">
+                    <button type="button" id="drugEditCancel" style="padding:8px 14px; border-radius:8px; background:#e2e8f0; color:#0f172a; font-weight:bold; border:none; cursor:pointer;">취소</button>
+                    <button type="button" id="drugEditSave" style="padding:8px 14px; border-radius:8px; background:#1d4ed8; color:white; font-weight:bold; border:none; cursor:pointer;">저장</button>
+                </div>
+            `;
+
+            const closeModal = () => overlay.remove();
+            modal.querySelector('#drugEditCancel').addEventListener('click', closeModal);
+            modal.querySelector('#drugEditSave').addEventListener('click', () => {
+                const code = modal.querySelector('#drugEditCode').value.trim();
+                const name = modal.querySelector('#drugEditName').value.trim();
+                const content = modal.querySelector('#drugEditContent').value.trim();
+                if (!code || !name) { alert('처방코드와 처방명은 필수입니다.'); return; }
+                drug.code = code; drug.name = name; drug.content = content; saveSettingsData(); renderSettings(); closeModal();
+            });
+
+            overlay.appendChild(modal); document.body.appendChild(overlay);
+        }
+
+        function deleteDrug(id) {
+            if (confirm('해당 처방 데이터를 삭제하시겠습니까?')) {
+                drugDatabase = drugDatabase.filter(item => item.id !== id);
+                saveSettingsData();
+                renderSettings();
+            }
+        }
+
+        function editLabDb(id) {
+            const item = labDatabase.find(d => d.id === id);
+            if (!item) return;
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100vw';
+            overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(15, 23, 42, 0.45)';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.zIndex = '2000';
+
+            const modal = document.createElement('div');
+            modal.style.width = '420px';
+            modal.style.maxWidth = '90vw';
+            modal.style.background = '#fff';
+            modal.style.borderRadius = '12px';
+            modal.style.boxShadow = '0 16px 40px rgba(15, 23, 42, 0.18)';
+            modal.style.padding = '20px';
+            modal.style.boxSizing = 'border-box';
+
+            modal.innerHTML = `
+                <div style="font-size:16px; font-weight:bold; margin-bottom:14px; color:#0f172a;">검사 결과 항목 수정</div>
+                <div style="display:grid; gap:12px;">
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">구분</div>
+                        <input id="labEditCategory" value="${(item.category || '기본').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;" />
+                    </div>
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">검사명</div>
+                        <input id="labEditName" value="${(item.name || '').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;" />
+                    </div>
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">정상수치 범위</div>
+                        <input id="labEditRefRange" value="${(item.refRange || '').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;" />
+                    </div>
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">단위</div>
+                        <input id="labEditUnit" value="${(item.unit || '').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;" />
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:18px;">
+                    <button type="button" id="labEditCancel" style="padding:8px 14px; border-radius:8px; background:#e2e8f0; color:#0f172a; font-weight:bold; border:none; cursor:pointer;">취소</button>
+                    <button type="button" id="labEditSave" style="padding:8px 14px; border-radius:8px; background:#1d4ed8; color:white; font-weight:bold; border:none; cursor:pointer;">저장</button>
+                </div>
+            `;
+
+            const closeModal = () => overlay.remove();
+            modal.querySelector('#labEditCancel').addEventListener('click', closeModal);
+            modal.querySelector('#labEditSave').addEventListener('click', () => {
+                const category = modal.querySelector('#labEditCategory').value.trim() || '기본';
+                const name = modal.querySelector('#labEditName').value.trim();
+                const refRange = modal.querySelector('#labEditRefRange').value.trim();
+                const unit = modal.querySelector('#labEditUnit').value.trim();
+
+                if (!name) {
+                    alert('검사명은 비워둘 수 없습니다.');
+                    return;
+                }
+
+                item.category = category;
+                item.name = name;
+                item.refRange = refRange;
+                item.unit = unit;
+                saveSettingsData();
+                renderSettings();
+                closeModal();
+            });
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+        }
+
+        function deleteLabDb(id) {
+            if (confirm('해당 검사 데이터를 삭제하시겠습니까?')) {
+                labDatabase = labDatabase.filter(item => item.id !== id);
+                saveSettingsData();
+                renderSettings();
+            }
+        }
+
+        function editNurseDb(id) {
+            const item = nurseDatabase.find(d => d.id === id);
+            if (!item) return;
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed'; overlay.style.top = '0'; overlay.style.left = '0';
+            overlay.style.width = '100vw'; overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(15, 23, 42, 0.45)'; overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center'; overlay.style.justifyContent = 'center'; overlay.style.zIndex = '2000';
+
+            const modal = document.createElement('div');
+            modal.style.width = '460px'; modal.style.maxWidth = '90vw'; modal.style.background = '#fff';
+            modal.style.borderRadius = '12px'; modal.style.boxShadow = '0 16px 40px rgba(15, 23, 42, 0.18)';
+            modal.style.padding = '20px'; modal.style.boxSizing = 'border-box';
+            modal.innerHTML = `
+                <div style="font-size:16px; font-weight:bold; margin-bottom:12px; color:#0f172a;">간호기록 템플릿 수정</div>
+                <div style="display:grid; gap:12px;">
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">간호기록명</div>
+                        <input id="nurseEditName" value="${(item.name || '').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; box-sizing:border-box; font-size:13px;" />
+                    </div>
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">간호기록 내용</div>
+                        <textarea id="nurseEditContent" rows="6" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; box-sizing:border-box; resize:vertical; font-size:13px;">${(item.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:18px;">
+                    <button type="button" id="nurseEditCancel" style="padding:8px 14px; border-radius:8px; background:#e2e8f0; color:#0f172a; font-weight:bold; border:none; cursor:pointer;">취소</button>
+                    <button type="button" id="nurseEditSave" style="padding:8px 14px; border-radius:8px; background:#1d4ed8; color:white; font-weight:bold; border:none; cursor:pointer;">저장</button>
+                </div>
+            `;
+
+            const closeModal = () => overlay.remove();
+            modal.querySelector('#nurseEditCancel').addEventListener('click', closeModal);
+            modal.querySelector('#nurseEditSave').addEventListener('click', () => {
+                const name = modal.querySelector('#nurseEditName').value.trim();
+                const content = modal.querySelector('#nurseEditContent').value.trim();
+                if (!name || !content) { alert('간호기록명과 내용은 비워둘 수 없습니다.'); return; }
+                item.name = name; item.content = content; saveSettingsData(); renderSettings(); closeModal();
+            });
+
+            overlay.appendChild(modal); document.body.appendChild(overlay);
+        }
+
+        function deleteNurseDb(id) {
+            if (confirm('해당 템플릿을 삭제하시겠습니까?')) {
+                nurseDatabase = nurseDatabase.filter(item => item.id !== id);
+                saveSettingsData();
+                renderSettings();
+            }
+        }
+
+        function updateMedDbDropdown() {
+            const select = document.getElementById('medDbSelect');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- 처방명 선택 --</option>' + drugDatabase.map(d => `<option value="${d.id}" data-name="${d.name || ''}" data-content="${d.content || ''}">[${d.code}] ${d.name}</option>`).join('');
         }
 
         // EMR 차트 내에서 검사 구분을 선택했을 때 세부 검사목록을 바꿔주는 함수
@@ -1742,21 +1975,28 @@ function generateFallbackReport(p, orders, labs, studentNotes) {
             const customCatInput = document.getElementById('labCategoryCustom');
             const customItemInput = document.getElementById('labItemCustom');
 
-            if (val === 'custom') { // 직접 입력을 골랐다면
-                customCatInput.style.display = 'inline-block'; // 직접 입력칸 표시
-                itemSelect.style.display = 'none'; // 선택창 숨김
+            if (!itemSelect || !customCatInput || !customItemInput) return;
+
+            if (val === 'custom') {
+                customCatInput.style.display = 'inline-block';
+                itemSelect.style.display = 'none';
                 customItemInput.style.display = 'inline-block';
-            } else { // 기존 목록을 골랐다면
-                customCatInput.style.display = 'none';
-                itemSelect.style.display = 'inline-block';
-                
-                // 해당 카테고리에 맞는 검사들만 걸러서 목록을 만듭니다.
-                const filtered = labDatabase.filter(d => d.category === val);
-                itemSelect.innerHTML = '<option value="">검사명 선택</option>' + 
-                    filtered.map(d => `<option value="${d.name}" data-ref="${d.refRange||''}" data-unit="${d.unit||''}">${d.name}</option>`).join('') +
-                    '<option value="custom">-- 직접입력 --</option>';
-                onLabItemChange(itemSelect);
+                return;
             }
+
+            customCatInput.style.display = 'none';
+            itemSelect.style.display = 'inline-block';
+
+            const categoryValue = val || '기본';
+            const filtered = labDatabase.filter(item => {
+                const category = (item.category && item.category.trim()) || '기본';
+                return category === categoryValue || (!val && (category === '기본' || !item.category));
+            });
+
+            itemSelect.innerHTML = '<option value="">검사명 선택</option>' +
+                filtered.map(item => `<option value="${item.name}" data-ref="${item.refRange || ''}" data-unit="${item.unit || ''}">${item.name}</option>`).join('') +
+                '<option value="custom">-- 직접입력 --</option>';
+            onLabItemChange(itemSelect);
         }
 
         // 세부 검사명을 선택했을 때, 정상수치(RefRange)와 단위(Unit)를 자동으로 채워주는 함수
@@ -1773,108 +2013,6 @@ function generateFallbackReport(p, orders, labs, studentNotes) {
                     document.getElementById('labRefRange').value = opt.getAttribute('data-ref') || '';
                     document.getElementById('labUnit').value = opt.getAttribute('data-unit') || '';
                 }
-            }
-        }
-
-        // 설정 창: 새 진료과 추가
-        async function handleAddDept(e) {
-            e.preventDefault();
-            const input = document.getElementById('dept-input');
-            const val = input.value.trim();
-            if (val && !departments.includes(val)) {
-                const { data, error } = await supabase.from('departments').insert({ name: val });
-                if (error) { console.error('departments insert error', error); alert('진료과 등록 실패: ' + (error.message || error.description || JSON.stringify(error))); return; }
-                input.value = ''; await fetchInitialData(); renderSettings();
-            }
-        }
-
-        // 설정 창: 진료과 수정
-        async function editDept(index) {
-            const current = departments[index];
-            const updated = prompt('진료과명을 수정하세요:', current);
-            if (updated && updated.trim() !== '') {
-                const { data, error } = await supabase.from('departments').update({ name: updated.trim() }).eq('name', current);
-                if (error) { console.error('departments update error', error); alert('진료과 수정 실패: ' + (error.message || JSON.stringify(error))); return; }
-                await fetchInitialData(); renderSettings();
-            }
-        }
-
-        // 설정 창: 진료과 삭제
-        async function deleteDept(index) {
-            if (confirm(`'${departments[index]}' 진료과를 삭제하시겠습니까?`)) {
-                const { data, error } = await supabase.from('departments').delete().eq('name', departments[index]);
-                if (error) { console.error('departments delete error', error); alert('진료과 삭제 실패: ' + (error.message || JSON.stringify(error))); return; }
-                await fetchInitialData(); renderSettings();
-            }
-        }
-
-        // 설정 창: 새 주치의 추가
-        async function handleAddDoctor(e) {
-            e.preventDefault();
-            const dept = document.getElementById('doc-dept-select').value;
-            const nameInput = document.getElementById('doc-name-input');
-            const name = nameInput.value.trim();
-            if (dept && name) {
-                const { data, error } = await supabase.from('doctors').insert({ name, dept });
-                if (error) { console.error('doctors insert error', error); alert('주치의 등록 실패: ' + (error.message || JSON.stringify(error))); return; }
-                nameInput.value = ''; await fetchInitialData(); renderSettings();
-            }
-        }
-
-        // 설정 창: 주치의 수정
-        async function editDoctor(id) {
-            const doc = doctors.find(d => d.id === id);
-            if (!doc) return;
-            const newName = prompt('의사 성명을 수정하세요:', doc.name);
-            if (newName && newName.trim() !== '') {
-                const { data, error } = await supabase.from('doctors').update({ name: newName.trim(), dept: doc.dept }).eq('id', id);
-                if (error) { console.error('doctors update error', error); alert('주치의 수정 실패: ' + (error.message || JSON.stringify(error))); return; }
-                await fetchInitialData(); renderSettings();
-            }
-        }
-
-        // 설정 창: 주치의 삭제
-        async function deleteDoctor(id) {
-            if (confirm('해당 주치의를 삭제하시겠습니까?')) {
-                const { data, error } = await supabase.from('doctors').delete().eq('id', id);
-                if (error) { console.error('doctors delete error', error); alert('주치의 삭제 실패: ' + (error.message || JSON.stringify(error))); return; }
-                await fetchInitialData(); renderSettings();
-            }
-        }
-
-        // 설정 창: 새 진단명(KCD) 추가
-        async function handleAddDiagnosis(e) {
-            e.preventDefault();
-            const code = document.getElementById('diag-code-input').value.trim();
-            const name_ko = document.getElementById('diag-name-input').value.trim();
-            const name_en = document.getElementById('diag-en-input').value.trim();
-            const category = document.getElementById('diag-dept-select').value;
-            if (code && name_ko) {
-                const { data, error } = await supabase.from('diagnoses').insert({ code, name_ko, name_en, category });
-                if (error) { console.error('diagnoses insert error', error); alert('진단명 등록 실패: ' + (error.message || JSON.stringify(error))); return; }
-                document.getElementById('diag-code-input').value = ''; document.getElementById('diag-name-input').value = '';
-                await fetchInitialData(); renderSettings();
-            }
-        }
-
-        // 설정 창: 진단명 수정
-        async function editDiagnosis(id) {
-            const diag = diagnosisDatabase.find(d => d.id === id);
-            if (!diag) return;
-            const newName = prompt('한글 진단명을 수정하세요:', diag.name_ko);
-            if (newName && newName.trim() !== '') {
-                const { data, error } = await supabase.from('diagnoses').update({ name_ko: newName.trim() }).eq('id', id);
-                if (error) { console.error('diagnoses update error', error); alert('진단명 수정 실패: ' + (error.message || JSON.stringify(error))); return; }
-                await fetchInitialData(); renderSettings();
-            }
-        }
-
-        // 설정 창: 진단명 삭제
-        async function deleteDiagnosis(id) {
-            if (confirm('해당 진단명을 DB에서 삭제하시겠습니까?')) {
-                const { data, error } = await supabase.from('diagnoses').delete().eq('id', id);
-                if (error) { console.error('diagnoses delete error', error); alert('진단명 삭제 실패: ' + (error.message || JSON.stringify(error))); return; }
-                await fetchInitialData(); renderSettings();
             }
         }
 
@@ -1920,50 +2058,6 @@ function generateFallbackReport(p, orders, labs, studentNotes) {
             }
         }
 
-        // 설정 창: 처방 약물 추가
-        async function handleAddDrug(e) {
-            e.preventDefault();
-            const code = document.getElementById('drug-code-input').value.trim();
-            const drugNameInput = document.getElementById('drug-name-input');
-            const name = drugNameInput.value.trim();
-            if (code && name) {
-                const { data, error } = await supabase.from('drugs').insert({ code, name });
-                if (error) { console.error('drugs insert error', error); alert('처방 DB 등록 실패: ' + (error.message || JSON.stringify(error))); return; }
-                document.getElementById('drug-code-input').value = ''; 
-                drugNameInput.value = '';
-                drugNameInput.style.height = 'auto';
-                await fetchInitialData(); renderSettings();
-            }
-        }
-
-        // 설정 창: 처방 약물 수정
-        async function editDrug(id) {
-            const drug = drugDatabase.find(d => d.id === id);
-            if (!drug) return;
-            const newName = prompt('처방/약물명을 수정하세요:', drug.name);
-            if (newName && newName.trim() !== '') {
-                const { data, error } = await supabase.from('drugs').update({ name: newName.trim() }).eq('id', id);
-                if (error) { console.error('drugs update error', error); alert('처방 DB 수정 실패: ' + (error.message || JSON.stringify(error))); return; }
-                await fetchInitialData(); renderSettings();
-            }
-        }
-
-        // 설정 창: 처방 약물 삭제
-        async function deleteDrug(id) {
-            if (confirm('해당 처방/약물 데이터를 DB에서 삭제하시겠습니까?')) {
-                const { data, error } = await supabase.from('drugs').delete().eq('id', id);
-                if (error) { console.error('drugs delete error', error); alert('처방 DB 삭제 실패: ' + (error.message || JSON.stringify(error))); return; }
-                await fetchInitialData(); renderSettings();
-            }
-        }
-
-        // 차트 안의 약물 선택창을 갱신하는 기능
-        function updateMedDbDropdown() {
-            const select = document.getElementById('medDbSelect');
-            if(!select) return;
-            select.innerHTML = '<option value="">-- DB 처방 선택 --</option>' + drugDatabase.map(d => `<option value="${d.id}">[${d.code}] ${d.name}</option>`).join('');
-        }
-
         // 선택창에서 약을 고르면, 처방코드와 상세내역 칸을 자동으로 채워줍니다.
         function selectMedFromDb(select) {
             const drugId = Number(select.value);
@@ -1972,8 +2066,9 @@ function generateFallbackReport(p, orders, labs, studentNotes) {
             if(drug) {
                 document.getElementById('prescCode').value = drug.code || '';
                 const prescNote = document.getElementById('prescNote');
-                prescNote.value = drug.name || '';
-                autoExpandTextarea(prescNote); // 글자가 길면 상자를 늘려줌
+                const content = drug.content || drug.name || '';
+                prescNote.value = content;
+                autoExpandTextarea(prescNote);
             }
         }
 
@@ -2070,9 +2165,10 @@ function generateFallbackReport(p, orders, labs, studentNotes) {
             const dept = document.getElementById('pDept').value;
             const doctor = document.getElementById('pDoctor').value || '담당의 미정';
             const room = document.getElementById('pRoom').value.trim() || '외래/미배정';
-// 변경 후 (숫자 입력 오류 방지)
-const hd = document.getElementById('pHD').value.trim() || 0;
-const pod = document.getElementById('pPOD').value.trim() || 0;
+            const height = document.getElementById('pHeight').value.trim();
+            const weight = document.getElementById('pWeight').value.trim();
+            const hd = document.getElementById('pHD').value.trim() || 0;
+            const pod = document.getElementById('pPOD').value.trim() || 0;
             const selectDiag = document.getElementById('pDiagnosisSelect');
             let diagCode = selectDiag.value;
             let diagnosis = '';
@@ -2274,8 +2370,8 @@ const pod = document.getElementById('pPOD').value.trim() || 0;
 
 function openPatientDetail(index) {
     // 💡 함수의 존재 여부를 안전하게 확인 후 실행
-    if (typeof closeAIDebriefModal === 'function') {
-        closeAIDebriefModal();
+    if (typeof closeN8nChatbotModal === 'function') {
+        closeN8nChatbotModal();
     }
 
     currentPatientIndex = index; // 내가 지금 클릭한 환자의 순서 번호를 기억합니다.
@@ -2482,6 +2578,16 @@ function openPatientDetail(index) {
             renderPatientList(); // 목록 화면을 최신 데이터로 업데이트합니다.
         }
 
+        function goToEmrChartFromSettings() {
+            if (typeof currentPatientIndex !== 'number' || currentPatientIndex === null || !patients[currentPatientIndex]) {
+                showView('patients');
+                return;
+            }
+
+            showView('patients');
+            openPatientDetail(currentPatientIndex);
+        }
+
         // 환자의 특이사항 및 메모 입력칸을 저장하는 비동기 함수입니다.
         async function saveMemo() {
             if(currentPatientIndex === null) return;
@@ -2646,10 +2752,18 @@ function openPatientDetail(index) {
                 const hr = document.getElementById('vsHr').value;
                 const rr = document.getElementById('vsRr').value;
                 const bt = document.getElementById('vsBt').value;
+                const spo2 = document.getElementById('vsSpo2').value;
                 if(!time) return alert("시간을 입력하세요.");
                 
                 // 새로운 측정 기록을 배열에 추가합니다. 숫자 데이터는 Number()를 써서 숫자형으로 변환합니다.
-                p.records.vs.push({ time, bp, hr: hr ? Number(hr) : null, rr: rr ? Number(rr) : null, bt: bt ? Number(bt) : null });
+                p.records.vs.push({
+                    time,
+                    bp,
+                    hr: hr ? Number(hr) : null,
+                    rr: rr ? Number(rr) : null,
+                    bt: bt ? Number(bt) : null,
+                    spo2: spo2 ? Number(spo2) : null
+                });
                 sortRecordsByTime(p.records.vs); // 시간을 기준으로 내림차순 정렬
                 
             } else if (type === 'io') {
@@ -2672,14 +2786,10 @@ const time = document.getElementById('prescTime').value.replace('T', ' ');
                 
 if (!note) return alert("처방 내역을 입력하세요.");
 
-// 약물 구분 시 개별 값 추출
-        let dose = '-', freq = '-', route = '-';
-        if (category === '약물') {
-            category = '약물';
-            dose = document.getElementById('prescDose')?.value.trim() || '-';
-            freq = document.getElementById('prescFreq')?.value.trim() || '-';
-            route = document.getElementById('prescRoute')?.value.trim() || '-';
-        }
+// 구분과 무관하게 용량/횟수/경로 입력값을 모두 저장합니다.
+        const dose = document.getElementById('prescDose')?.value.trim() || '-';
+        const freq = document.getElementById('prescFreq')?.value.trim() || '-';
+        const route = document.getElementById('prescRoute')?.value.trim() || '-';
 
         const newPresc = { time, category, code, note, dose, freq, route, issuer, status: '미수행', nurse: '-' };
 
@@ -2893,6 +3003,822 @@ if (!note) return alert("처방 내역을 입력하세요.");
             renderNurseTable();
             renderVsSection();
             renderIoSection();
+            renderDocumentsSection();
+        }
+
+        function readFileAsDataURL(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error('파일 읽기 실패'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function openDocumentUploadFallback() {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.pdf,application/pdf,.txt,text/plain';
+            fileInput.onchange = async () => {
+                const file = fileInput.files[0];
+                if (!file) return;
+
+                const isPdf = file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf');
+                const isTxt = file.type.includes('text') || file.name.toLowerCase().endsWith('.txt');
+                if (!isPdf && !isTxt) {
+                    alert('PDF 또는 TXT 파일만 등록할 수 있습니다.');
+                    return;
+                }
+
+                const p = patients[currentPatientIndex];
+                if (!p) return;
+
+                if (isTxt) {
+                    const text = await file.text();
+                    const parsed = parseNursingAssessmentText(text);
+                    openNursingAssessmentEditor(null, parsed);
+                    return;
+                }
+
+                const name = file.name.replace(/\.pdf$/i, '') || '서류';
+                const dataUrl = await readFileAsDataURL(file);
+                if (!p.records) p.records = {};
+                if (!p.records.documents) p.records.documents = [];
+                p.records.documents.push({
+                    id: Date.now(),
+                    name,
+                    type: 'pdf',
+                    fileName: file.name,
+                    fileData: dataUrl,
+                    createdAt: new Date().toISOString()
+                });
+                await savePatientToBackend(p);
+                renderDocumentsSection();
+                alert('PDF 서류가 등록되었습니다.');
+            };
+            fileInput.click();
+        }
+
+        function parseNursingAssessmentText(text) {
+            const result = {
+                patientName: '', patientId: '', sex: '', age: '', ward: '', nurse: '', admissionDate: '', complaint: '',
+                currentSymptom: '', bt: '', hr: '', rr: '', bp: '', spo2: '', height: '', weight: '', pain: '', mental: '',
+                mobility: '', nutrition: '', bowel: '', urinary: '', sleep: '', risk: '', nursingPlan: '',
+                admissionRoute: '', bloodType: '', job: '', religion: '', education: '', secretRequirement: '', explanationConsent: '',
+                admissionNursingEducation: '', admissionNursingEducationDetail: '', guardianSignature: ''
+            };
+
+            const normalize = (value) => String(value || '')
+                .replace(/\u200B/g, '')
+                .replace(/\r/g, '')
+                .replace(/[\t ]+/g, ' ')
+                .trim();
+
+            const lines = normalize(text).split(/\n+/).map(line => line.trim()).filter(Boolean);
+            const labelPatterns = [
+                { aliases: ['주증상 및 입원동기', '주증상및입원동기'], key: 'complaint' },
+                { aliases: ['환자명', '성명', '이름'], key: 'patientName' },
+                { aliases: ['등록번호', '환자번호'], key: 'patientId' },
+                { aliases: ['성별'], key: 'sex' },
+                { aliases: ['나이'], key: 'age' },
+                { aliases: ['병실', '병동', '호실'], key: 'ward' },
+                { aliases: ['담당간호사', '작성자'], key: 'nurse' },
+                { aliases: ['입원일', '입원일시', '입원(작성)일시'], key: 'admissionDate' },
+                { aliases: ['입원경로'], key: 'admissionRoute' },
+                { aliases: ['혈액형'], key: 'bloodType' },
+                { aliases: ['직업'], key: 'job' },
+                { aliases: ['종교'], key: 'religion' },
+                { aliases: ['교육정도'], key: 'education' },
+                { aliases: ['주호소', '주증상', '입원동기'], key: 'complaint' },
+                { aliases: ['진단명'], key: 'complaint' },
+                { aliases: ['혈압'], key: 'bp' },
+                { aliases: ['맥박'], key: 'hr' },
+                { aliases: ['호흡'], key: 'rr' },
+                { aliases: ['체온'], key: 'bt' },
+                { aliases: ['SpO2', 'spo2'], key: 'spo2' },
+                { aliases: ['신장'], key: 'height' },
+                { aliases: ['체중'], key: 'weight' },
+                { aliases: ['통증위험', '통증정도', '통증'], key: 'pain' },
+                { aliases: ['인지상태', '의식상태'], key: 'mental' },
+                { aliases: ['활동상태', '활동/보행'], key: 'mobility' },
+                { aliases: ['영양상태'], key: 'nutrition' },
+                { aliases: ['배뇨/배변', '배변', '배뇨'], key: 'bowel' },
+                { aliases: ['수면상태', '수면장애'], key: 'sleep' },
+                { aliases: ['위험요인', '관찰사항'], key: 'risk' },
+                { aliases: ['간호계획', '간호계획 및 수행 내용'], key: 'nursingPlan' },
+                { aliases: ['현재 증상', '현재증상'], key: 'currentSymptom' },
+                { aliases: ['사생활 보호를 위한 환자의 비밀 요구사항', '비밀 요구사항'], key: 'secretRequirement' },
+                { aliases: ['설명을 듣고 이해하셨습니까', '상기 내용에 대한 설명을 듣고 이해하셨습니까'], key: 'explanationConsent' }
+            ];
+
+            for (const line of lines) {
+                const colonIndex = line.indexOf(':');
+                if (colonIndex === -1) {
+                    const vitalMatch = line.match(/활력\s*징후\s*[:：]?\s*(.*)$/i);
+                    if (!vitalMatch) continue;
+                    const vitalText = vitalMatch[1];
+                    const bpMatch = vitalText.match(/혈압\s*([0-9]{2,3}\s*\/\s*[0-9]{2,3})/i);
+                    const hrMatch = vitalText.match(/맥박\s*([0-9]{1,3})/i);
+                    const rrMatch = vitalText.match(/호흡\s*([0-9]{1,3})/i);
+                    const btMatch = vitalText.match(/체온\s*([0-9]{2,3}(?:\.\d)?)/i);
+                    if (bpMatch) result.bp = bpMatch[1].replace(/\s+/g, '');
+                    if (hrMatch) result.hr = hrMatch[1];
+                    if (rrMatch) result.rr = rrMatch[1];
+                    if (btMatch) result.bt = btMatch[1];
+                    continue;
+                }
+
+                const beforeColon = line.slice(0, colonIndex).trim();
+                const afterColon = line.slice(colonIndex + 1).trim();
+                if (!beforeColon || !afterColon) continue;
+
+                const normalizedLabel = beforeColon.replace(/\s+/g, '');
+                const matched = labelPatterns.find(({ aliases }) => aliases.some(alias => normalize(alias).replace(/\s+/g, '') === normalizedLabel));
+                if (!matched) continue;
+
+                const value = afterColon.replace(/\s+/g, ' ').trim();
+                if (!value) continue;
+
+                const { key } = matched;
+                if (key === 'complaint') {
+                    if (!result.complaint) result.complaint = value;
+                    else if (!result.complaint.includes(value)) result.complaint += ' / ' + value;
+                } else if (key === 'patientId') {
+                    result.patientId = value.replace(/[^A-Za-z0-9-]/g, '');
+                } else if (key === 'explanationConsent' || key === 'secretRequirement') {
+                    result[key] = value;
+                } else {
+                    result[key] = value;
+                }
+            }
+
+            const fullText = normalize(text);
+            const fallbackName = fullText.match(/(?:성명|환자명|이름)\s*[:：]?\s*([^\n]+)/i);
+            if (fallbackName && !result.patientName) result.patientName = fallbackName[1].trim();
+            const fallbackComplaint = fullText.match(/주증상\s*및\s*입원동기\s*[:：]?\s*([^\n]+)/i) || fullText.match(/주호소\s*[:：]?\s*([^\n]+)/i);
+            if (fallbackComplaint && !result.complaint) result.complaint = fallbackComplaint[1].trim();
+            const diagnosisText = fullText.match(/진단명\s*[:：]?\s*([^\n]+)/i);
+            if (diagnosisText) {
+                const diagnosisVal = diagnosisText[1].trim();
+                if (!result.complaint) result.complaint = diagnosisVal;
+                else if (!result.complaint.includes(diagnosisVal)) result.complaint += ' / ' + diagnosisVal;
+            }
+            const fallbackWard = fullText.match(/병실\s*[:：]?\s*([^\n]+)/i) || fullText.match(/병동\s*[:：]?\s*([^\n]+)/i);
+            if (fallbackWard && !result.ward) result.ward = fallbackWard[1].trim();
+            const sexMatch = fullText.match(/성별\s*[:：]?\s*(남|여|기타)/i);
+            if (sexMatch && !result.sex) result.sex = sexMatch[1];
+            const ageMatch = fullText.match(/나이\s*[:：]?\s*(\d+\s*세|만\s*\d+\s*세|\d+)/i);
+            if (ageMatch && !result.age) result.age = ageMatch[1];
+
+            return result;
+        }
+
+        function getNursingAssessmentDefaults(p, importedData = null) {
+            const base = {
+                patientName: p.name || '',
+                patientId: p.hd || p.pod || '',
+                sex: p.sex || '',
+                age: p.age || '',
+                ward: '',
+                nurse: '',
+                admissionDate: '',
+                complaint: '',
+                admissionRoute: '',
+                bloodType: '',
+                job: '',
+                religion: '',
+                education: '',
+                currentSymptom: '',
+                bt: '',
+                hr: '',
+                rr: '',
+                bp: '',
+                spo2: '',
+                height: '',
+                weight: '',
+                pain: '',
+                mental: '',
+                mobility: '',
+                nutrition: '',
+                bowel: '',
+                urinary: '',
+                sleep: '',
+                risk: '',
+                nursingPlan: '',
+                admissionNursingEducation: '입원 시 준비물품, 병동시설 안내, 편의시설 안내, 주차 안내, 면회 시간, 식사 시간, 의사 회진시간, 감염관리, 간호사 호출기 사용, 낙상방지, 가스 전열기구 사용금지, 화재예방 및 화재 시 대피요령, 귀중품 관리, 도난방지, 금연안내 및 교육, 진단서 발급, 환자의 권리 및 책임, 불만 및 고충처리, 개인 사생활 및 정보에 대한 비밀보장, 입원 생활 안내문 제공',
+                admissionNursingEducationDetail: '',
+                secretRequirement: '',
+                secretRequirementDetail: '',
+                explanationConsent: '',
+                explanationConsentDetail: '',
+                mentalDetail: '',
+                mobilityDetail: '',
+                nutritionDetail: '',
+                bowelDetail: '',
+                sleepDetail: '',
+                guardianSignature: ''
+            };
+            return { ...base, ...(importedData || {}) };
+        }
+
+        function buildNursingAssessmentField(field, value, formData = {}) {
+            const safeValue = value == null ? '' : String(value);
+            const fieldValue = safeValue.replace(/"/g, '&quot;');
+            const detailValue = field.detailKey ? (formData[field.detailKey] || '') : '';
+            const detailValueEscaped = detailValue.replace(/"/g, '&quot;');
+            const showDetail = safeValue === '기타' || safeValue === '있음';
+
+            if (field.type === 'textarea') {
+                const defaultText = field.key === 'admissionNursingEducation' ? `입원 시 준비물품, 병동시설 안내, 편의시설 안내, 주차 안내, 면회 시간, 식사 시간, 의사 회진시간, 감염관리, 간호사 호출기 사용, 낙상방지, 가스 전열기구 사용금지, 화재예방 및 화재 시 대피요령, 귀중품 관리, 도난방지, 금연안내 및 교육, 진단서 발급, 환자의 권리 및 책임, 불만 및 고충처리, 개인 사생활 및 정보에 대한 비밀보장, 입원 생활 안내문 제공` : safeValue;
+                return `
+                    <div style="grid-column:1 / -1; display:grid; grid-template-columns: 220px 1fr; border-top:1px solid #dfe7f1; min-height:70px; align-items:start;">
+                        <div style="padding:10px 8px; font-size:12px; font-weight:700; color:#0f172a; line-height:1.4; background:#f8fafc; border-right:1px solid #dfe7f1;">${field.label}</div>
+                        <div style="padding:8px; background:#fff;">
+                            <textarea data-field="${field.key}" style="width:100%; min-height:${field.key === 'nursingPlan' || field.key === 'admissionNursingEducation' ? '150px' : '80px'}; resize:vertical; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box; font-size:12px; line-height:1.5; background:#fff;">${(safeValue || defaultText).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (field.type === 'select') {
+                const options = (field.options || []).map(option => `
+                    <option value="${option}" ${safeValue === option ? 'selected' : ''}>${option}</option>
+                `).join('');
+                return `
+                    <div style="display:grid; grid-template-columns: 220px 1fr; border-top:1px solid #dfe7f1; min-height:56px; align-items:center;">
+                        <div style="padding:10px 8px; font-size:12px; font-weight:700; color:#0f172a; background:#f8fafc; border-right:1px solid #dfe7f1; line-height:1.4;">${field.label}</div>
+                        <div style="padding:8px; background:#fff;">
+                            <select data-field="${field.key}" data-detail-key="${field.detailKey || ''}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box; font-size:12px; background:#fff;">
+                                <option value="">선택</option>
+                                ${options}
+                            </select>
+                            ${field.detailKey ? `
+                                <div data-detail-container="${field.detailKey}" style="display:${showDetail ? 'block' : 'none'}; margin-top:8px;">
+                                    <input data-detail-field="${field.detailKey}" type="text" value="${detailValueEscaped}" placeholder="${field.detailPlaceholder || '세부 내용을 직접 입력하세요'}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box; font-size:12px; background:#fff;" />
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (field.type === 'signature') {
+                return `
+                    <div style="grid-column:1 / -1; display:grid; grid-template-columns: 220px 1fr; border-top:1px solid #dfe7f1; min-height:150px; align-items:start;">
+                        <div style="padding:10px 8px; font-size:12px; font-weight:700; color:#0f172a; background:#f8fafc; border-right:1px solid #dfe7f1; line-height:1.4;">${field.label}</div>
+                        <div style="padding:8px; background:#fff;">
+                            <div style="border:1px solid #cbd5e1; border-radius:6px; overflow:hidden; background:#fff;">
+                                <canvas data-signature-field="${field.key}" width="760" height="160" style="display:block; width:100%; height:160px; background:#fff; cursor:crosshair;"></canvas>
+                            </div>
+                            <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+                                <button type="button" data-clear-signature="${field.key}" style="padding:7px 10px; border:none; border-radius:6px; background:#e2e8f0; color:#0f172a; font-weight:700; cursor:pointer;">지우기</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const inputType = field.type === 'date' ? 'date' : 'text';
+            return `
+                <div style="display:grid; grid-template-columns: 220px 1fr; border-top:1px solid #dfe7f1; min-height:56px; align-items:center;">
+                    <div style="padding:10px 8px; font-size:12px; font-weight:700; color:#0f172a; background:#f8fafc; border-right:1px solid #dfe7f1; line-height:1.4;">${field.label}</div>
+                    <div style="padding:8px; background:#fff;">
+                        <input data-field="${field.key}" type="${inputType}" value="${fieldValue}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box; font-size:12px; background:#fff;" />
+                    </div>
+                </div>
+            `;
+        }
+
+        function composeNursingSignatureImage(formValues = {}, signatureDataUrl = '') {
+            const canvas = document.createElement('canvas');
+            const width = 820;
+            const height = 1160;
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, width, height);
+            ctx.strokeStyle = '#111111';
+            ctx.lineWidth = 1.5;
+            ctx.font = '700 26px Malgun Gothic, sans-serif';
+            ctx.fillText('간호정보조사지', 60, 56);
+
+            ctx.font = '12px Malgun Gothic, sans-serif';
+            ctx.fillText(`작성일: ${new Date().toLocaleDateString('ko-KR')}   병동: ${formValues.ward || '-'}   담당간호사: ${formValues.nurse || '-'}`, 500, 60);
+
+            const drawBox = (x, y, w, h, label, value = '', align = 'left') => {
+                ctx.strokeRect(x, y, w, h);
+                ctx.fillStyle = '#f2f2f2';
+                ctx.fillRect(x, y, 170, h);
+                ctx.fillStyle = '#111';
+                ctx.font = '700 12px Malgun Gothic, sans-serif';
+                ctx.fillText(label, x + 12, y + 22);
+                ctx.fillStyle = '#111';
+                ctx.font = '12px Malgun Gothic, sans-serif';
+                const text = value || '';
+                const lines = text.length > 0 ? [text] : [''];
+                lines.forEach((line, index) => {
+                    ctx.fillText(line, x + 182, y + 22 + index * 16, w - 200);
+                });
+            };
+
+            drawBox(60, 90, 700, 44, '환자명', formValues.patientName || '');
+            drawBox(60, 134, 220, 44, '등록번호', formValues.patientId || '');
+            drawBox(280, 134, 150, 44, '성별', formValues.sex || '');
+            drawBox(430, 134, 150, 44, '나이', formValues.age || '');
+            drawBox(580, 134, 180, 44, '병실', formValues.ward || '');
+            drawBox(60, 178, 308, 42, '입원일', formValues.admissionDate || '');
+            drawBox(368, 178, 392, 42, '입원경로', formValues.admissionRoute || '');
+            drawBox(60, 220, 220, 42, '신장', formValues.height ? `${formValues.height} cm` : '');
+            drawBox(280, 220, 220, 42, '체중', formValues.weight ? `${formValues.weight} kg` : '');
+            drawBox(500, 220, 260, 42, '혈액형', formValues.bloodType || '');
+            drawBox(60, 262, 700, 42, '주증상 및 입원동기', formValues.mainComplaint || formValues.complaint || '');
+            drawBox(60, 304, 170, 42, '체온', formValues.bt || '');
+            drawBox(230, 304, 170, 42, '맥박', formValues.hr || '');
+            drawBox(400, 304, 170, 42, '호흡', formValues.rr || '');
+            drawBox(570, 304, 190, 42, '혈압', formValues.bp || '');
+            drawBox(60, 346, 170, 42, 'SpO2', formValues.spo2 || '');
+            drawBox(230, 346, 170, 42, '인지상태', formValues.mental || '');
+            drawBox(400, 346, 170, 42, '활동/보행', formValues.mobility || '');
+            drawBox(570, 346, 190, 42, '영양상태', formValues.nutrition || '');
+            drawBox(60, 388, 700, 62, '위험요인/관찰사항', formValues.risk || '');
+            drawBox(60, 450, 700, 120, '입원 시 간호 및 교육 내용(전문)', formValues.admissionNursingEducation || '');
+            drawBox(60, 570, 700, 74, '추가 교육 내용', formValues.admissionNursingEducationDetail || '');
+            drawBox(60, 644, 700, 42, '서명', '');
+
+            const signatureImage = signatureDataUrl || '';
+            if (signatureImage) {
+                const sigImg = new Image();
+                sigImg.src = signatureImage;
+                ctx.drawImage(sigImg, 320, 680, 220, 80);
+            }
+
+            return canvas.toDataURL('image/png');
+        }
+
+        function openNursingAssessmentEditor(docId = null, importedData = null) {
+            const p = patients[currentPatientIndex];
+            if (!p) return;
+
+            const docs = p.records && p.records.documents ? p.records.documents : [];
+            const existingDoc = docId ? docs.find(item => item.id == docId) : null;
+            const formData = existingDoc && existingDoc.formData ? existingDoc.formData : getNursingAssessmentDefaults(p, importedData);
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100vw';
+            overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(15, 23, 42, 0.5)';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.zIndex = '2000';
+            overlay.style.padding = '16px';
+            overlay.style.boxSizing = 'border-box';
+            overlay.style.overflowY = 'auto';
+
+            const modal = document.createElement('div');
+            modal.style.width = 'min(1100px, 94vw)';
+            modal.style.maxHeight = '90vh';
+            modal.style.overflowY = 'auto';
+            modal.style.background = '#f5f5f5';
+            modal.style.border = '2px solid #111';
+            modal.style.boxSizing = 'border-box';
+            modal.style.fontFamily = 'Malgun Gothic, Noto Sans KR, sans-serif';
+            modal.style.color = '#111';
+            modal.style.lineHeight = '1.3';
+
+            const titleCase = formData.title || '간호정보조사지';
+            const g = (value, fallback = '') => value == null ? fallback : String(value);
+
+            const makeTextField = (key, value, style = '', placeholder = '') => `
+                <input data-field="${key}" type="text" value="${String(value || '').replace(/"/g, '&quot;')}" placeholder="${placeholder}" style="${style}; border:1px solid #999; background:#fff; font-size:11px; padding:4px 6px; box-sizing:border-box;" />
+            `;
+
+            const makeSelectField = (key, value, options, width = '100%') => `
+                <select data-field="${key}" style="width:${width}; border:1px solid #999; background:#fff; font-size:11px; padding:4px 6px; box-sizing:border-box;">
+                    <option value="">선택</option>
+                    ${options.map(opt => `<option value="${opt}" ${value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                </select>
+            `;
+
+            const makeTextarea = (key, value, height = '60px', width = '100%') => `
+                <textarea data-field="${key}" style="width:${width}; min-height:${height}; border:1px solid #999; background:#fff; font-size:11px; padding:5px 6px; box-sizing:border-box; resize:vertical;">${String(value || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+            `;
+
+            const makeCheckboxLine = (key, value, label, checked) => `
+                <label style="display:inline-flex; align-items:center; gap:4px; margin-right:8px; font-size:11px;">
+                    <input type="checkbox" data-field="${key}" value="${label}" ${checked ? 'checked' : ''} />
+                    ${label}
+                </label>
+            `;
+
+            modal.innerHTML = `
+                <style>
+                    .emr-form-box { border:2px solid #111; background:#fff; }
+                    .emr-form-head { background:#d9d9d9; border:2px solid #111; font-size:12px; font-weight:700; padding:5px 8px; }
+                    .emr-row { display:grid; grid-template-columns: 220px 1fr; border-top:1px solid #111; }
+                    .emr-label { background:#e9e9e9; border-right:1px solid #111; padding:7px 8px; font-size:11px; font-weight:700; }
+                    .emr-input { background:#fff; padding:6px 8px; }
+                    .signature-transparent-layer { position:absolute; left: 610px; top: 740px; width: 250px; height: 96px; z-index:20; background: rgba(255,255,255,0.12); border:1px dashed rgba(17,17,17,0.55); border-radius:4px; box-sizing:border-box; }
+                </style>
+                <div style="padding:10px 12px 12px; position:relative;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom:2px solid #111; padding-bottom:8px; margin-bottom:10px;">
+                        <div style="font-size:20px; font-weight:900; letter-spacing:-0.5px;">${titleCase}</div>
+                        <div style="display:flex; gap:8px;">
+                            <button type="button" id="nurseFormPrint" style="padding:7px 12px; border:1px solid #111; background:#dfe7f1; font-weight:700; cursor:pointer; font-size:12px;">인쇄/PDF 저장</button>
+                            <button type="button" id="nurseFormClose" style="padding:7px 12px; border:1px solid #111; background:#efefef; font-weight:700; cursor:pointer; font-size:12px;">닫기</button>
+                        </div>
+                    </div>
+
+                    <div style="position:relative; width:100%; min-height:960px; background:#fff; border:2px solid #111; box-sizing:border-box;">
+                        <div style="display:grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-bottom:2px solid #111; background:#fff;">
+                            <div style="display:flex; align-items:center; justify-content:center; border-right:2px solid #111; background:#f0f0f0; font-size:11px; font-weight:700; text-align:center; padding:8px; min-height:88px;">
+                                등록번호
+                            </div>
+                            <div style="display:flex; flex-direction:column; justify-content:center; gap:6px; border-right:2px solid #111; padding:8px; min-height:88px;">
+                                <span style="font-size:11px; font-weight:700;">등록번호</span>
+                                ${makeTextField('patientId', formData.patientId || '', 'width:100%; height:26px;')}
+                            </div>
+                            <div style="display:flex; flex-direction:column; justify-content:center; gap:6px; border-right:2px solid #111; padding:8px; min-height:88px;">
+                                <span style="font-size:11px; font-weight:700;">성명</span>
+                                ${makeTextField('patientName', formData.patientName || p.name || '', 'width:100%; height:26px;')}
+                            </div>
+                            <div style="display:flex; flex-direction:column; justify-content:center; gap:6px; border-right:2px solid #111; padding:8px; min-height:88px;">
+                                <span style="font-size:11px; font-weight:700;">성별/나이</span>
+                                <div style="display:flex; gap:6px;">
+                                    ${makeTextField('sex', formData.sex || '', 'width:60px; height:26px;')}
+                                    ${makeTextField('age', formData.age || '', 'width:70px; height:26px;')}
+                                </div>
+                            </div>
+                            <div style="display:flex; flex-direction:column; justify-content:center; gap:6px; padding:8px; min-height:88px;">
+                                <span style="font-size:11px; font-weight:700;">병실</span>
+                                ${makeTextField('ward', formData.ward || '', 'width:100%; height:26px;')}
+                            </div>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns: 1.3fr 2.2fr; border-bottom:2px solid #111; background:#f7f7f7;">
+                            <div style="display:flex; align-items:center; justify-content:center; border-right:2px solid #111; background:#efefef; font-weight:700; font-size:11px; min-height:52px;">
+                                담당간호사
+                            </div>
+                            <div style="display:flex; align-items:center; justify-content:center; background:#f7f7f7; padding:8px; min-height:52px;">
+                                <div style="width:100%; display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:11px; font-weight:700;">담당간호사</span>
+                                    ${makeTextField('nurse', formData.nurse || '', 'width:100%; height:26px;')}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="padding:8px 10px 0; background:#fff;">
+                            <div style="display:flex; align-items:center; justify-content:center; flex-direction:column; gap:2px; border:2px solid #111; background:#efefef; padding:12px 10px; margin-bottom:10px;">
+                                <div style="font-size:18px; font-weight:900; letter-spacing:-0.5px;">간호정보조사지</div>
+                                <div style="font-size:11px; font-weight:700;">Initial Nursing Assessment Sheet</div>
+                            </div>
+                        </div>
+
+                        <div class="emr-form-head" style="margin-top:0;">일반정보 Basic information</div>
+                        <div class="emr-form-box">
+                            <div style="display:grid; grid-template-columns:1fr 1fr; border-bottom:2px solid #111;">
+                                <div class="emr-row" style="grid-template-columns: 132px 1fr; border-top:none;">
+                                    <div class="emr-label">입원(작성)일시</div>
+                                    <div class="emr-input">${makeTextField('admissionDate', formData.admissionDate || '', 'width:150px; height:26px;')}</div>
+                                </div>
+                                <div class="emr-row" style="grid-template-columns: 100px 1fr; border-top:none; border-left:2px solid #111;">
+                                    <div class="emr-label">입원경로</div>
+                                    <div class="emr-input">${makeSelectField('admissionRoute', formData.admissionRoute || '', ['외래', '응급실', '기타'], '160px')}</div>
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; border-bottom:2px solid #111;">
+                                <div class="emr-row" style="grid-template-columns: 90px 1fr; border-top:none;">
+                                    <div class="emr-label">신장</div>
+                                    <div class="emr-input"><div style="display:flex; align-items:center; gap:6px;">${makeTextField('height', formData.height || '', 'width:72px; height:26px;')}<span style="font-size:11px;">cm</span></div></div>
+                                </div>
+                                <div class="emr-row" style="grid-template-columns: 90px 1fr; border-top:none; border-left:2px solid #111;">
+                                    <div class="emr-label">체중</div>
+                                    <div class="emr-input"><div style="display:flex; align-items:center; gap:6px;">${makeTextField('weight', formData.weight || '', 'width:72px; height:26px;')}<span style="font-size:11px;">kg</span></div></div>
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr;">
+                                <div class="emr-row" style="grid-template-columns: 90px 1fr; border-top:none;">
+                                    <div class="emr-label">혈액형</div>
+                                    <div class="emr-input">${makeSelectField('bloodType', formData.bloodType || '', ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-', '미기록'], '140px')}</div>
+                                </div>
+                                <div class="emr-row" style="grid-template-columns: 90px 1fr; border-top:none; border-left:2px solid #111;">
+                                    <div class="emr-label">직업</div>
+                                    <div class="emr-input">${makeTextField('job', formData.job || '', 'width:100%; height:26px;')}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="emr-form-head" style="margin-top:12px;">사회적 · 경제적 사정 Social · Economic assessment</div>
+                        <div class="emr-form-box" style="padding:8px 8px 10px;">
+                            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+                                <div>
+                                    <div style="font-size:11px; font-weight:700; margin-bottom:6px;">직업</div>
+                                    ${makeCheckboxLine('jobStatus', formData.jobStatus || '', '무직', g(formData.jobStatus) === '무직')}
+                                    ${makeCheckboxLine('jobStatus', formData.jobStatus || '', '기타', g(formData.jobStatus) === '기타')}
+                                </div>
+                                <div>
+                                    <div style="font-size:11px; font-weight:700; margin-bottom:6px;">종교</div>
+                                    ${makeCheckboxLine('religion', formData.religion || '', '무교', g(formData.religion) === '무교')}
+                                    ${makeCheckboxLine('religion', formData.religion || '', '기독교', g(formData.religion) === '기독교')}
+                                    ${makeCheckboxLine('religion', formData.religion || '', '불교', g(formData.religion) === '불교')}
+                                    ${makeCheckboxLine('religion', formData.religion || '', '천주교', g(formData.religion) === '천주교')}
+                                </div>
+                                <div>
+                                    <div style="font-size:11px; font-weight:700; margin-bottom:6px;">교육정도</div>
+                                    ${makeCheckboxLine('education', formData.education || '', '무', g(formData.education) === '무')}
+                                    ${makeCheckboxLine('education', formData.education || '', '초', g(formData.education) === '초')}
+                                    ${makeCheckboxLine('education', formData.education || '', '중', g(formData.education) === '중')}
+                                    ${makeCheckboxLine('education', formData.education || '', '고', g(formData.education) === '고')}
+                                    ${makeCheckboxLine('education', formData.education || '', '대학(원)', g(formData.education) === '대학(원)')}
+                                </div>
+                            </div>
+                            <div style="margin-top:12px; display:grid; grid-template-columns: 1fr 200px; gap:10px; align-items:center;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:11px; font-weight:700;">가족여부</span>
+                                    ${makeTextField('familyStatus', formData.familyStatus || '', 'width:100%; height:26px;')}
+                                </div>
+                                <div style="border:1px solid #111; background:#f2f2f2; font-size:11px; font-weight:700; text-align:center; padding:8px;">Pt : 환자</div>
+                            </div>
+                        </div>
+
+                        <div class="emr-form-head" style="margin-top:12px;">입원 정보 Admission information</div>
+                        <div class="emr-form-box" style="padding:8px;">
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div style="display:flex; align-items:center; gap:8px; font-size:11px;">
+                                    <span style="font-weight:700; min-width:60px;">진단명</span>
+                                    ${makeTextField('diagnosis', formData.diagnosis || '', 'width:100%; height:26px;')}
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px; font-size:11px;">
+                                    <span style="font-weight:700; min-width:50px;">발병일</span>
+                                    <input data-field="onsetDate" type="date" value="${g(formData.onsetDate, '')}" style="width:100%; border:1px solid #999; background:#fff; font-size:11px; padding:4px 6px; height:26px; box-sizing:border-box;" />
+                                </div>
+                            </div>
+                            <div style="margin-top:10px; border-top:1px solid #111; padding-top:8px;">
+                                <div style="font-size:11px; font-weight:700; margin-bottom:6px;">주증상 및 입원동기</div>
+                                ${makeTextarea('mainComplaint', formData.mainComplaint || '', '70px')}
+                            </div>
+                        </div>
+
+                        <div class="emr-form-head" style="margin-top:12px;">신체 사정 Physical assessment</div>
+                        <div class="emr-form-box" style="padding:8px;">
+                            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; font-size:11px;">
+                                <div style="display:flex; align-items:center; gap:6px; border:1px solid #111; background:#f7f7f7; padding:4px 6px;">체온 ${makeTextField('bt', formData.bt || '', 'width:70px; height:24px;')}</div>
+                                <div style="display:flex; align-items:center; gap:6px; border:1px solid #111; background:#f7f7f7; padding:4px 6px;">맥박 ${makeTextField('hr', formData.hr || '', 'width:70px; height:24px;')}</div>
+                                <div style="display:flex; align-items:center; gap:6px; border:1px solid #111; background:#f7f7f7; padding:4px 6px;">호흡 ${makeTextField('rr', formData.rr || '', 'width:70px; height:24px;')}</div>
+                                <div style="display:flex; align-items:center; gap:6px; border:1px solid #111; background:#f7f7f7; padding:4px 6px;">혈압 ${makeTextField('bp', formData.bp || '', 'width:70px; height:24px;')}</div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin-top:8px; font-size:11px;">
+                                <div style="display:flex; align-items:center; gap:6px; border:1px solid #111; background:#f7f7f7; padding:4px 6px;">SpO2 ${makeTextField('spo2', formData.spo2 || '', 'width:70px; height:24px;')}</div>
+                                <div style="display:flex; align-items:center; gap:6px; border:1px solid #111; background:#f7f7f7; padding:4px 6px;">인지상태 ${makeSelectField('mental', formData.mental || '', ['명료', '혼돈', '반의식', '무의식', '기타'], '90px')}</div>
+                                <div style="display:flex; align-items:center; gap:6px; border:1px solid #111; background:#f7f7f7; padding:4px 6px;">활동/보행 ${makeSelectField('mobility', formData.mobility || '', ['자기보행', '보행보조', '침상안정', '기타'], '100px')}</div>
+                                <div style="display:flex; align-items:center; gap:6px; border:1px solid #111; background:#f7f7f7; padding:4px 6px;">영양상태 ${makeSelectField('nutrition', formData.nutrition || '', ['양호', '불량', '연하곤란', '기타'], '100px')}</div>
+                            </div>
+                            <div style="margin-top:10px;">
+                                <div style="font-size:11px; font-weight:700; margin-bottom:6px;">위험요인 / 관찰사항</div>
+                                ${makeTextarea('risk', formData.risk || '', '72px')}
+                            </div>
+                        </div>
+
+                        <div class="emr-form-head" style="margin-top:12px;">입원시 간호 및 교육</div>
+                        <div class="emr-form-box" style="padding:8px;">
+                            <div style="font-size:11px; font-weight:700; margin-bottom:6px;">입원 시 간호 및 교육 내용(전문)</div>
+                            ${makeTextarea('admissionNursingEducation', formData.admissionNursingEducation || '입원 시 준비물품, 병동시설 안내, 편의시설 안내, 주차 안내, 면회 시간, 식사 시간, 의사 회진시간, 감염관리, 간호사 호출기 사용, 낙상방지, 가스 전열기구 사용금지, 화재예방 및 화재 시 대피요령, 귀중품 관리, 도난방지, 금연안내 및 교육, 진단서 발급, 환자의 권리 및 책임, 불만 및 고충처리, 개인 사생활 및 정보에 대한 비밀보장, 입원 생활 안내문 제공', '120px')}
+                            <div style="font-size:11px; font-weight:700; margin:10px 0 6px;">추가 교육 내용</div>
+                            ${makeTextarea('admissionNursingEducationDetail', formData.admissionNursingEducationDetail || '', '70px')}
+                        </div>
+
+                        <div class="signature-transparent-layer">
+                            <canvas data-signature-field="guardianSignature" width="250" height="96" style="display:block; width:100%; height:100%; background:transparent; cursor:crosshair; touch-action:none; border-radius:4px;"></canvas>
+                            <button type="button" data-clear-signature="guardianSignature" style="position:absolute; right:6px; bottom:6px; padding:4px 8px; border:1px solid #111; background:rgba(255,255,255,0.7); font-size:10px; cursor:pointer; line-height:1;">지우기</button>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; justify-content:flex-end; margin-top:12px; padding-top:8px; border-top:2px solid #111;">
+                        <button type="button" id="nurseFormSave" style="padding:8px 16px; border:1px solid #111; background:#111; color:#fff; font-weight:700; cursor:pointer; font-size:12px;">저장</button>
+                    </div>
+                </div>
+            `;
+
+            const bindSignature = (canvas) => {
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const previous = formData.guardianSignature || '';
+                if (previous) {
+                    const img = new Image();
+                    img.onload = () => {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    };
+                    img.src = previous;
+                }
+                let drawing = false;
+                const getPoint = (event) => {
+                    const rect = canvas.getBoundingClientRect();
+                    const scaleX = canvas.width / rect.width;
+                    const scaleY = canvas.height / rect.height;
+                    return { x: (event.clientX - rect.left) * scaleX, y: (event.clientY - rect.top) * scaleY };
+                };
+                canvas.addEventListener('pointerdown', event => {
+                    drawing = true;
+                    const p = getPoint(event);
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineWidth = 2.5;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.strokeStyle = '#000';
+                });
+                canvas.addEventListener('pointermove', event => {
+                    if (!drawing) return;
+                    const p = getPoint(event);
+                    ctx.lineTo(p.x, p.y);
+                    ctx.stroke();
+                });
+                canvas.addEventListener('pointerup', () => drawing = false);
+                canvas.addEventListener('pointerleave', () => drawing = false);
+                canvas.addEventListener('pointercancel', () => drawing = false);
+            };
+
+            const sigCanvas = modal.querySelector('[data-signature-field]');
+            bindSignature(sigCanvas);
+            modal.querySelectorAll('[data-clear-signature]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const c = modal.querySelector('[data-signature-field]');
+                    if (!c) return;
+                    const context = c.getContext('2d');
+                    context.clearRect(0, 0, c.width, c.height);
+                });
+            });
+
+            const closeModal = () => overlay.remove();
+            modal.querySelector('#nurseFormClose').addEventListener('click', closeModal);
+
+            modal.querySelector('#nurseFormSave').addEventListener('click', async () => {
+                const formValues = {};
+                modal.querySelectorAll('[data-field]').forEach(el => {
+                    const key = el.dataset.field;
+                    if (!key) return;
+                    formValues[key] = el.value;
+                });
+                if (sigCanvas) formValues.guardianSignature = sigCanvas.toDataURL('image/png');
+
+                if (!p.records) p.records = {};
+                if (!p.records.documents) p.records.documents = [];
+
+                const nameForFile = (p.name || '환자').replace(/[^\x00-\x7F]/g, '').trim() || '환자';
+                const today = new Date();
+                const dateStamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+                const entry = existingDoc || {
+                    id: Date.now(),
+                    name: `${nameForFile}_간호정보조사지_${dateStamp}`,
+                    type: 'nursing-assessment',
+                    createdAt: new Date().toISOString(),
+                    formData: {}
+                };
+                entry.name = `${nameForFile}_간호정보조사지_${dateStamp}`;
+                entry.type = 'nursing-assessment';
+                entry.formData = formValues;
+                if (!existingDoc) p.records.documents.push(entry);
+
+                await savePatientToBackend(p);
+                renderDocumentsSection();
+                alert('간호정보조사지가 저장되었습니다.');
+                closeModal();
+            });
+
+            modal.querySelector('#nurseFormPrint').addEventListener('click', () => {
+                const formValues = {};
+                modal.querySelectorAll('[data-field]').forEach(el => {
+                    const key = el.dataset.field;
+                    if (!key) return;
+                    formValues[key] = el.value;
+                });
+                if (sigCanvas) formValues.guardianSignature = sigCanvas.toDataURL('image/png');
+
+                const printWindow = window.open('', '_blank');
+                if (!printWindow) {
+                    alert('팝업 차단을 해제해 주세요. 인쇄/PDF 저장이 가능합니다.');
+                    return;
+                }
+
+                const mergedImage = composeNursingSignatureImage(formValues, formValues.guardianSignature || '');
+                printWindow.document.write(`<!DOCTYPE html><html><head><title>간호정보조사지</title><style>
+                    @page { size: A4 portrait; margin: 12mm; }
+                    body { margin:0; padding:0; background:#fff; }
+                    img { display:block; width:100%; height:auto; }
+                </style></head><body>
+                    <img src="${mergedImage}" alt="간호정보조사지" />
+                </body></html>`);
+                printWindow.document.close();
+                setTimeout(() => { printWindow.focus(); printWindow.print(); }, 350);
+            });
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+        }
+
+        function openDocumentPreview(docId) {
+            const p = patients[currentPatientIndex];
+            if (!p || !p.records?.documents) return;
+
+            const doc = p.records.documents.find(item => item.id == docId);
+            if (!doc) return;
+
+            if (doc.type === 'nursing-assessment' && doc.formData) {
+                openNursingAssessmentEditor(doc.id);
+                return;
+            }
+
+            if (!doc.fileData) return;
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100vw';
+            overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(15, 23, 42, 0.55)';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.zIndex = '2000';
+
+            const modal = document.createElement('div');
+            modal.style.width = '75vw';
+            modal.style.maxWidth = '980px';
+            modal.style.height = '80vh';
+            modal.style.background = '#fff';
+            modal.style.borderRadius = '12px';
+            modal.style.boxShadow = '0 18px 40px rgba(15, 23, 42, 0.28)';
+            modal.style.padding = '16px';
+            modal.style.boxSizing = 'border-box';
+            modal.style.display = 'flex';
+            modal.style.flexDirection = 'column';
+            modal.style.gap = '12px';
+
+            modal.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                    <div style="font-size:16px; font-weight:bold; color:#0f172a;">${doc.name}</div>
+                    <button type="button" id="documentPreviewClose" style="padding:8px 12px; border:none; border-radius:8px; background:#e2e8f0; color:#0f172a; font-weight:bold; cursor:pointer;">닫기</button>
+                </div>
+                <div style="flex:1; border:1px solid #cbd5e1; border-radius:8px; overflow:hidden; background:#f8fafc;">
+                    <iframe src="${doc.fileData}" title="${doc.name}" style="width:100%; height:100%; border:none;"></iframe>
+                </div>
+            `;
+
+            const closeModal = () => overlay.remove();
+            modal.querySelector('#documentPreviewClose').addEventListener('click', closeModal);
+            overlay.addEventListener('click', (event) => {
+                if (event.target === overlay) closeModal();
+            });
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+        }
+
+        function renderDocumentsSection() {
+            const p = patients[currentPatientIndex];
+            const list = document.getElementById('documentList');
+            if (!list || !p) return;
+
+            const docs = (p.records && p.records.documents) ? p.records.documents : [];
+            const nursingDocs = docs.filter(doc => doc.type === 'nursing-assessment');
+            const rendered = [
+                ...nursingDocs.map(doc => ({
+                    id: doc.id,
+                    name: doc.name || '간호정보조사지',
+                    type: 'nursing-assessment'
+                })),
+                { id: 'nursing-assessment-template', name: '간호정보조사지', type: 'nursing-assessment-template' }
+            ];
+
+            if (!rendered.length) {
+                list.innerHTML = '<div style="padding:14px; border:1px dashed #cbd5e1; border-radius:8px; color:#64748b; text-align:center;">등록된 서류 및 동의서가 없습니다.</div>';
+                return;
+            }
+
+            list.innerHTML = rendered.map(item => `
+                <button type="button" data-doc-id="${item.id}" data-doc-type="${item.type}" style="text-align:left; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; background:white; cursor:pointer; font-size:13px; color:#0f172a;" class="document-item">
+                    ${item.name}
+                </button>
+            `).join('');
+
+            list.querySelectorAll('.document-item').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const type = btn.dataset.docType;
+                    if (type === 'nursing-assessment' || type === 'nursing-assessment-template') {
+                        openNursingAssessmentEditor(type === 'nursing-assessment' ? Number(btn.dataset.docId) : null);
+                    } else {
+                        openDocumentPreview(Number(btn.dataset.docId));
+                    }
+                });
+            });
         }
 
         /* --- 활력징후(V/S) 표를 만들고 차트를 그리는 함수 --- */
@@ -2929,6 +3855,10 @@ if (!note) return alert("처방 내역을 입력하세요.");
                         <td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.bt ? 'checked' : ''} onchange="toggleVsMetric('bt')"> 체온 (BT)</label></td>
                         <td class="vs-val">-</td>
                     </tr>
+                    <tr>
+                        <td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.spo2 ? 'checked' : ''} onchange="toggleVsMetric('spo2')"> 산소포화도 (SpO2)</label></td>
+                        <td class="vs-val">-</td>
+                    </tr>
                 `;
             } else {
                 // 기록이 있다면 각 행(가로줄)을 담을 글자(문자열) 바구니를 준비합니다.
@@ -2937,7 +3867,8 @@ if (!note) return alert("처방 내역을 입력하세요.");
                 let hrRow = `<tr><td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.hr ? 'checked' : ''} onchange="toggleVsMetric('hr')"> 맥박 (HR)</label></td>`;
                 let rrRow = `<tr><td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.rr ? 'checked' : ''} onchange="toggleVsMetric('rr')"> 호흡 (RR)</label></td>`;
                 let btRow = `<tr><td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.bt ? 'checked' : ''} onchange="toggleVsMetric('bt')"> 체온 (BT)</label></td>`;
-                let delRow = `<tr><td class="vs-label" style="background:#fee2e2; color:#ef4444;">삭제</td>`;
+                let spo2Row = `<tr><td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.spo2 ? 'checked' : ''} onchange="toggleVsMetric('spo2')"> 산소포화도 (SpO2)</label></td>`;
+                let delRow = `<tr><td class="vs-label" style="background:#fee2e2; color:#ef4444;">수정 및 삭제</td>`;
 
                 // 기록된 데이터 개수만큼 반복하면서 오른쪽으로 칸(td)을 덧붙여 나갑니다.
                 vsRecords.forEach((r, idx) => {
@@ -2946,19 +3877,111 @@ if (!note) return alert("처방 내역을 입력하세요.");
                     hrRow += `<td class="vs-val">${r.hr || '-'}</td>`;
                     rrRow += `<td class="vs-val">${r.rr || '-'}</td>`;
                     btRow += `<td class="vs-val">${r.bt || '-'}</td>`;
-                    // 마지막 줄에는 삭제 버튼을 만들어 줍니다.
-                    delRow += `<td class="vs-val"><button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('vs', ${idx})">✕</button></td>`;
+                    spo2Row += `<td class="vs-val">${r.spo2 !== null && r.spo2 !== undefined ? r.spo2 : '-'}</td>`;
+                    delRow += `<td class="vs-val" style="white-space:nowrap;">
+                        <button class="btn-slate" style="padding:1px 4px; font-size:10px; margin-right:3px;" onclick="editVsRecord(${idx})">수정</button>
+                        <button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('vs', ${idx})">삭제</button>
+                    </td>`;
                 });
 
                 // 각 줄의 태그를 닫아줍니다.
-                headerRow += `</tr>`; bpRow += `</tr>`; hrRow += `</tr>`; rrRow += `</tr>`; btRow += `</tr>`; delRow += `</tr>`;
+                headerRow += `</tr>`; bpRow += `</tr>`; hrRow += `</tr>`; rrRow += `</tr>`; btRow += `</tr>`; spo2Row += `</tr>`; delRow += `</tr>`;
 
                 // 완성된 모든 줄을 합쳐서 실제 화면(HTML)에 집어넣습니다.
-                vsTableBody.innerHTML = headerRow + bpRow + hrRow + rrRow + btRow + delRow;
+                vsTableBody.innerHTML = headerRow + bpRow + hrRow + rrRow + btRow + spo2Row + delRow;
             }
 
             // 2. Chart.js 라이브러리를 사용해 활력징후 그래프 그리기
             renderVsChart(vsRecords);
+        }
+
+        function editVsRecord(index) {
+            const p = patients[currentPatientIndex];
+            if (!p || !p.records?.vs) return;
+            const item = p.records.vs[index];
+            if (!item) return;
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed'; overlay.style.top = '0'; overlay.style.left = '0';
+            overlay.style.width = '100vw'; overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(15, 23, 42, 0.45)'; overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center'; overlay.style.justifyContent = 'center'; overlay.style.zIndex = '2000';
+
+            const modal = document.createElement('div');
+            modal.style.width = '420px'; modal.style.maxWidth = '90vw'; modal.style.background = '#fff';
+            modal.style.borderRadius = '12px'; modal.style.boxShadow = '0 16px 40px rgba(15, 23, 42, 0.18)';
+            modal.style.padding = '20px'; modal.style.boxSizing = 'border-box';
+
+            modal.innerHTML = `
+                <div style="font-size:16px; font-weight:bold; margin-bottom:14px; color:#0f172a;">활력징후 수정</div>
+                <div style="display:grid; gap:12px;">
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">일시</div>
+                        <input id="vsEditTime" type="datetime-local" value="${(item.time || '').replace(' ', 'T').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;" />
+                    </div>
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">혈압</div>
+                        <input id="vsEditBp" value="${(item.bp || '').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;" />
+                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px;">
+                        <div>
+                            <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">맥박</div>
+                            <input id="vsEditHr" value="${item.hr ?? ''}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;" />
+                        </div>
+                        <div>
+                            <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">호흡</div>
+                            <input id="vsEditRr" value="${item.rr ?? ''}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;" />
+                        </div>
+                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px;">
+                        <div>
+                            <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">체온</div>
+                            <input id="vsEditBt" value="${item.bt ?? ''}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;" />
+                        </div>
+                        <div>
+                            <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">산소포화도</div>
+                            <input id="vsEditSpo2" value="${item.spo2 ?? ''}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;" />
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:18px;">
+                    <button type="button" id="vsEditCancel" style="padding:8px 14px; border-radius:8px; background:#e2e8f0; color:#0f172a; font-weight:bold; border:none; cursor:pointer;">취소</button>
+                    <button type="button" id="vsEditSave" style="padding:8px 14px; border-radius:8px; background:#1d4ed8; color:white; font-weight:bold; border:none; cursor:pointer;">저장</button>
+                </div>
+            `;
+
+            const closeModal = () => overlay.remove();
+            modal.querySelector('#vsEditCancel').addEventListener('click', closeModal);
+            modal.querySelector('#vsEditSave').addEventListener('click', async () => {
+                const time = modal.querySelector('#vsEditTime').value.trim();
+                const bp = modal.querySelector('#vsEditBp').value.trim();
+                const hr = modal.querySelector('#vsEditHr').value.trim();
+                const rr = modal.querySelector('#vsEditRr').value.trim();
+                const bt = modal.querySelector('#vsEditBt').value.trim();
+                const spo2 = modal.querySelector('#vsEditSpo2').value.trim();
+
+                if (!time) {
+                    alert('일시는 비워둘 수 없습니다.');
+                    return;
+                }
+
+                p.records.vs[index] = {
+                    ...p.records.vs[index],
+                    time: time.replace('T', ' '),
+                    bp,
+                    hr: hr ? Number(hr) : null,
+                    rr: rr ? Number(rr) : null,
+                    bt: bt ? Number(bt) : null,
+                    spo2: spo2 ? Number(spo2) : null
+                };
+
+                await savePatientToBackend(p);
+                renderAllRecords();
+                closeModal();
+            });
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
         }
 
         /* --- 활력징후(V/S) 꺾은선 그래프(차트)를 그리는 함수 --- */
@@ -2975,7 +3998,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
             const labels = vsRecords.map(r => r.time);
 
             // 그래프가 너무 꽉 차지 않도록 축의 최대/최소 기본값을 넉넉하게 설정합니다.
-            let maxBP = 200, maxHR = 200, maxRR = 80;
+            let maxBP = 200, maxHR = 200, maxRR = 80, maxSpO2 = 100;
             let minBT = 34, maxBT = 43;
 
             // 기록된 데이터 중 가장 큰 값이 있다면 축의 범위를 그에 맞춰 늘려주는 로직입니다.
@@ -2985,6 +4008,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
                 if (parsed.dia !== null && parsed.dia > maxBP) maxBP = Math.ceil(parsed.dia + 10);
                 if (r.hr && r.hr > maxHR) maxHR = Math.ceil(r.hr + 10);
                 if (r.rr && r.rr > maxRR) maxRR = Math.ceil(r.rr + 10);
+                if (r.spo2 !== null && r.spo2 !== undefined && r.spo2 > maxSpO2) maxSpO2 = Math.ceil(r.spo2 + 10);
                 if (r.bt) {
                     if (r.bt < minBT) minBT = Math.floor(r.bt - 1);
                     if (r.bt > maxBT) maxBT = Math.ceil(r.bt + 1);
@@ -3025,6 +4049,12 @@ if (!note) return alert("처방 내역을 입력하세요.");
                     data: vsRecords.map(r => r.bt !== null && r.bt !== undefined ? r.bt : null),
                     borderColor: '#8b5cf6', backgroundColor: '#8b5cf6',
                     yAxisID: 'yBT', hidden: !vsVisibility.bt, tension: 0.2, spanGaps: true
+                },
+                {
+                    label: '산소포화도 (SpO2 %)',
+                    data: vsRecords.map(r => r.spo2 !== null && r.spo2 !== undefined ? r.spo2 : null),
+                    borderColor: '#14b8a6', backgroundColor: '#14b8a6',
+                    yAxisID: 'ySpO2', hidden: !vsVisibility.spo2, tension: 0.2, spanGaps: true
                 }
             ];
 
@@ -3044,7 +4074,8 @@ if (!note) return alert("처방 내역을 입력하세요.");
                         yBP: { type: 'linear', display: vsVisibility.bp, position: 'left', min: 0, suggestedMax: maxBP, title: { display: true, text: '혈압', color: '#ef4444', font: { size: 10, weight: 'bold' } }, ticks: { color: '#ef4444', font: { size: 9 } } },
                         yHR: { type: 'linear', display: vsVisibility.hr, position: 'left', min: 0, suggestedMax: maxHR, title: { display: true, text: '맥박', color: '#3b82f6', font: { size: 10, weight: 'bold' } }, ticks: { color: '#3b82f6', font: { size: 9 } } },
                         yRR: { type: 'linear', display: vsVisibility.rr, position: 'left', min: 0, suggestedMax: maxRR, title: { display: true, text: '호흡', color: '#10b981', font: { size: 10, weight: 'bold' } }, ticks: { color: '#10b981', font: { size: 9 } } },
-                        yBT: { type: 'linear', display: vsVisibility.bt, position: 'left', suggestedMin: minBT, suggestedMax: maxBT, title: { display: true, text: '체온', color: '#8b5cf6', font: { size: 10, weight: 'bold' } }, ticks: { color: '#8b5cf6', font: { size: 9 } } }
+                        yBT: { type: 'linear', display: vsVisibility.bt, position: 'left', suggestedMin: minBT, suggestedMax: maxBT, title: { display: true, text: '체온', color: '#8b5cf6', font: { size: 10, weight: 'bold' } }, ticks: { color: '#8b5cf6', font: { size: 9 } } },
+                        ySpO2: { type: 'linear', display: vsVisibility.spo2, position: 'right', min: 60, suggestedMax: maxSpO2, title: { display: true, text: 'SpO2', color: '#14b8a6', font: { size: 10, weight: 'bold' } }, ticks: { color: '#14b8a6', font: { size: 9 } } }
                     }
                 }
             });
@@ -3070,13 +4101,16 @@ if (!note) return alert("처방 내역을 입력하세요.");
                 let headerRow = `<tr><th class="vs-header-title">구분 \\ 시간</th>`;
                 let intakeRow = `<tr><td class="vs-label">Intake (mL)</td>`;
                 let outputRow = `<tr><td class="vs-label">Output (mL)</td>`;
-                let delRow = `<tr><td class="vs-label" style="background:#fee2e2; color:#ef4444;">삭제</td>`;
+                let delRow = `<tr><td class="vs-label" style="background:#fee2e2; color:#ef4444;">수정 및 삭제</td>`;
 
                 ioRecords.forEach((r, idx) => {
                     headerRow += `<th class="vs-header-time">${r.time}</th>`;
                     intakeRow += `<td class="vs-val" style="color:#3b82f6;">${r.intake || 0}</td>`;
                     outputRow += `<td class="vs-val" style="color:#ef4444;">${r.output || 0}</td>`;
-                    delRow += `<td class="vs-val"><button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('io', ${idx})">✕</button></td>`;
+                    delRow += `<td class="vs-val" style="white-space:nowrap;">
+                        <button class="btn-slate" style="padding:1px 4px; font-size:10px; margin-right:3px;" onclick="editIoRecord(${idx})">수정</button>
+                        <button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('io', ${idx})">삭제</button>
+                    </td>`;
                 });
 
                 headerRow += `</tr>`; intakeRow += `</tr>`; outputRow += `</tr>`; delRow += `</tr>`;
@@ -3085,6 +4119,75 @@ if (!note) return alert("처방 내역을 입력하세요.");
 
             // I/O 막대그래프를 호출합니다.
             renderIoChart(ioRecords);
+        }
+
+        function editIoRecord(index) {
+            const p = patients[currentPatientIndex];
+            if (!p || !p.records?.io) return;
+            const item = p.records.io[index];
+            if (!item) return;
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed'; overlay.style.top = '0'; overlay.style.left = '0';
+            overlay.style.width = '100vw'; overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(15, 23, 42, 0.45)'; overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center'; overlay.style.justifyContent = 'center'; overlay.style.zIndex = '2000';
+
+            const modal = document.createElement('div');
+            modal.style.width = '420px'; modal.style.maxWidth = '90vw'; modal.style.background = '#fff';
+            modal.style.borderRadius = '12px'; modal.style.boxShadow = '0 16px 40px rgba(15, 23, 42, 0.18)';
+            modal.style.padding = '20px'; modal.style.boxSizing = 'border-box';
+
+            modal.innerHTML = `
+                <div style="font-size:16px; font-weight:bold; margin-bottom:14px; color:#0f172a;">섭취/배설 수정</div>
+                <div style="display:grid; gap:12px;">
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">일시</div>
+                        <input id="ioEditTime" type="datetime-local" value="${(item.time || '').replace(' ', 'T').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;" />
+                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px;">
+                        <div>
+                            <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">Intake (mL)</div>
+                            <input id="ioEditIntake" value="${item.intake ?? ''}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;" />
+                        </div>
+                        <div>
+                            <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">Output (mL)</div>
+                            <input id="ioEditOutput" value="${item.output ?? ''}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;" />
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:18px;">
+                    <button type="button" id="ioEditCancel" style="padding:8px 14px; border-radius:8px; background:#e2e8f0; color:#0f172a; font-weight:bold; border:none; cursor:pointer;">취소</button>
+                    <button type="button" id="ioEditSave" style="padding:8px 14px; border-radius:8px; background:#1d4ed8; color:white; font-weight:bold; border:none; cursor:pointer;">저장</button>
+                </div>
+            `;
+
+            const closeModal = () => overlay.remove();
+            modal.querySelector('#ioEditCancel').addEventListener('click', closeModal);
+            modal.querySelector('#ioEditSave').addEventListener('click', async () => {
+                const time = modal.querySelector('#ioEditTime').value.trim();
+                const intake = modal.querySelector('#ioEditIntake').value.trim();
+                const output = modal.querySelector('#ioEditOutput').value.trim();
+
+                if (!time) {
+                    alert('일시는 비워둘 수 없습니다.');
+                    return;
+                }
+
+                p.records.io[index] = {
+                    ...p.records.io[index],
+                    time: time.replace('T', ' '),
+                    intake: intake ? Number(intake) : 0,
+                    output: output ? Number(output) : 0
+                };
+
+                await savePatientToBackend(p);
+                renderAllRecords();
+                closeModal();
+            });
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
         }
 
         /* --- 섭취/배설(I/O) 막대그래프를 그리는 함수 --- */
@@ -3212,6 +4315,118 @@ function editPresc(index) {
             `).join('');
         }
 
+        function getLabRangeStatus(result, refRange) {
+            if (!result || !refRange) return { color: '', arrow: '', text: result || '' };
+
+            const resultText = String(result).trim();
+            const valueMatch = resultText.match(/-?\d[\d,]*(?:\.\d+)?/);
+            if (!valueMatch) return { color: '', arrow: '', text: resultText };
+
+            const value = parseFloat(valueMatch[0].replace(/,/g, ''));
+            const refNumbers = String(refRange).match(/-?\d[\d,]*(?:\.\d+)?/g) || [];
+            if (refNumbers.length < 2) return { color: '', arrow: '', text: resultText };
+
+            const numbers = refNumbers.map(num => parseFloat(num.replace(/,/g, ''))).filter(num => !Number.isNaN(num));
+            if (numbers.length < 2) return { color: '', arrow: '', text: resultText };
+
+            const lower = numbers[0];
+            const upper = numbers[numbers.length - 1];
+            if (Number.isNaN(lower) || Number.isNaN(upper)) return { color: '', arrow: '', text: resultText };
+
+            if (value > upper) return { color: '#dc2626', arrow: '▲', text: resultText };
+            if (value < lower) return { color: '#2563eb', arrow: '▼', text: resultText };
+
+            return { color: '', arrow: '', text: resultText };
+        }
+
+        function editLabRecord(idx) {
+            const p = patients[currentPatientIndex];
+            if (!p || !p.records?.lab) return;
+            const item = p.records.lab[idx];
+            if (!item) return;
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed'; overlay.style.top = '0'; overlay.style.left = '0';
+            overlay.style.width = '100vw'; overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(15, 23, 42, 0.45)'; overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center'; overlay.style.justifyContent = 'center'; overlay.style.zIndex = '2000';
+
+            const modal = document.createElement('div');
+            modal.style.width = '440px'; modal.style.maxWidth = '90vw'; modal.style.background = '#fff';
+            modal.style.borderRadius = '12px'; modal.style.boxShadow = '0 16px 40px rgba(15, 23, 42, 0.18)';
+            modal.style.padding = '20px'; modal.style.boxSizing = 'border-box';
+
+            modal.innerHTML = `
+                <div style="font-size:16px; font-weight:bold; margin-bottom:14px; color:#0f172a;">검사 결과 수정</div>
+                <div style="display:grid; gap:12px;">
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">일시</div>
+                        <input id="labEditTime" type="datetime-local" value="${(item.time || '').replace(' ', 'T').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;" />
+                    </div>
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">구분</div>
+                        <input id="labEditCategory" value="${(item.category || '').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;" />
+                    </div>
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">검사명</div>
+                        <input id="labEditItem" value="${(item.item || '').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;" />
+                    </div>
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">결과 및 판독소견</div>
+                        <textarea id="labEditResult" rows="4" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box; resize:vertical;">${(item.result || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                    </div>
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">정상범위 수치</div>
+                        <input id="labEditRefRange" value="${(item.refRange || '').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;" />
+                    </div>
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom:5px;">단위</div>
+                        <input id="labEditUnit" value="${(item.unit || '').replace(/"/g, '&quot;')}" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:13px; box-sizing:border-box;" />
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:18px;">
+                    <button type="button" id="labEditCancel" style="padding:8px 14px; border-radius:8px; background:#e2e8f0; color:#0f172a; font-weight:bold; border:none; cursor:pointer;">취소</button>
+                    <button type="button" id="labEditSave" style="padding:8px 14px; border-radius:8px; background:#1d4ed8; color:white; font-weight:bold; border:none; cursor:pointer;">저장</button>
+                </div>
+            `;
+
+            const closeModal = () => overlay.remove();
+            modal.querySelector('#labEditCancel').addEventListener('click', closeModal);
+            modal.querySelector('#labEditSave').addEventListener('click', async () => {
+                const time = modal.querySelector('#labEditTime').value.trim();
+                const category = modal.querySelector('#labEditCategory').value.trim() || '기타';
+                const itemName = modal.querySelector('#labEditItem').value.trim();
+                const result = modal.querySelector('#labEditResult').value.trim();
+                const refRange = modal.querySelector('#labEditRefRange').value.trim();
+                const unit = modal.querySelector('#labEditUnit').value.trim();
+
+                if (!time || !itemName || !result) {
+                    alert('일시, 검사명, 결과값은 필수입니다.');
+                    return;
+                }
+
+                p.records.lab[idx] = {
+                    ...p.records.lab[idx],
+                    time: time.replace('T', ' '),
+                    category,
+                    item: itemName,
+                    result,
+                    refRange,
+                    unit
+                };
+
+                const savedResult = p.records.lab[idx].result;
+                const savedRefRange = p.records.lab[idx].refRange;
+                p.records.lab[idx].comparison = getLabRangeStatus(savedResult, savedRefRange);
+
+                await savePatientToBackend(p);
+                renderAllRecords();
+                closeModal();
+            });
+
+            overlay.appendChild(modal); document.body.appendChild(overlay);
+        }
+
         // [진단검사/영상 기록 표 그리기]
         function renderLabTable() {
             const p = patients[currentPatientIndex];
@@ -3224,16 +4439,26 @@ function editPresc(index) {
                 return;
             }
 
-            tbody.innerHTML = records.map((r, idx) => `
+            tbody.innerHTML = records.map((r, idx) => {
+                const status = r.comparison || getLabRangeStatus(r.result, r.refRange);
+                const resultHtml = status.arrow
+                    ? `<span style="color:${status.color}; font-weight:bold;">${status.text}</span><span style="color:${status.color}; font-weight:bold; margin-left:4px;">${status.arrow}</span>`
+                    : `<span>${status.text}</span>`;
+
+                return `
                 <tr>
                     <td>${r.time}</td>
                     <td><b>${r.category}</b></td>
                     <td style="font-weight:bold; color:var(--primary-navy);">${r.item}</td>
-                    <td style="text-align:left;">${r.result}</td>
+                    <td style="text-align:left; white-space:nowrap;">${resultHtml}</td>
                     <td>${r.refRange ? (r.refRange + ' ' + (r.unit||'')) : '-'}</td>
-                    <td><button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('lab_img', ${idx})">삭제</button></td>
+                    <td style="white-space:nowrap;">
+                        <button class="btn-slate" style="padding:1px 4px; font-size:10px; margin-right:3px;" onclick="editLabRecord(${idx})">수정</button>
+                        <button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('lab_img', ${idx})">삭제</button>
+                    </td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
         }
     </script>
 </body>
