@@ -505,6 +505,8 @@
                         <input type="text" id="pDiagnosisCustomCode" placeholder="코드(K35.8)" style="display:none;">
                         <input type="text" id="pDiagnosisCustom" placeholder="진단명 입력" style="display:none;">
                         
+                        <input type="number" id="pHeight" placeholder="키(cm)" min="0" step="0.1">
+                        <input type="number" id="pWeight" placeholder="몸무게(kg)" min="0" step="0.1">
                         <input type="number" id="pHD" placeholder="입원일수(HD)" min="0">
                         <input type="number" id="pPOD" placeholder="수술후경과일(POD)" min="0">
 
@@ -541,8 +543,9 @@
                 <div class="header-bar" style="margin-bottom: 8px;">
                     <h1>📑 전자의무기록 (EMR Chart)</h1>
                     <div style="display: flex; gap: 6px;">
-                       <button type="button" class="btn-purple" onclick="runGeminiDebriefing()"> 🤖 AI 디브리핑 생성 </button>
+                        <button class="btn-blue" onclick="downloadEmrTxt()">📄 EMR 요약 TXT 다운로드</button>
                         <button class="btn-blue" onclick="window.print()">🖨️ 차트 인쇄</button>
+                        <button class="btn-purple" onclick="runGeminiDebriefing()" title="AI 피드백">🤖 AI 피드백</button>
                         <button class="btn-slate" onclick="showListPage()">← 환자 목록으로 돌아가기</button>
                     </div>
                 </div>
@@ -556,10 +559,7 @@
             <button type="button" onclick="closeAIDebriefModal()" style="background: none; color: #475569; font-size: 20px; border: none; cursor: pointer;">×</button>
         </div>
 
-        <div style="margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 6px;">
-            <label style="font-size: 13px; font-weight: bold;">📄 시나리오 PDF 파일 첨부 (선택):</label>
-            <input type="file" id="scenarioPdfInput" accept=".pdf" style="display: block; margin-top: 5px; font-size: 12px;"/>
-        </div>
+        <!-- 사용자 추가 요청 입력란 제거: 요구대로 단순화 -->
 
         <div id="debrief-score" style="font-weight: bold; color: #1e3a8a; margin-bottom: 10px;">미분석</div>
         <div id="debrief-body" style="min-height: 120px; white-space: normal; line-height: 1.6; color: #1e293b;">AI 분석 결과가 여기에 표시됩니다.</div>
@@ -584,6 +584,7 @@
                                 <tr><th>성 명:</th><td id="dName" style="color:var(--primary-navy); font-size:12px;">-</td></tr>
                                 <tr><th>나이 / 성별:</th><td id="dAgeGender">-</td></tr>
                                 <tr><th>생년월일:</th><td id="dBirth">-</td></tr>
+                                <tr><th>키 / 몸무게:</th><td id="dHeightWeight">-</td></tr>
                                 <tr><th>혈 액 형:</th><td id="dBloodType" style="color:#ef4444;">-</td></tr>
                                 <tr><th>입원병실:</th><td id="dRoom" style="color:#8b5cf6;">-</td></tr>
                                 <tr><th>진료과/주치의:</th><td id="dDeptDoc">-</td></tr>
@@ -682,13 +683,11 @@
                     <div class="col-3">
                         <div class="split-container">
                             
-                            <!-- 상단 패널 (처방, 수술, 수혈, 검사, 간호기록 탭) -->
+                            <!-- 상단 패널 (처방, 검사, 간호기록 탭) -->
                             <div class="split-pane" id="topPane">
                                 <!-- 탭 버튼들 -->
                                 <div class="main-tab-bar">
                                     <button class="main-tab-btn active" onclick="openTopTab('prescriptionTab', this)">📋 처방내역</button>
-                                    <button class="main-tab-btn" onclick="openTopTab('surgTab', this)">✂️ 수술/동의서</button>
-                                    <button class="main-tab-btn" onclick="openTopTab('bloodTab', this)">🩸 수혈 관리</button>
                                     <button class="main-tab-btn" onclick="openTopTab('labTab', this)">🧪 검사 결과</button>
                                     <button class="main-tab-btn" onclick="openTopTab('nurseTab', this)">📝 간호/투약 기록</button>
                                 </div>
@@ -769,72 +768,7 @@
                                     </div>
                                 </div>
 
-                                <!-- 2. 수술/동의서 탭 화면 -->
-                                <div id="surgTab" class="tab-content">
-                                    <div class="table-scroll-area">
-                                        <table class="prescription-table-theme">
-                                            <thead><tr><th>일시</th><th>단계</th><th>수술명</th><th>소견 및 처방</th><th style="width:50px;">관리</th></tr></thead>
-                                            <tbody id="surgTable"></tbody>
-                                        </table>
-                                    </div>
-                                    <div class="input-bar-bottom">
-                                        <input type="datetime-local" id="surgTime">
-                                        <select id="surgStage" style="width:85px;">
-                                            <option value="수술 전">Pre-op</option>
-                                            <option value="수술 중">Intra-op</option>
-                                            <option value="수술 후">Post-op</option>
-                                        </select>
-                                        <input type="text" id="surgOpName" placeholder="수술명" style="width:120px;">
-                                        <input type="text" id="surgNote" placeholder="처방 및 간호소견" style="flex:1;">
-                                        <button class="btn-purple" onclick="addRecord('surg')">저장</button>
-                                    </div>
-                                </div>
-
-                                <!-- 3. 수혈 관리 탭 화면 -->
-                                <div id="bloodTab" class="tab-content">
-                                    <div class="table-scroll-area">
-                                        <table class="prescription-table-theme">
-                                            <thead><tr><th>일시</th><th>제제</th><th>바코드</th><th>용량</th><th>V/S 변화</th><th>부작용</th><th style="width:50px;">관리</th></tr></thead>
-                                            <tbody id="bloodTable"></tbody>
-                                        </table>
-                                    </div>
-                                    <div class="input-bar-bottom">
-                                        <input type="datetime-local" id="bloodTime">
-                                        <select id="bloodType" style="width:70px;">
-                                            <option value="RBC">RBC</option>
-                                            <option value="FFP">FFP</option>
-                                            <option value="PLT">PLT</option>
-                                            <option value="Cryo">Cryo</option>
-                                        </select>
-                                        <input type="text" id="bloodCode" placeholder="바코드" style="width:80px;">
-                                        <select id="bloodUnitSelect" onchange="toggleBloodUnitCustom(this)" style="width:75px;">
-                                            <option value="1U">1U</option>
-                                            <option value="2U">2U</option>
-                                            <option value="100mL">100mL</option>
-                                            <option value="200mL">200mL</option>
-                                            <option value="400mL">400mL</option>
-                                            <option value="custom">-- 직접입력 --</option>
-                                        </select>
-                                        <input type="text" id="bloodUnitCustom" placeholder="용량입력" style="display:none; width:65px;">
-                                        <input type="text" id="bloodVs" placeholder="V/S 변화" style="width:80px;">
-                                        <select id="bloodSideEffectSelect" onchange="toggleBloodSideCustom(this)" style="width:110px;">
-                                            <option value="없음">부작용 없음</option>
-                                            <option value="발열">발열 (Febrile)</option>
-                                            <option value="오한">오한 (Chills)</option>
-                                            <option value="두드러기/가려움">두드러기/가려움</option>
-                                            <option value="호흡곤란">호흡곤란 (TRALI/TACO)</option>
-                                            <option value="혈압저하">혈압 저하</option>
-                                            <option value="아나필락시스">아나필락시스</option>
-                                            <option value="오심/구토">오심/구토</option>
-                                            <option value="혈뇨/용혈반응">혈뇨/용혈반응</option>
-                                            <option value="custom">-- 직접입력 --</option>
-                                        </select>
-                                        <input type="text" id="bloodSideCustom" placeholder="부작용 입력" style="display:none; width:90px;">
-                                        <button class="btn-red" onclick="addRecord('blood')">기록 저장</button>
-                                    </div>
-                                </div>
-
-                                <!-- 4. 검사 결과 탭 화면 -->
+                                <!-- 2. 검사 결과 탭 화면 -->
                                 <div id="labTab" class="tab-content">
                                     <div class="table-scroll-area">
                                         <table class="prescription-table-theme">
@@ -974,7 +908,6 @@
             <button class="setting-tab-btn" onclick="switchSettingTab('drug-panel', this)">💊 처방 관리</button>
             <button class="setting-tab-btn" onclick="switchSettingTab('labdb-panel', this)">🧪 검사결과 관리</button>
             <button class="setting-tab-btn" onclick="switchSettingTab('nursedb-panel', this)">📝 간호기록 템플릿</button>
-            <button class="tab-btn ..." id="tabBtn-scenario" onclick="switchSettingTab('scenario-panel', this)">📄 시나리오 관리</button>
         </div>
 
 <div class="mt-4 w-full">
@@ -1084,20 +1017,6 @@
         <ul id="nursedb-list" class="divide-y divide-slate-100 border rounded-lg overflow-y-auto flex-1 min-h-[350px]"></ul>
     </div>
 
-    <!-- 7. 시나리오 DB 관리 패널 -->
-    <div id="scenario-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex flex-col min-h-[500px] w-full hidden">
-        <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
-            <span>📄 시나리오 DB 관리</span>
-            <span id="scenario-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full font-medium">0개</span>
-        </h3>
-        <form onsubmit="handleUploadScenario(event)" class="flex gap-2 items-center max-w-3xl">
-            <input type="text" id="scenarioTitleInput" required placeholder="시나리오명 입력 (예: 급성 장염 환아 간호 시뮬레이션)" class="flex-1 px-3 py-2 border rounded-lg text-[13px]">
-            <input type="file" id="scenarioFileInput" accept=".pdf" required class="text-[13px] text-slate-600">
-            <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[13px] rounded-lg font-bold shrink-0 transition-colors">+ 시나리오 등록</button>
-        </form>
-        <ul id="scenario-list" class="divide-y divide-slate-100 border rounded-lg overflow-y-auto flex-1 min-h-[350px]"></ul>
-    </div>
-
 </div>
 
 </div> <!-- 👈 mt-4 w-full 감싸는 태그 닫기 -->
@@ -1132,36 +1051,26 @@
         let pinClickTimer = null;
         let targetPinIndex = null;
 
-       // 💡 오류 방지 및 시나리오 탭 지원 switchSettingTab 함수
-function switchSettingTab(panelId, btnElement) {
-    // 1. 모든 패널에서 active 제거 및 숨김(hidden) 처리
-    document.querySelectorAll('.setting-panel').forEach(panel => {
-        panel.classList.remove('active');
-        panel.classList.add('hidden');
-    });
+        function switchSettingTab(panelId, btnElement) {
+            document.querySelectorAll('.setting-panel').forEach(panel => {
+                panel.classList.remove('active');
+                panel.classList.add('hidden');
+            });
 
-    // 2. 모든 탭 버튼에서 active 클래스 제거
-    document.querySelectorAll('.setting-tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
+            document.querySelectorAll('.setting-tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
 
-    // 3. 선택한 패널 표시 (active 추가 및 hidden 제거)
-    const targetPanel = document.getElementById(panelId);
-    if (targetPanel) {
-        targetPanel.classList.add('active');
-        targetPanel.classList.remove('hidden');
-    }
+            const targetPanel = document.getElementById(panelId);
+            if (targetPanel) {
+                targetPanel.classList.add('active');
+                targetPanel.classList.remove('hidden');
+            }
 
-    // 4. 클릭한 버튼에 active 클래스 추가
-    if (btnElement) {
-        btnElement.classList.add('active');
-    }
-
-    // 5. 시나리오 탭일 경우 목록 불러오기
-    if (panelId === 'scenario-panel' && typeof renderScenarioList === 'function') {
-        renderScenarioList();
-    }
-}
+            if (btnElement) {
+                btnElement.classList.add('active');
+            }
+        }
 
         // 입력 칸(textarea)에 글을 길게 쓰면 자동으로 상자 높이를 늘려주는 함수입니다.
         function autoExpandTextarea(element) {
@@ -1210,13 +1119,11 @@ function switchSettingTab(panelId, btnElement) {
                     supabase.from('patients').select('*')
                 ]);
 
-                // 응답 객체의 .data 프로퍼티에서 실제 데이터를 가져옵니다.
                 departments = (deptRes.data || []).map(d => d.name);
                 doctors = docRes.data || [];
                 diagnosisDatabase = diagRes.data || [];
                 drugDatabase = drugRes.data || [];
 
-                // labdb: DB 컬럼명이 snake_case(ref_range)일 수 있으므로 클라이언트에서 사용하기 쉽게 camelCase로 변환합니다.
                 labDatabase = (labDbRes.data || []).map(r => ({
                     id: r.id,
                     category: r.category,
@@ -1225,10 +1132,8 @@ function switchSettingTab(panelId, btnElement) {
                     unit: r.unit || ''
                 }));
 
-                // nursedb은 category, content 컬럼을 그대로 사용합니다.
                 nurseDatabase = nurseDbRes.data || [];
 
-                // patients: snake_case -> camelCase 매핑
                 patients = (patRes.data || []).map(r => ({
                     id: r.id,
                     chartNo: r.chart_no || r.chartNo || null,
@@ -1236,6 +1141,8 @@ function switchSettingTab(panelId, btnElement) {
                     birth: r.birth,
                     age: r.age,
                     gender: r.gender,
+                    height: r.height || r.height_cm || '',
+                    weight: r.weight || r.weight_kg || '',
                     bloodType: r.blood_type || r.bloodType || '',
                     dept: r.dept,
                     doctor: r.doctor,
@@ -1247,7 +1154,7 @@ function switchSettingTab(panelId, btnElement) {
                     cc: r.cc,
                     memo: r.memo || '',
                     bodyMarks: r.body_marks || r.bodyMarks || [],
-                    records: r.records || r.records || { vs: [], io: [], prescriptions: [], nurse: [], surg: [], blood: [], lab: [] }
+                    records: r.records || { vs: [], io: [], prescriptions: [], nurse: [], lab: [] }
                 }));
 
             } catch (err) {
@@ -1300,6 +1207,12 @@ function switchSettingTab(panelId, btnElement) {
         // 로그아웃 버튼을 누르면 Supabase 세션에서 로그아웃하고 로그인 창으로 돌아갑니다.
         async function handleLogout() {
             try { await supabase.auth.signOut(); } catch(e) { console.error(e); }
+            currentPatientIndex = null;
+            editingPatientIndex = null;
+            editingPrescIndex = null;
+            resetForm();
+            document.getElementById('detailPage').style.display = 'none';
+            document.getElementById('listPage').style.display = 'block';
             showView('login');
         }
 
@@ -1310,6 +1223,8 @@ function switchSettingTab(panelId, btnElement) {
         }
 // 1306번 줄 시작
 const GEMINI_API_KEY = "AQ.Ab8RN6IQrdCspYX3bMXQb17HePkDGCo_tokLGn90iGLG4j3FFg";
+// 테스트용: AI 호출 대신 모의(Mock) 응답을 사용하려면 true로 설정하세요.
+const USE_MOCK_DEBRIEF = true;
 
 function showAIDebriefModal() {
     const modal = document.getElementById('debrief-modal') || document.getElementById('aiDebriefModal');
@@ -1340,19 +1255,6 @@ function getCurrentPatientName() {
     return '환자';
 }
 
-function getSelectedScenarioFromStorage() {
-    const scenarioId = localStorage.getItem('selectedScenarioId');
-    if (!scenarioId) return null;
-
-    try {
-        const scenarios = JSON.parse(localStorage.getItem('scenarios') || '[]');
-        return scenarios.find(item => String(item.id) === String(scenarioId)) || null;
-    } catch (error) {
-        console.warn('시나리오 로딩 중 오류:', error);
-        return null;
-    }
-}
-
 function getFileBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -1365,6 +1267,7 @@ function getFileBase64(file) {
         reader.readAsDataURL(file);
     });
 }
+
 
 async function runGeminiDebriefing(patientName = getCurrentPatientName()) {
     const debriefBtn = document.getElementById('debrief-btn');
@@ -1382,21 +1285,48 @@ async function runGeminiDebriefing(patientName = getCurrentPatientName()) {
     if (debriefBody) debriefBody.innerHTML = `<div class="text-center py-8 text-gray-500">AI가 EMR 기록과 시나리오를 비교 분석하고 있습니다...</div>`;
 
     try {
+        // Mock 모드가 켜져 있으면 실제 API 호출을 건너뛰고 가짜 피드백을 보여줍니다.
+        if (typeof USE_MOCK_DEBRIEF !== 'undefined' && USE_MOCK_DEBRIEF) {
+            const p = patients[currentPatientIndex] || { name: finalPatientName };
+            const mockHtml = `
+                <p><strong>🎯 간호사정 비교 및 누락 항목</strong></p>
+                <ul>
+                    <li>기록된 활력징후와 기본 정보는 잘 정리되어 있습니다.</li>
+                    <li>누락: 투약 후 관찰(증상/부작용)과 재평가 내용이 충분하지 않습니다.</li>
+                </ul>
+                <p><strong>💊 처방 & 투약 수행 정확도</strong></p>
+                <ul>
+                    <li>대부분 처방 이행은 적절하나 일부 투약에서 용량/경로 표기가 불명확합니다.</li>
+                </ul>
+                <p><strong>📝 간호기록(SOAPIE) 완성도 평가</strong></p>
+                <ul>
+                    <li>Subjective/Objective는 기재되어 있으나 Assessment/Plan/Intervention 중 일부가 미비합니다.</li>
+                    <li>특히 평가(평가 후 변화) 항목 보강이 필요합니다.</li>
+                </ul>
+                <p><strong>💡 총평 및 핵심 개선 조언</strong></p>
+                <ul>
+                    <li>투약 후 관찰 항목을 표준 템플릿으로 추가하세요.</li>
+                    <li>중요 소견은 날짜/시간과 함께 구체적으로 기록하세요.</li>
+                </ul>
+            `;
+
+            if (debriefScore) debriefScore.innerText = '분석 완료';
+            if (debriefBody) debriefBody.innerHTML = mockHtml;
+            if (debriefBtn) { debriefBtn.disabled = false; debriefBtn.classList.remove('opacity-50', 'cursor-not-allowed'); }
+            return;
+        }
+
         let pureBase64 = '';
-        const selectedScenario = getSelectedScenarioFromStorage();
-        if (selectedScenario && selectedScenario.fileData) {
-            pureBase64 = selectedScenario.fileData;
-            if (pureBase64.includes(',')) {
-                pureBase64 = pureBase64.split(',')[1];
-            }
+
+        // EMR 데이터가 전역 studentEMR로 이미 제공되어 있으면 JSON으로, 아니면 요약 텍스트로 만들어 보냅니다.
+        let emrDataText;
+        if (typeof studentEMR !== 'undefined' && studentEMR) {
+            try { emrDataText = JSON.stringify(studentEMR, null, 2); }
+            catch (e) { emrDataText = String(studentEMR); }
+        } else {
+            emrDataText = buildEmrTxtExport();
         }
 
-        const scenarioPdfInput = document.getElementById('scenarioPdfInput');
-        if (!pureBase64 && scenarioPdfInput && scenarioPdfInput.files && scenarioPdfInput.files[0]) {
-            pureBase64 = await getFileBase64(scenarioPdfInput.files[0]);
-        }
-
-        const emrData = typeof studentEMR !== 'undefined' ? studentEMR : {};
         const finalPatientName = patientName || getCurrentPatientName();
 
         const promptText = `
@@ -1404,7 +1334,7 @@ async function runGeminiDebriefing(patientName = getCurrentPatientName()) {
 이름: ${finalPatientName}
 
 [학생 작성 EMR 기록]
-${JSON.stringify(emrData, null, 2)}
+${emrDataText}
 
 [요청사항]
 1. 시나리오와 비교하여 학생이 놓친 간호사정, 잘못 투여된 처방/약물, 미비한 간호기록(SOAPIE)을 분석해줘.
@@ -1479,13 +1409,9 @@ ${JSON.stringify(emrData, null, 2)}
         if (aiResult) {
             console.log('최종 AI 텍스트 추출 성공!');
 
-            const scoreMatch = aiResult.match(/SCORE:\s*(\d+)/i);
-            if (scoreMatch && debriefScore) {
-                debriefScore.innerText = `${scoreMatch[1]}점`;
-            } else if (debriefScore) {
-                debriefScore.innerText = '분석 완료';
-            }
-
+            // 점수(SCORE: 숫자) 표시는 제거합니다 — 결과에서 SCORE 토큰을 모두 삭제
+            aiResult = aiResult.replace(/SCORE:\s*\d+\s*/ig, '');
+            if (debriefScore) debriefScore.innerText = '분석 완료';
             if (debriefBody) {
                 debriefBody.innerHTML = aiResult;
             }
@@ -1568,18 +1494,20 @@ function generateFallbackReport(p, orders, labs, studentNotes) {
 // 환자 정보를 서버에 저장하는 함수입니다. (숫자 형변환 및 안전한 디버깅 보장)
         async function savePatientToBackend(patientData) {
             try {
-                // 숫자형 컬럼(age, hd, pod)의 안전한 형변환 처리
                 const ageVal = parseInt(patientData.age, 10);
                 const hdVal = parseInt(patientData.hd, 10);
                 const podVal = parseInt(patientData.pod, 10);
+                const heightVal = parseFloat(patientData.height);
+                const weightVal = parseFloat(patientData.weight);
 
-                // Supabase 테이블 구조와 정확히 매핑되는 페이로드 생성
                 const payload = {
                     chart_no: patientData.chartNo,
                     name: patientData.name,
                     birth: patientData.birth,
                     age: isNaN(ageVal) ? 0 : ageVal,
                     gender: patientData.gender,
+                    height: isNaN(heightVal) ? null : heightVal,
+                    weight: isNaN(weightVal) ? null : weightVal,
                     blood_type: patientData.bloodType,
                     dept: patientData.dept,
                     doctor: patientData.doctor,
@@ -1639,11 +1567,12 @@ function generateFallbackReport(p, orders, labs, studentNotes) {
 
         // 화면을 크게 통째로 바꾸는 함수입니다. (예: 로그인 화면 -> 환자 목록 화면 -> 설정 화면)
         async function showView(viewName) {
-            // 일단 모든 뷰를 숨깁니다.
             document.getElementById('view-login').classList.add('hidden');
             document.getElementById('view-patients').classList.add('hidden');
             document.getElementById('view-settings').classList.add('hidden');
             document.getElementById('main-header').classList.add('hidden');
+            document.getElementById('detailPage').style.display = 'none';
+            document.getElementById('listPage').style.display = 'block';
 
             if (viewName === 'login') {
                 document.getElementById('view-login').classList.remove('hidden');
@@ -1652,7 +1581,6 @@ function generateFallbackReport(p, orders, labs, studentNotes) {
                 document.getElementById(`view-${viewName}`).classList.remove('hidden');
             }
 
-            // 설정화면으로 가면 설정을 그려주고, 환자화면으로 가면 환자정보를 그려줍니다.
             if (viewName === 'settings') renderSettings();
             if (viewName === 'patients') {
                 await fetchInitialData();
@@ -1763,185 +1691,6 @@ function generateFallbackReport(p, orders, labs, studentNotes) {
                 </li>
             `).join('') || '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 간호기록 DB가 없습니다.</li>';
         }
-        // 시나리오 목록 렌더링 함께 호출
-    if (typeof renderScenarioList === 'function') {
-        renderScenarioList();
-    }
-        // 기존 간호기록 코드 끝나는 지점 (1671번 줄 부근) 바로 아래 붙여넣기
-
-// 시나리오 데이터 등록 처리
-// 1. 시나리오 업로드 처리 함수
-async function handleUploadScenario(event) {
-    event.preventDefault();
-
-    const titleInput = document.getElementById('scenarioTitleInput');
-    const fileInput = document.getElementById('scenarioFileInput');
-
-    if (!fileInput || !fileInput.files[0]) {
-        alert('PDF 파일을 선택해 주세요.');
-        return;
-    }
-
-    const title = titleInput ? titleInput.value.trim() : '';
-    const file = fileInput.files[0];
-
-    // FileReader를 사용해 Base64로 변환 후 LocalStorage 저장
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        const fileData = e.target.result;
-        
-        // 기존 시나리오 목록 불러오기
-        const scenarios = JSON.parse(localStorage.getItem('scenarios') || '[]');
-        
-        const newScenario = {
-            id: Date.now(),
-            title: title || file.name,
-            fileName: file.name,
-            fileData: fileData,
-            date: new Date().toLocaleDateString()
-        };
-
-        scenarios.push(newScenario);
-        localStorage.setItem('scenarios', JSON.stringify(scenarios));
-
-        // 폼 초기화
-        if (titleInput) titleInput.value = '';
-        fileInput.value = '';
-
-        alert('시나리오가 성공적으로 등록되었습니다.');
-        
-        // 안전하게 목록 다시 그리기
-        renderScenarioList();
-    };
-
-    reader.readAsDataURL(file);
-}
-
-function getScenarioListFromStorage() {
-    try {
-        return JSON.parse(localStorage.getItem('scenarios') || '[]');
-    } catch (error) {
-        console.warn('시나리오 목록 로딩 실패:', error);
-        return [];
-    }
-}
-
-function selectScenarioForDebriefing(id) {
-    const scenarios = getScenarioListFromStorage();
-    const target = scenarios.find(item => String(item.id) === String(id));
-    if (!target) return;
-
-    localStorage.setItem('selectedScenarioId', String(id));
-    renderScenarioList();
-}
-
-function renderScenarioList() {
-    const listEl = document.getElementById('scenario-list');
-    const countEl = document.getElementById('scenario-count');
-
-    if (!listEl) return;
-
-    const scenarios = getScenarioListFromStorage();
-    const selectedScenarioId = localStorage.getItem('selectedScenarioId');
-
-    if (countEl) {
-        countEl.textContent = `${scenarios.length}개`;
-    }
-
-    if (scenarios.length === 0) {
-        listEl.innerHTML = `<li class="p-8 text-center text-slate-400 text-[13px]">등록된 시나리오가 없습니다.</li>`;
-        return;
-    }
-
-    listEl.innerHTML = scenarios.map(item => {
-        const isSelected = String(item.id) === String(selectedScenarioId);
-        return `
-            <li class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-none ${isSelected ? 'bg-indigo-50' : ''}">
-                <div>
-                    <div class="font-bold text-slate-800 text-[14px]">${item.title}</div>
-                    <div class="text-[12px] text-slate-400 mt-0.5">📄 ${item.fileName} | 등록일: ${item.date}</div>
-                </div>
-                <div class="flex gap-2 items-center">
-                    <button onclick="selectScenarioForDebriefing(${item.id})" class="px-3 py-1.5 ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'} rounded-lg text-[12px] font-bold transition-colors">
-                        ${isSelected ? '선택됨' : '선택'}
-                    </button>
-                    <button onclick="deleteScenario(${item.id})" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-[12px] font-bold transition-colors">삭제</button>
-                </div>
-            </li>
-        `;
-    }).join('');
-}
-
-function deleteScenario(id) {
-    if (!confirm('해당 시나리오를 삭제하시겠습니까?')) return;
-
-    const scenarios = getScenarioListFromStorage().filter(s => String(s.id) !== String(id));
-    localStorage.setItem('scenarios', JSON.stringify(scenarios));
-
-    const selectedScenarioId = localStorage.getItem('selectedScenarioId');
-    if (String(selectedScenarioId) === String(id)) {
-        localStorage.removeItem('selectedScenarioId');
-    }
-
-    renderScenarioList();
-}
-
-let scenarioList = getScenarioListFromStorage();
-
-document.addEventListener('DOMContentLoaded', () => {
-    renderScenarioList();
-});
-
-function handleUploadScenario(event) {
-    if (event) event.preventDefault();
-
-    const titleInput = document.getElementById('scenarioTitleInput');
-    const fileInput = document.getElementById('scenarioFileInput');
-
-    if (!fileInput || !fileInput.files[0]) {
-        alert('PDF 파일을 선택해 주세요.');
-        return;
-    }
-
-    const file = fileInput.files[0];
-    const title = titleInput && titleInput.value.trim() ? titleInput.value.trim() : file.name;
-
-    if (file.size > 3.5 * 1024 * 1024) {
-        alert('파일 용량이 너무 큽니다. (3.5MB 이하의 PDF만 등록 가능합니다.)');
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        try {
-            const fileData = e.target.result;
-            const scenarios = getScenarioListFromStorage();
-            const newScenario = {
-                id: Date.now(),
-                title: title,
-                fileName: file.name,
-                fileData: fileData,
-                date: new Date().toLocaleDateString()
-            };
-
-            scenarios.push(newScenario);
-            localStorage.setItem('scenarios', JSON.stringify(scenarios));
-            localStorage.setItem('selectedScenarioId', String(newScenario.id));
-
-            if (titleInput) titleInput.value = '';
-            fileInput.value = '';
-
-            alert('시나리오가 성공적으로 등록되었습니다.');
-            renderScenarioList();
-        } catch (error) {
-            console.error('저장 실패:', error);
-            alert('저장 공간이 부족하여 등록에 실패했습니다. (기존 시나리오를 지우거나 더 적은 용량의 PDF를 올려주세요.)');
-        }
-    };
-
-    reader.readAsDataURL(file);
-}
-
         // 간호기록 문구 삭제 함수
         async function deleteNurseDb(id) {
             if (confirm('해당 간호기록 DB 항목을 삭제하시겠습니까?')) {
@@ -2340,7 +2089,7 @@ const pod = document.getElementById('pPOD').value.trim() || 0;
             // 지금이 '수정' 중이라면 기존 데이터를 덮어씁니다.
             if(editingPatientIndex !== null) {
                 const p = patients[editingPatientIndex];
-                p.name = name; p.birth = birth; p.age = age; p.gender = gender; p.bloodType = bloodType;
+                p.name = name; p.birth = birth; p.age = age; p.gender = gender; p.height = height; p.weight = weight; p.bloodType = bloodType;
                 p.dept = dept; p.doctor = doctor; p.room = room; p.hd = hd; p.pod = pod;
                 p.diagCode = diagCode || p.diagCode; p.diagnosis = diagnosis || p.diagnosis; p.cc = cc;
 
@@ -2351,9 +2100,9 @@ const pod = document.getElementById('pPOD').value.trim() || 0;
                 // '신규 등록' 이라면 새 데이터를 만듭니다. 차트번호는 무작위(시간)로 만듭니다.
                 const chartNo = 'P' + String(Date.now()).slice(-5);
                 const newPatient = {
-                    chartNo, name, birth, age, gender, bloodType, dept, doctor, room, hd, pod,
+                    chartNo, name, birth, age, gender, height, weight, bloodType, dept, doctor, room, hd, pod,
                     diagCode: diagCode || 'KCD-', diagnosis: diagnosis || '일반 진료', cc, memo: '', bodyMarks: [],
-                    records: { vs: [], io: [], prescriptions: [], nurse: [], surg: [], blood: [], lab: [] }
+                    records: { vs: [], io: [], prescriptions: [], nurse: [], lab: [] }
                 };
                 const ok = await savePatientToBackend(newPatient);
                 if (!ok) { alert('신규 환자 등록에 실패했습니다. 콘솔을 확인하세요.'); return; }
@@ -2372,6 +2121,8 @@ const pod = document.getElementById('pPOD').value.trim() || 0;
             document.getElementById('pGenderCustom').style.display = 'none';
             document.getElementById('pBloodType').value = '';
             document.getElementById('pRoom').value = '';
+            document.getElementById('pHeight').value = '';
+            document.getElementById('pWeight').value = '';
             document.getElementById('pHD').value = '';
             document.getElementById('pPOD').value = '';
             document.getElementById('pDiagnosisSelect').value = '';
@@ -2433,6 +2184,8 @@ const pod = document.getElementById('pPOD').value.trim() || 0;
             updateDoctorSelectOptions();
             document.getElementById('pDoctor').value = p.doctor || '';
             document.getElementById('pRoom').value = p.room || '';
+            document.getElementById('pHeight').value = p.height || '';
+            document.getElementById('pWeight').value = p.weight || '';
             document.getElementById('pHD').value = p.hd || '';
             document.getElementById('pPOD').value = p.pod || '';
             
@@ -2534,6 +2287,9 @@ function openPatientDetail(index) {
             document.getElementById('dName').innerText = p.name;
             document.getElementById('dAgeGender').innerText = `만 ${p.age} 세 / ${p.gender || '-'}`;
             document.getElementById('dBirth').innerText = p.birth;
+            const heightText = p.height !== undefined && p.height !== null && p.height !== '' ? `${p.height} cm` : '-';
+            const weightText = p.weight !== undefined && p.weight !== null && p.weight !== '' ? `${p.weight} kg` : '-';
+            document.getElementById('dHeightWeight').innerText = `${heightText} / ${weightText}`;
             document.getElementById('dBloodType').innerText = p.bloodType || '미확인';
             document.getElementById('dRoom').innerText = p.room || '미배정';
             document.getElementById('dDeptDoc').innerText = `[${p.dept||'일반외과'}] ${p.doctor||'의사'}`;
@@ -2737,17 +2493,135 @@ function openPatientDetail(index) {
             alert("메모가 저장되었습니다.");
         }
 
-        // 수혈 관리에서 '용량 직접입력'을 선택했을 때만 입력칸이 보이도록 제어하는 함수입니다.
-        function toggleBloodUnitCustom(select) {
-            const customInput = document.getElementById('bloodUnitCustom');
-            // 선택 상자의 값이 'custom'이면 보이게(inline-block), 아니면 숨깁니다(none).
-            customInput.style.display = select.value === 'custom' ? 'inline-block' : 'none';
+        function buildEmrTxtExport() {
+            const p = patients[currentPatientIndex];
+            if (!p) return '선택된 환자가 없습니다.';
+
+            const records = p.records || {};
+            const bodyMarks = p.bodyMarks || [];
+            const summaryLines = [];
+
+            const safeText = (value, fallback = '-') => {
+                const text = String(value ?? '').replace(/\s+/g, ' ').trim();
+                return text || fallback;
+            };
+
+            const groupMarks = (type) => {
+                const list = bodyMarks.filter(m => (m.type || 'OP') === type);
+                if (!list.length) return '없음';
+                return list.slice(0, 6).map(m => {
+                    const side = m.side === 'back' ? '뒷모습' : '앞모습';
+                    const note = safeText(m.note, '메모없음');
+                    return `${side}: ${note}`;
+                }).join(' / ');
+            };
+
+            const summarizePrescriptions = () => {
+                const items = (records.prescriptions || []).slice(0, 6);
+                if (!items.length) return '없음';
+                return items.map(item => {
+                    const date = safeText(item.time, '시간미상');
+                    const category = safeText(item.category, '기타');
+                    const name = safeText(item.note, '처방명없음');
+                    const dose = item.dose && item.dose !== '-' ? ` / ${item.dose}` : '';
+                    const route = item.route && item.route !== '-' ? ` / ${item.route}` : '';
+                    return `${date} | ${category} | ${name}${dose}${route}`;
+                }).join('\n');
+            };
+
+            const summarizeLab = () => {
+                const items = (records.lab || []).slice(0, 6);
+                if (!items.length) return '없음';
+                return items.map(item => {
+                    const date = safeText(item.time, '시간미상');
+                    const name = safeText(item.item, '검사명없음');
+                    const result = safeText(item.result, '결과없음');
+                    return `${date} | ${name} | ${result}`;
+                }).join('\n');
+            };
+
+            const summarizeNurse = () => {
+                const items = (records.nurse || []).slice(0, 6);
+                if (!items.length) return '없음';
+                return items.map(item => {
+                    const date = safeText(item.time, '시간미상');
+                    const note = safeText(item.note, '기록없음');
+                    return `${date} | ${note}`;
+                }).join('\n');
+            };
+
+            const summarizeVs = () => {
+                const items = (records.vs || []).slice(0, 4);
+                if (!items.length) return '없음';
+                return items.map(item => {
+                    const date = safeText(item.time, '시간미상');
+                    return `${date} | BP ${safeText(item.bp, '-')}, HR ${safeText(item.hr, '-')}, RR ${safeText(item.rr, '-')}, BT ${safeText(item.bt, '-')}`;
+                }).join('\n');
+            };
+
+            summaryLines.push('=== EMR 요약본 (챗봇 업로드용) ===');
+            summaryLines.push('※ 토큰 절약을 위해 전체 기록 대신 핵심 정보만 정리하였습니다.');
+            summaryLines.push('');
+            summaryLines.push('1. 기본 정보');
+            summaryLines.push(`- 등록번호: ${safeText(p.chartNo)}`);
+            summaryLines.push(`- 성명: ${safeText(p.name)}`);
+            summaryLines.push(`- 나이/성별: ${safeText(p.age)}세 / ${safeText(p.gender)}`);
+            summaryLines.push(`- 진료과/주치의: ${safeText(p.dept)} / ${safeText(p.doctor)}`);
+            summaryLines.push(`- 병실: ${safeText(p.room, '미배정')}`);
+            summaryLines.push(`- 혈액형: ${safeText(p.bloodType, '미확인')}`);
+            summaryLines.push(`- 진단명: ${safeText(p.diagnosis)}`);
+            summaryLines.push(`- 주호소: ${safeText(p.cc)}`);
+            summaryLines.push(`- 메모: ${safeText(p.memo, '없음')}`);
+            summaryLines.push('');
+            summaryLines.push('2. 특이사항 및 메모');
+            summaryLines.push(safeText(p.memo, '없음'));
+            summaryLines.push('');
+            summaryLines.push('3. 신체부위/마커');
+            summaryLines.push(`- 수술부위: ${groupMarks('OP')}`);
+            summaryLines.push(`- 욕창부위: ${groupMarks('SORE')}`);
+            summaryLines.push(`- 적용기구: ${groupMarks('DEVICE')}`);
+            summaryLines.push('');
+            summaryLines.push('4. 처방내역(요약)');
+            summaryLines.push(summarizePrescriptions());
+            summaryLines.push('');
+            summaryLines.push('5. 검사결과(요약)');
+            summaryLines.push(summarizeLab());
+            summaryLines.push('');
+            summaryLines.push('6. 간호/투약 기록(요약)');
+            summaryLines.push(summarizeNurse());
+            summaryLines.push('');
+            summaryLines.push('7. 활력징후(최근)');
+            summaryLines.push(summarizeVs());
+            summaryLines.push('');
+            summaryLines.push('=== 종료 ===');
+
+            return summaryLines.join('\n');
         }
 
-        // 수혈 부작용에서 '직접입력'을 선택했을 때만 입력칸이 보이도록 제어하는 함수입니다.
-        function toggleBloodSideCustom(select) {
-            const customInput = document.getElementById('bloodSideCustom');
-            customInput.style.display = select.value === 'custom' ? 'inline-block' : 'none';
+        function downloadEmrTxt() {
+            const p = patients[currentPatientIndex];
+            if (!p) {
+                alert('다운로드할 환자가 선택되지 않았습니다.');
+                return;
+            }
+
+            const text = buildEmrTxtExport();
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `EMR_요약_${safeFileName(p.name || 'patient')}_${safeFileName(p.chartNo || 'chart')}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        function safeFileName(value) {
+            return String(value || 'unknown')
+                .replace(/[\\/:*?"<>|]/g, '')
+                .replace(/\s+/g, '_')
+                .slice(0, 30);
         }
 
         // 활력징후, 처방, 수술, 간호 등 탭에서 입력한 다양한 의료 기록을 환자 데이터에 추가하는 통합 함수입니다.
@@ -2834,40 +2708,6 @@ if (!note) return alert("처방 내역을 입력하세요.");
                 sortRecordsByTime(p.records.nurse);
                 nurseNoteEl.value = ''; // 작성 후 입력칸 비우기
                 nurseNoteEl.style.height = '28px';
-                
-            } else if (type === 'surg') {
-                // [수술/동의서 기록 처리]
-                const time = document.getElementById('surgTime').value.replace('T', ' ');
-                const stage = document.getElementById('surgStage').value;
-                const opName = document.getElementById('surgOpName').value.trim();
-                const note = document.getElementById('surgNote').value.trim();
-                if(!time || !opName) return alert("일시와 수술명을 입력하세요.");
-                if(!p.records.surg) p.records.surg = [];
-                p.records.surg.push({ time, stage, opName, note });
-                sortRecordsByTime(p.records.surg);
-                // 작성 후 입력칸 비우기
-                document.getElementById('surgOpName').value = '';
-                document.getElementById('surgNote').value = '';
-                
-            } else if (type === 'blood') {
-                // [수혈 기록 처리]
-                const time = document.getElementById('bloodTime').value.replace('T', ' ');
-                const bType = document.getElementById('bloodType').value;
-                const code = document.getElementById('bloodCode').value.trim() || '-';
-                
-                const unitSelect = document.getElementById('bloodUnitSelect').value;
-                // '직접입력'을 선택했다면 입력칸의 값을 사용하고, 아니면 선택된 값을 사용합니다.
-                const unit = unitSelect === 'custom' ? document.getElementById('bloodUnitCustom').value.trim() : unitSelect;
-                const vs = document.getElementById('bloodVs').value.trim() || '-';
-                
-                const sideSelect = document.getElementById('bloodSideEffectSelect').value;
-                const sideEffect = sideSelect === 'custom' ? document.getElementById('bloodSideCustom').value.trim() : sideSelect;
-                
-                if(!time) return alert("시간을 입력하세요.");
-                if(!p.records.blood) p.records.blood = [];
-                p.records.blood.push({ time, bType, code, unit, vs, sideEffect });
-                sortRecordsByTime(p.records.blood);
-                document.getElementById('bloodCode').value = ''; // 코드 입력칸 비우기
                 
             } else if (type === 'lab_img') {
                 // [검사 결과 기록 처리]
@@ -3013,8 +2853,6 @@ if (!note) return alert("처방 내역을 입력하세요.");
             // splice(idx, 1)은 배열에서 idx 위치에 있는 데이터 1개를 지우라는 명령어입니다.
             if (type === 'presc') p.records.prescriptions.splice(idx, 1);
             else if (type === 'nurse') p.records.nurse.splice(idx, 1);
-            else if (type === 'surg') p.records.surg.splice(idx, 1);
-            else if (type === 'blood') p.records.blood.splice(idx, 1);
             else if (type === 'lab_img') p.records.lab.splice(idx, 1);
             else if (type === 'vs') p.records.vs.splice(idx, 1);
             else if (type === 'io') p.records.io.splice(idx, 1);
@@ -3050,10 +2888,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
         /* --- 환자의 모든 하단 기록(표와 그래프들)을 한 번에 다시 그리는 함수 --- */
         function renderAllRecords() {
             if (currentPatientIndex === null) return;
-            // 각각의 표와 그래프를 그리는 함수들을 차례대로 모두 호출합니다.
             renderPrescriptionTable();
-            renderSurgTable();
-            renderBloodTable();
             renderLabTable();
             renderNurseTable();
             renderVsSection();
@@ -3373,54 +3208,6 @@ function editPresc(index) {
                     <td style="text-align:left;">${r.note}</td>
                     <td><b>${r.nurse || '-'}</b></td>
                     <td><button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('nurse', ${idx})">삭제</button></td>
-                </tr>
-            `).join('');
-        }
-
-        // [수술 및 동의서 기록 표 그리기]
-        function renderSurgTable() {
-            const p = patients[currentPatientIndex];
-            const tbody = document.getElementById('surgTable');
-            if (!tbody || !p) return;
-            const records = p.records?.surg || [];
-
-            if (records.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#94a3b8;">등록된 수술 기록이 없습니다.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = records.map((r, idx) => `
-                <tr>
-                    <td>${r.time}</td>
-                    <td><b>${r.stage}</b></td>
-                    <td style="font-weight:bold; color:var(--primary-navy);">${r.opName}</td>
-                    <td style="text-align:left;">${r.note || '-'}</td>
-                    <td><button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('surg', ${idx})">삭제</button></td>
-                </tr>
-            `).join('');
-        }
-
-        // [수혈 기록 표 그리기]
-        function renderBloodTable() {
-            const p = patients[currentPatientIndex];
-            const tbody = document.getElementById('bloodTable');
-            if (!tbody || !p) return;
-            const records = p.records?.blood || [];
-
-            if (records.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#94a3b8;">등록된 수혈 기록이 없습니다.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = records.map((r, idx) => `
-                <tr>
-                    <td>${r.time}</td>
-                    <td><b style="color:#ef4444;">${r.bType}</b></td>
-                    <td><span class="code-badge">${r.code || '-'}</span></td>
-                    <td>${r.unit || '-'}</td>
-                    <td>${r.vs || '-'}</td>
-                    <td>${r.sideEffect || '없음'}</td>
-                    <td><button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('blood', ${idx})">삭제</button></td>
                 </tr>
             `).join('');
         }
