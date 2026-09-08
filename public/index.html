@@ -14,6 +14,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 그래프를 그리기 위한 외부 도구인 Chart.js를 가져옵니다. -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- PDF 첫 페이지를 이미지로 렌더링하기 위한 PDF.js -->
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
     <!-- Supabase 클라이언트 (CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
     <script>
@@ -175,6 +177,59 @@
 }
 
 .hidden { display: none !important; }
+
+/* n8n 챗봇 팝업: 배경은 클릭을 막지 않고, 창 자체만 상호작용 가능 */
+.n8n-chatbot-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+.n8n-chatbot-window {
+    position: absolute;
+    left: 50%;
+    top: 8vh;
+    transform: translateX(-50%);
+    width: min(900px, 92vw);
+    height: min(82vh, 760px);
+    min-width: 380px;
+    min-height: 320px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.2);
+    border: 1px solid #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    pointer-events: auto;
+    animation: modalFadeIn 0.2s ease-out;
+}
+
+.n8n-chatbot-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    cursor: move;
+    user-select: none;
+}
+
+.n8n-resize-handle {
+    position: absolute;
+    z-index: 3;
+    background: transparent;
+}
+.n8n-resize-handle.n { top: -4px; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+.n8n-resize-handle.s { bottom: -4px; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+.n8n-resize-handle.e { right: -4px; top: 8px; bottom: 8px; width: 8px; cursor: ew-resize; }
+.n8n-resize-handle.w { left: -4px; top: 8px; bottom: 8px; width: 8px; cursor: ew-resize; }
+.n8n-resize-handle.ne { top: -4px; right: -4px; width: 12px; height: 12px; cursor: nesw-resize; }
+.n8n-resize-handle.nw { top: -4px; left: -4px; width: 12px; height: 12px; cursor: nwse-resize; }
+.n8n-resize-handle.se { bottom: -4px; right: -4px; width: 12px; height: 12px; cursor: nwse-resize; }
+.n8n-resize-handle.sw { bottom: -4px; left: -4px; width: 12px; height: 12px; cursor: nesw-resize; }
 
         /* 데이터가 들어가는 표(table) 기본 디자인입니다. */
         table { width: 100%; border-collapse: separate; border-spacing: 0; background: white; }
@@ -475,6 +530,7 @@
                     <b id="formTitle" style="font-size:12px; color:var(--primary-navy);">[신규 환자 등록]</b>
                     
                     <div class="input-grid">
+                        <input type="text" id="pChartNo" placeholder="등록번호 * (예: P12345)">
                         <input type="text" id="pName" placeholder="환자명 *">
                         <input type="text" id="pBirth" placeholder="생년월일(예: 850101) *" oninput="autoCalculateAge(this.value)">
                         <input type="number" id="pAge" placeholder="만 나이 (자동입력)" readonly style="background-color: #e2e8f0;">
@@ -551,9 +607,9 @@
                 </div>
 
 <!-- n8n 챗봇 모달 -->
-<div id="n8n-chatbot-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); display: none; align-items: center; justify-content: center; z-index: 9999;">
-    <div style="background: white; padding: 16px; border-radius: 12px; width: min(900px, 92vw); height: min(82vh, 760px); box-shadow: 0 16px 40px rgba(15, 23, 42, 0.2); display: flex; flex-direction: column;">
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px;">
+<div id="n8n-chatbot-modal" class="n8n-chatbot-modal hidden" aria-hidden="true">
+    <div id="n8n-chatbot-window" class="n8n-chatbot-window" role="dialog" aria-modal="false" aria-label="n8n 챗봇">
+        <div id="n8n-chatbot-header" class="n8n-chatbot-header">
             <h3 style="margin: 0; font-size: 16px;">💬 n8n 챗봇 피드백</h3>
             <button type="button" onclick="closeN8nChatbotModal()" style="background: none; color: #475569; font-size: 22px; border: none; cursor: pointer;">×</button>
         </div>
@@ -565,6 +621,15 @@
             style="width:100%; height:100%; border:1px solid #e2e8f0; border-radius:10px; background:#fff;"
             allow="clipboard-write; microphone; camera"
         ></iframe>
+
+        <div class="n8n-resize-handle n" data-dir="n"></div>
+        <div class="n8n-resize-handle s" data-dir="s"></div>
+        <div class="n8n-resize-handle e" data-dir="e"></div>
+        <div class="n8n-resize-handle w" data-dir="w"></div>
+        <div class="n8n-resize-handle ne" data-dir="ne"></div>
+        <div class="n8n-resize-handle nw" data-dir="nw"></div>
+        <div class="n8n-resize-handle se" data-dir="se"></div>
+        <div class="n8n-resize-handle sw" data-dir="sw"></div>
     </div>
 </div>
 
@@ -832,8 +897,10 @@
                                         <div id="documentList" style="display:flex; flex-direction:column; gap:8px; padding:8px;"></div>
                                     </div>
                                     <div class="input-bar-bottom" style="padding:8px; border:1px solid var(--border-color); border-radius:4px; background:#f8fafc; gap:8px;">
-                                        <button class="btn-blue" onclick="openNursingAssessmentEditor()">간호정보조사지 작성</button>
+                                        <input type="text" id="documentNameInput" placeholder="서류 표시 이름 입력" style="width:220px;">
                                         <button class="btn-slate" onclick="openDocumentUploadFallback()">PDF 서류 업로드</button>
+                                        <button class="btn-green" id="documentRegisterBtn" onclick="registerSelectedDocument()" disabled style="opacity:0.55; cursor:not-allowed;">등록</button>
+                                        <div id="documentAttachInfo" style="display:none; font-size:11px; color:#334155; background:#e2e8f0; border:1px solid #cbd5e1; border-radius:999px; padding:4px 8px;"></div>
                                     </div>
                                 </div>
 
@@ -1023,12 +1090,14 @@
         // 현재 프로그램의 상태를 기억하는 변수들입니다.
         let currentPatientIndex = null; // 지금 보고 있는 환자가 누구인지 기억
         let editingPatientIndex = null; // 수정 중인 환자가 누구인지 기억
+        let editingOriginalChartNo = null; // 수정 시작 시점의 원래 등록번호
         let editingPrescIndex = null;   // 수정 중인 처방전 기록 기억
         let targetPrescModalIndex = null;
         let currentBodySide = 'front';  // 마네킹이 앞모습인지 뒷모습인지 기억
         let selectedMarkType = 'OP';    // 선택된 핀 종류(수술부위 등) 기억
         let vsChartInstance = null;     // V/S 그래프 객체
         let ioChartInstance = null;     // I/O 그래프 객체
+        let pendingDocumentUpload = null; // PDF 선택 후 등록 전 임시 보관
 
         // V/S 항목 중 어떤 것을 차트에 보여줄지 숨길지 결정하는 값입니다.
         let vsVisibility = { bp: true, hr: true, rr: true, bt: true, spo2: true };
@@ -1231,9 +1300,153 @@
         }
 const N8N_CHATBOT_URL = 'https://emr-chatbot.onrender.com/webhook/f944a844-cd48-4aeb-bf36-e4b337724993/chat';
 
+const N8N_CHATBOT_MIN_WIDTH = 380;
+const N8N_CHATBOT_MIN_HEIGHT = 320;
+const n8nChatbotPointerState = {
+    type: null,
+    dir: '',
+    pointerId: null,
+    startX: 0,
+    startY: 0,
+    startLeft: 0,
+    startTop: 0,
+    startWidth: 0,
+    startHeight: 0
+};
+
+function initN8nChatbotInteractions() {
+    const modal = document.getElementById('n8n-chatbot-modal');
+    const popup = document.getElementById('n8n-chatbot-window');
+    const header = document.getElementById('n8n-chatbot-header');
+    if (!modal || !popup || !header || popup.dataset.interactionBound === 'true') return;
+
+    const beginPointerAction = (type, event, dir = '') => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+
+        const rect = popup.getBoundingClientRect();
+        n8nChatbotPointerState.type = type;
+        n8nChatbotPointerState.dir = dir;
+        n8nChatbotPointerState.pointerId = event.pointerId;
+        n8nChatbotPointerState.startX = event.clientX;
+        n8nChatbotPointerState.startY = event.clientY;
+        n8nChatbotPointerState.startLeft = rect.left;
+        n8nChatbotPointerState.startTop = rect.top;
+        n8nChatbotPointerState.startWidth = rect.width;
+        n8nChatbotPointerState.startHeight = rect.height;
+
+        document.body.style.userSelect = 'none';
+    };
+
+    header.addEventListener('pointerdown', (event) => {
+        if (event.target.closest('button')) return;
+        beginPointerAction('drag', event);
+    });
+
+    popup.querySelectorAll('.n8n-resize-handle').forEach((handle) => {
+        handle.addEventListener('pointerdown', (event) => {
+            beginPointerAction('resize', event, handle.dataset.dir || '');
+        });
+    });
+
+    const endPointerAction = () => {
+        n8nChatbotPointerState.type = null;
+        n8nChatbotPointerState.dir = '';
+        n8nChatbotPointerState.pointerId = null;
+        document.body.style.userSelect = '';
+    };
+
+    window.addEventListener('pointerup', endPointerAction);
+    window.addEventListener('pointercancel', endPointerAction);
+
+    window.addEventListener('pointermove', (event) => {
+        if (!n8nChatbotPointerState.type) return;
+
+        const viewportW = window.innerWidth;
+        const viewportH = window.innerHeight;
+        const margin = 8;
+        const dx = event.clientX - n8nChatbotPointerState.startX;
+        const dy = event.clientY - n8nChatbotPointerState.startY;
+
+        let left = n8nChatbotPointerState.startLeft;
+        let top = n8nChatbotPointerState.startTop;
+        let width = n8nChatbotPointerState.startWidth;
+        let height = n8nChatbotPointerState.startHeight;
+
+        if (n8nChatbotPointerState.type === 'drag') {
+            left = n8nChatbotPointerState.startLeft + dx;
+            top = n8nChatbotPointerState.startTop + dy;
+
+            left = Math.max(margin, Math.min(left, viewportW - width - margin));
+            top = Math.max(margin, Math.min(top, viewportH - 44));
+
+            popup.style.left = left + 'px';
+            popup.style.top = top + 'px';
+            popup.style.transform = 'none';
+            return;
+        }
+
+        const dir = n8nChatbotPointerState.dir;
+        if (dir.includes('e')) {
+            width = n8nChatbotPointerState.startWidth + dx;
+        }
+        if (dir.includes('s')) {
+            height = n8nChatbotPointerState.startHeight + dy;
+        }
+        if (dir.includes('w')) {
+            width = n8nChatbotPointerState.startWidth - dx;
+            left = n8nChatbotPointerState.startLeft + dx;
+        }
+        if (dir.includes('n')) {
+            height = n8nChatbotPointerState.startHeight - dy;
+            top = n8nChatbotPointerState.startTop + dy;
+        }
+
+        const maxWidth = Math.max(N8N_CHATBOT_MIN_WIDTH, viewportW - margin * 2);
+        const maxHeight = Math.max(N8N_CHATBOT_MIN_HEIGHT, viewportH - margin * 2);
+
+        width = Math.max(N8N_CHATBOT_MIN_WIDTH, Math.min(width, maxWidth));
+        height = Math.max(N8N_CHATBOT_MIN_HEIGHT, Math.min(height, maxHeight));
+
+        if (dir.includes('w')) {
+            left = n8nChatbotPointerState.startLeft + (n8nChatbotPointerState.startWidth - width);
+        }
+        if (dir.includes('n')) {
+            top = n8nChatbotPointerState.startTop + (n8nChatbotPointerState.startHeight - height);
+        }
+
+        left = Math.max(margin, Math.min(left, viewportW - width - margin));
+        top = Math.max(margin, Math.min(top, viewportH - height - margin));
+
+        popup.style.left = left + 'px';
+        popup.style.top = top + 'px';
+        popup.style.width = width + 'px';
+        popup.style.height = height + 'px';
+        popup.style.transform = 'none';
+    });
+
+    popup.dataset.interactionBound = 'true';
+}
+
+function resetN8nChatbotPosition() {
+    const popup = document.getElementById('n8n-chatbot-window');
+    if (!popup) return;
+    popup.style.left = '50%';
+    popup.style.top = '8vh';
+    popup.style.transform = 'translateX(-50%)';
+    popup.style.width = 'min(900px, 92vw)';
+    popup.style.height = 'min(82vh, 760px)';
+}
+
 function openN8nChatbot() {
     const modal = document.getElementById('n8n-chatbot-modal');
     if (!modal) return;
+
+    initN8nChatbotInteractions();
+    if (!modal.dataset.openedOnce) {
+        resetN8nChatbotPosition();
+        modal.dataset.openedOnce = 'true';
+    }
 
     const iframe = document.getElementById('n8nChatbotFrame');
     if (iframe) {
@@ -1241,9 +1454,10 @@ function openN8nChatbot() {
     }
 
     modal.classList.remove('hidden');
-    modal.style.display = 'flex';
+    modal.style.display = 'block';
     modal.style.position = 'fixed';
     modal.style.zIndex = '9999';
+    modal.setAttribute('aria-hidden', 'false');
 }
 
 function closeN8nChatbotModal() {
@@ -1251,6 +1465,7 @@ function closeN8nChatbotModal() {
     if (!modal) return;
     modal.classList.add('hidden');
     modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
 }
 
 function getCurrentPatientName() {
@@ -2154,10 +2369,11 @@ function getCurrentPatientName() {
 
         // 작성한 환자 폼을 최종적으로 묶어서 저장(또는 수정)하는 기능입니다.
         async function savePatientForm() {
+            const chartNo = document.getElementById('pChartNo').value.trim();
             const name = document.getElementById('pName').value.trim();
             const birth = document.getElementById('pBirth').value.trim();
             const age = document.getElementById('pAge').value.trim();
-            if(!name || !birth || !age) return alert("환자명과 올바른 생년월일을 입력해주세요.");
+            if(!chartNo || !name || !birth || !age) return alert("등록번호, 환자명과 올바른 생년월일을 입력해주세요.");
 
             const genderSelect = document.getElementById('pGenderSelect').value;
             let gender = genderSelect === 'custom' ? (document.getElementById('pGenderCustom').value.trim() || '미지정') : (genderSelect || '미지정');
@@ -2185,16 +2401,36 @@ function getCurrentPatientName() {
             // 지금이 '수정' 중이라면 기존 데이터를 덮어씁니다.
             if(editingPatientIndex !== null) {
                 const p = patients[editingPatientIndex];
+                const isChartNoChanged = !!editingOriginalChartNo && editingOriginalChartNo !== chartNo;
+
+                if (patients.some((existing, index) => index !== editingPatientIndex && existing.chartNo === chartNo)) {
+                    return alert('이미 사용 중인 등록번호입니다. 다른 등록번호를 입력해주세요.');
+                }
+
+                p.chartNo = chartNo;
                 p.name = name; p.birth = birth; p.age = age; p.gender = gender; p.height = height; p.weight = weight; p.bloodType = bloodType;
                 p.dept = dept; p.doctor = doctor; p.room = room; p.hd = hd; p.pod = pod;
                 p.diagCode = diagCode || p.diagCode; p.diagnosis = diagnosis || p.diagnosis; p.cc = cc;
 
                 const ok = await savePatientToBackend(p);
                 if (!ok) { alert('환자 정보 저장에 실패했습니다. 콘솔을 확인하세요.'); return; }
+
+                if (isChartNoChanged) {
+                    const { error: deleteError } = await supabase.from('patients').delete().eq('chart_no', editingOriginalChartNo);
+                    if (deleteError) {
+                        console.error('기존 등록번호 레코드 삭제 실패:', deleteError);
+                        alert('등록번호는 변경되었지만 기존 등록번호 레코드 삭제에 실패했습니다. 관리자에게 문의하세요.');
+                    }
+                }
+
                 alert(`${p.name} 환자 정보가 수정되었습니다.`); editingPatientIndex = null;
+                editingOriginalChartNo = null;
             } else {
-                // '신규 등록' 이라면 새 데이터를 만듭니다. 차트번호는 무작위(시간)로 만듭니다.
-                const chartNo = 'P' + String(Date.now()).slice(-5);
+                if (patients.some(existing => existing.chartNo === chartNo)) {
+                    return alert('이미 사용 중인 등록번호입니다. 다른 등록번호를 입력해주세요.');
+                }
+
+                // '신규 등록' 이라면 새 데이터를 만듭니다.
                 const newPatient = {
                     chartNo, name, birth, age, gender, height, weight, bloodType, dept, doctor, room, hd, pod,
                     diagCode: diagCode || 'KCD-', diagnosis: diagnosis || '일반 진료', cc, memo: '', bodyMarks: [],
@@ -2210,6 +2446,9 @@ function getCurrentPatientName() {
 
         // 환자 등록/수정 입력칸을 모두 텅 비워주는 함수입니다.
         function resetForm() {
+            document.getElementById('pChartNo').value = '';
+            document.getElementById('pChartNo').readOnly = false;
+            document.getElementById('pChartNo').style.backgroundColor = '';
             document.getElementById('pName').value = '';
             document.getElementById('pBirth').value = '';
             document.getElementById('pAge').value = '';
@@ -2226,6 +2465,7 @@ function getCurrentPatientName() {
             document.getElementById('pDiagnosisCustom').style.display = 'none';
             document.getElementById('pCC').value = '';
             editingPatientIndex = null;
+            editingOriginalChartNo = null;
             document.getElementById('formTitle').innerText = '[신규 환자 등록]';
             document.getElementById('btnSavePatient').innerText = '+ 환자 등록';
             document.getElementById('btnCancelEdit').style.display = 'none';
@@ -2250,6 +2490,7 @@ function getCurrentPatientName() {
                         <td style="text-align:left;">${p.cc}</td>
                         <td>
                             <button class="btn-slate" style="padding:1px 5px; margin-right:2px;" onclick="editPatient(${idx})">수정</button>
+                            <button class="btn-blue" style="padding:1px 5px; margin-right:2px;" onclick="duplicatePatient(${idx})">복사등록</button>
                             <button class="btn-red" style="padding:1px 5px;" onclick="deletePatient(${idx})">삭제</button>
                         </td>
                     </tr>
@@ -2260,7 +2501,11 @@ function getCurrentPatientName() {
         // '수정' 버튼을 눌렀을 때 폼 안에 기존 데이터를 채워넣어 줍니다.
         function editPatient(idx) {
             editingPatientIndex = idx;
+            editingOriginalChartNo = patients[idx]?.chartNo || null;
             const p = patients[idx];
+            document.getElementById('pChartNo').value = p.chartNo || '';
+            document.getElementById('pChartNo').readOnly = false;
+            document.getElementById('pChartNo').style.backgroundColor = '';
             document.getElementById('pName').value = p.name;
             document.getElementById('pBirth').value = p.birth;
             document.getElementById('pAge').value = p.age;
@@ -2323,6 +2568,35 @@ function getCurrentPatientName() {
             }
         }
 
+        async function duplicatePatient(idx) {
+            const source = patients[idx];
+            if (!source) return;
+
+            if (!confirm(`'${source.name}' 환자와 EMR 전체 기록을 복사 등록하시겠습니까?`)) return;
+
+            const generateChartNo = () => {
+                let next = '';
+                do {
+                    next = 'P' + String(Date.now()).slice(-5) + String(Math.floor(Math.random() * 10));
+                } while (patients.some(p => p.chartNo === next));
+                return next;
+            };
+
+            const cloned = JSON.parse(JSON.stringify(source));
+            cloned.chartNo = generateChartNo();
+            cloned.name = `${source.name} 복사본`;
+
+            const ok = await savePatientToBackend(cloned);
+            if (!ok) {
+                alert('환자 복사 등록에 실패했습니다.');
+                return;
+            }
+
+            await fetchInitialData();
+            renderPatientList();
+            alert(`복사 등록 완료: ${cloned.name} (${cloned.chartNo})`);
+        }
+
         // EMR 차트 안쪽 2열 하단에 있는 작고 빠른 환자 검색 리스트를 그립니다.
         function renderQuickPatientList(filterText = '') {
             const listContainer = document.getElementById('quickPatientList');
@@ -2374,6 +2648,7 @@ function openPatientDetail(index) {
         closeN8nChatbotModal();
     }
 
+    clearPendingDocumentUpload(true);
     currentPatientIndex = index; // 내가 지금 클릭한 환자의 순서 번호를 기억합니다.
     const p = patients[index]; // 환자 정보를 꺼내옵니다.
 
@@ -2605,103 +2880,162 @@ function openPatientDetail(index) {
 
             const records = p.records || {};
             const bodyMarks = p.bodyMarks || [];
-            const summaryLines = [];
+            const lines = [];
 
             const safeText = (value, fallback = '-') => {
                 const text = String(value ?? '').replace(/\s+/g, ' ').trim();
                 return text || fallback;
             };
 
-            const groupMarks = (type) => {
-                const list = bodyMarks.filter(m => (m.type || 'OP') === type);
-                if (!list.length) return '없음';
-                return list.slice(0, 6).map(m => {
-                    const side = m.side === 'back' ? '뒷모습' : '앞모습';
-                    const note = safeText(m.note, '메모없음');
-                    return `${side}: ${note}`;
-                }).join(' / ');
+            const formatDateLike = (value) => safeText(value, '시간미상');
+            const section = (title) => {
+                lines.push(title);
+                lines.push('-'.repeat(Math.max(6, title.length)));
             };
 
-            const summarizePrescriptions = () => {
-                const items = (records.prescriptions || []).slice(0, 6);
+            const extractFirstNumber = (value) => {
+                const match = String(value ?? '').replace(/,/g, '').match(/-?\d+(?:\.\d+)?/);
+                return match ? Number(match[0]) : null;
+            };
+
+            const parseRefRange = (value) => {
+                const text = String(value ?? '').trim();
+                if (!text) return null;
+
+                const normalized = text.replace(/\s+/g, '').replace(/~/g, '-');
+                const between = normalized.match(/^(-?\d+(?:\.\d+)?)\s*[-]\s*(-?\d+(?:\.\d+)?)$/);
+                if (between) {
+                    return { min: Number(between[1]), max: Number(between[2]) };
+                }
+
+                const lt = normalized.match(/^(?:<|<=|이하)(-?\d+(?:\.\d+)?)$/i);
+                if (lt) return { min: null, max: Number(lt[1]) };
+
+                const gt = normalized.match(/^(?:>|>=|이상)(-?\d+(?:\.\d+)?)$/i);
+                if (gt) return { min: Number(gt[1]), max: null };
+
+                return null;
+            };
+
+            const isLabOutOfRange = (item) => {
+                const resultValue = extractFirstNumber(item?.result);
+                const ref = parseRefRange(item?.refRange);
+                if (resultValue === null || !ref) return false;
+                if (ref.min !== null && resultValue < ref.min) return true;
+                if (ref.max !== null && resultValue > ref.max) return true;
+                return false;
+            };
+
+            const formatPrescriptions = () => {
+                const items = records.prescriptions || [];
                 if (!items.length) return '없음';
-                return items.map(item => {
-                    const date = safeText(item.time, '시간미상');
+                return items.map((item, idx) => {
+                    const date = formatDateLike(item.time);
                     const category = safeText(item.category, '기타');
                     const name = safeText(item.note, '처방명없음');
-                    const dose = item.dose && item.dose !== '-' ? ` / ${item.dose}` : '';
-                    const route = item.route && item.route !== '-' ? ` / ${item.route}` : '';
-                    return `${date} | ${category} | ${name}${dose}${route}`;
+                    const dose = safeText(item.dose, '-');
+                    const freq = safeText(item.freq, '-');
+                    const route = safeText(item.route, '-');
+                    const issuer = safeText(item.issuer, '-');
+                    const status = safeText(item.status, '-');
+                    const nurse = safeText(item.nurse, '-');
+                    return `${idx + 1}) ${date} | 구분:${category} | 처방:${name} | 용량:${dose} | 횟수:${freq} | 경로:${route} | 발행:${issuer} | 상태:${status} | 수행:${nurse}`;
                 }).join('\n');
             };
 
-            const summarizeLab = () => {
-                const items = (records.lab || []).slice(0, 6);
-                if (!items.length) return '없음';
-                return items.map(item => {
-                    const date = safeText(item.time, '시간미상');
+            const formatLab = () => {
+                const items = (records.lab || []).filter(isLabOutOfRange);
+                if (!items.length) return '정상범위 이탈 검사 없음';
+                return items.map((item, idx) => {
+                    const date = formatDateLike(item.time);
+                    const category = safeText(item.category, '기타');
                     const name = safeText(item.item, '검사명없음');
                     const result = safeText(item.result, '결과없음');
-                    return `${date} | ${name} | ${result}`;
+                    const refRange = safeText(item.refRange, '-');
+                    const unit = safeText(item.unit, '-');
+                    return `${idx + 1}) ${date} | 구분:${category} | 검사:${name} | 결과:${result} | 정상범위:${refRange} | 단위:${unit}`;
                 }).join('\n');
             };
 
-            const summarizeNurse = () => {
-                const items = (records.nurse || []).slice(0, 6);
+            const formatNurse = () => {
+                const items = records.nurse || [];
                 if (!items.length) return '없음';
-                return items.map(item => {
-                    const date = safeText(item.time, '시간미상');
+                return items.map((item, idx) => {
+                    const date = formatDateLike(item.time);
                     const note = safeText(item.note, '기록없음');
-                    return `${date} | ${note}`;
+                    const nurse = safeText(item.nurse, '간호사');
+                    return `${idx + 1}) ${date} | 수행:${nurse} | 내용:${note}`;
                 }).join('\n');
             };
 
-            const summarizeVs = () => {
-                const items = (records.vs || []).slice(0, 4);
+            const formatVs = () => {
+                const items = records.vs || [];
                 if (!items.length) return '없음';
-                return items.map(item => {
-                    const date = safeText(item.time, '시간미상');
-                    return `${date} | BP ${safeText(item.bp, '-')}, HR ${safeText(item.hr, '-')}, RR ${safeText(item.rr, '-')}, BT ${safeText(item.bt, '-')}`;
+                return items.map((item, idx) => {
+                    const date = formatDateLike(item.time);
+                    return `${idx + 1}) ${date} | BP ${safeText(item.bp, '-')} | HR ${safeText(item.hr, '-')} | RR ${safeText(item.rr, '-')} | BT ${safeText(item.bt, '-')} | SpO2 ${safeText(item.spo2, '-')}`;
                 }).join('\n');
             };
 
-            summaryLines.push('=== EMR 요약본 (챗봇 업로드용) ===');
-            summaryLines.push('※ 토큰 절약을 위해 전체 기록 대신 핵심 정보만 정리하였습니다.');
-            summaryLines.push('');
-            summaryLines.push('1. 기본 정보');
-            summaryLines.push(`- 등록번호: ${safeText(p.chartNo)}`);
-            summaryLines.push(`- 성명: ${safeText(p.name)}`);
-            summaryLines.push(`- 나이/성별: ${safeText(p.age)}세 / ${safeText(p.gender)}`);
-            summaryLines.push(`- 진료과/주치의: ${safeText(p.dept)} / ${safeText(p.doctor)}`);
-            summaryLines.push(`- 병실: ${safeText(p.room, '미배정')}`);
-            summaryLines.push(`- 혈액형: ${safeText(p.bloodType, '미확인')}`);
-            summaryLines.push(`- 진단명: ${safeText(p.diagnosis)}`);
-            summaryLines.push(`- 주호소: ${safeText(p.cc)}`);
-            summaryLines.push(`- 메모: ${safeText(p.memo, '없음')}`);
-            summaryLines.push('');
-            summaryLines.push('2. 특이사항 및 메모');
-            summaryLines.push(safeText(p.memo, '없음'));
-            summaryLines.push('');
-            summaryLines.push('3. 신체부위/마커');
-            summaryLines.push(`- 수술부위: ${groupMarks('OP')}`);
-            summaryLines.push(`- 욕창부위: ${groupMarks('SORE')}`);
-            summaryLines.push(`- 적용기구: ${groupMarks('DEVICE')}`);
-            summaryLines.push('');
-            summaryLines.push('4. 처방내역(요약)');
-            summaryLines.push(summarizePrescriptions());
-            summaryLines.push('');
-            summaryLines.push('5. 검사결과(요약)');
-            summaryLines.push(summarizeLab());
-            summaryLines.push('');
-            summaryLines.push('6. 간호/투약 기록(요약)');
-            summaryLines.push(summarizeNurse());
-            summaryLines.push('');
-            summaryLines.push('7. 활력징후(최근)');
-            summaryLines.push(summarizeVs());
-            summaryLines.push('');
-            summaryLines.push('=== 종료 ===');
+            const formatIo = () => {
+                const items = records.io || [];
+                if (!items.length) return '없음';
+                return items.map((item, idx) => {
+                    const date = formatDateLike(item.time);
+                    return `${idx + 1}) ${date} | Intake ${safeText(item.intake, '-')} mL | Output ${safeText(item.output, '-')} mL`;
+                }).join('\n');
+            };
 
-            return summaryLines.join('\n');
+            const formatBodyMarks = () => {
+                if (!bodyMarks.length) return '없음';
+                return bodyMarks.map((mark, idx) => {
+                    const type = safeText(mark.type, 'OP');
+                    const side = mark.side === 'back' ? '뒷모습' : '앞모습';
+                    const note = safeText(mark.note, '메모없음');
+                    return `${idx + 1}) 유형:${type} | 위치:${side} | 메모:${note}`;
+                }).join('\n');
+            };
+
+            lines.push('=== EMR 전체 기록본 ===');
+            lines.push(`생성시각: ${new Date().toLocaleString('ko-KR')}`);
+            lines.push('');
+
+            section('1. 환자 기본 정보');
+            lines.push(`성명: ${safeText(p.name)}`);
+            lines.push(`나이: ${safeText(p.age)}`);
+            lines.push(`성별: ${safeText(p.gender)}`);
+            lines.push(`혈액형: ${safeText(p.bloodType, '미확인')}`);
+            lines.push(`진단명: ${safeText(p.diagnosis)}`);
+            lines.push(`주호소: ${safeText(p.cc)}`);
+            lines.push(`메모: ${safeText(p.memo, '없음')}`);
+            lines.push('');
+
+            section('2. 신체부위/마커 전체');
+            lines.push(formatBodyMarks());
+            lines.push('');
+
+            section('3. 처방내역 전체');
+            lines.push(formatPrescriptions());
+            lines.push('');
+
+            section('4. 검사결과 전체');
+            lines.push(formatLab());
+            lines.push('');
+
+            section('5. 간호/투약 기록 전체');
+            lines.push(formatNurse());
+            lines.push('');
+
+            section('6. 활력징후 전체');
+            lines.push(formatVs());
+            lines.push('');
+
+            section('7. I/O 기록 전체');
+            lines.push(formatIo());
+            lines.push('');
+            lines.push('=== 종료 ===');
+
+            return lines.join('\n');
         }
 
         function downloadEmrTxt() {
@@ -3015,725 +3349,194 @@ if (!note) return alert("처방 내역을 입력하세요.");
             });
         }
 
+        function updatePendingDocumentUi() {
+            const attachInfo = document.getElementById('documentAttachInfo');
+            const registerBtn = document.getElementById('documentRegisterBtn');
+            if (attachInfo) {
+                if (pendingDocumentUpload) {
+                    attachInfo.style.display = 'inline-flex';
+                    attachInfo.innerText = `첨부됨: ${pendingDocumentUpload.fileName}`;
+                } else {
+                    attachInfo.style.display = 'none';
+                    attachInfo.innerText = '';
+                }
+            }
+
+            if (registerBtn) {
+                registerBtn.disabled = !pendingDocumentUpload;
+                registerBtn.style.opacity = pendingDocumentUpload ? '1' : '0.55';
+                registerBtn.style.cursor = pendingDocumentUpload ? 'pointer' : 'not-allowed';
+            }
+        }
+
+        function clearPendingDocumentUpload(clearNameInput = false) {
+            pendingDocumentUpload = null;
+            if (clearNameInput) {
+                const nameInput = document.getElementById('documentNameInput');
+                if (nameInput) nameInput.value = '';
+            }
+            updatePendingDocumentUi();
+        }
+
         function openDocumentUploadFallback() {
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
-            fileInput.accept = '.pdf,application/pdf,.txt,text/plain';
+            fileInput.accept = '.pdf,application/pdf';
             fileInput.onchange = async () => {
                 const file = fileInput.files[0];
                 if (!file) return;
 
                 const isPdf = file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf');
-                const isTxt = file.type.includes('text') || file.name.toLowerCase().endsWith('.txt');
-                if (!isPdf && !isTxt) {
-                    alert('PDF 또는 TXT 파일만 등록할 수 있습니다.');
+                if (!isPdf) {
+                    alert('PDF 파일만 등록할 수 있습니다.');
                     return;
                 }
 
                 const p = patients[currentPatientIndex];
                 if (!p) return;
 
-                if (isTxt) {
-                    const text = await file.text();
-                    const parsed = parseNursingAssessmentText(text);
-                    openNursingAssessmentEditor(null, parsed);
-                    return;
+                const defaultName = file.name.replace(/\.pdf$/i, '') || '서류';
+                const nameInput = document.getElementById('documentNameInput');
+                const dataUrl = await readFileAsDataURL(file);
+                const previewImageData = await createPdfPreviewImage(dataUrl);
+
+                pendingDocumentUpload = {
+                    patientIndex: currentPatientIndex,
+                    fileName: file.name,
+                    defaultName,
+                    fileData: dataUrl,
+                    previewImageData
+                };
+
+                if (nameInput && !(nameInput.value || '').trim()) {
+                    nameInput.value = defaultName;
                 }
 
-                const name = file.name.replace(/\.pdf$/i, '') || '서류';
-                const dataUrl = await readFileAsDataURL(file);
-                if (!p.records) p.records = {};
-                if (!p.records.documents) p.records.documents = [];
-                p.records.documents.push({
-                    id: Date.now(),
-                    name,
-                    type: 'pdf',
-                    fileName: file.name,
-                    fileData: dataUrl,
-                    createdAt: new Date().toISOString()
-                });
-                await savePatientToBackend(p);
-                renderDocumentsSection();
-                alert('PDF 서류가 등록되었습니다.');
+                updatePendingDocumentUi();
             };
             fileInput.click();
         }
 
-        function parseNursingAssessmentText(text) {
-            const result = {
-                patientName: '', patientId: '', sex: '', age: '', ward: '', nurse: '', admissionDate: '', complaint: '',
-                currentSymptom: '', bt: '', hr: '', rr: '', bp: '', spo2: '', height: '', weight: '', pain: '', mental: '',
-                mobility: '', nutrition: '', bowel: '', urinary: '', sleep: '', risk: '', nursingPlan: '',
-                admissionRoute: '', bloodType: '', job: '', religion: '', education: '', secretRequirement: '', explanationConsent: '',
-                admissionNursingEducation: '', admissionNursingEducationDetail: '', guardianSignature: ''
-            };
-
-            const normalize = (value) => String(value || '')
-                .replace(/\u200B/g, '')
-                .replace(/\r/g, '')
-                .replace(/[\t ]+/g, ' ')
-                .trim();
-
-            const lines = normalize(text).split(/\n+/).map(line => line.trim()).filter(Boolean);
-            const labelPatterns = [
-                { aliases: ['주증상 및 입원동기', '주증상및입원동기'], key: 'complaint' },
-                { aliases: ['환자명', '성명', '이름'], key: 'patientName' },
-                { aliases: ['등록번호', '환자번호'], key: 'patientId' },
-                { aliases: ['성별'], key: 'sex' },
-                { aliases: ['나이'], key: 'age' },
-                { aliases: ['병실', '병동', '호실'], key: 'ward' },
-                { aliases: ['담당간호사', '작성자'], key: 'nurse' },
-                { aliases: ['입원일', '입원일시', '입원(작성)일시'], key: 'admissionDate' },
-                { aliases: ['입원경로'], key: 'admissionRoute' },
-                { aliases: ['혈액형'], key: 'bloodType' },
-                { aliases: ['직업'], key: 'job' },
-                { aliases: ['종교'], key: 'religion' },
-                { aliases: ['교육정도'], key: 'education' },
-                { aliases: ['주호소', '주증상', '입원동기'], key: 'complaint' },
-                { aliases: ['진단명'], key: 'complaint' },
-                { aliases: ['혈압'], key: 'bp' },
-                { aliases: ['맥박'], key: 'hr' },
-                { aliases: ['호흡'], key: 'rr' },
-                { aliases: ['체온'], key: 'bt' },
-                { aliases: ['SpO2', 'spo2'], key: 'spo2' },
-                { aliases: ['신장'], key: 'height' },
-                { aliases: ['체중'], key: 'weight' },
-                { aliases: ['통증위험', '통증정도', '통증'], key: 'pain' },
-                { aliases: ['인지상태', '의식상태'], key: 'mental' },
-                { aliases: ['활동상태', '활동/보행'], key: 'mobility' },
-                { aliases: ['영양상태'], key: 'nutrition' },
-                { aliases: ['배뇨/배변', '배변', '배뇨'], key: 'bowel' },
-                { aliases: ['수면상태', '수면장애'], key: 'sleep' },
-                { aliases: ['위험요인', '관찰사항'], key: 'risk' },
-                { aliases: ['간호계획', '간호계획 및 수행 내용'], key: 'nursingPlan' },
-                { aliases: ['현재 증상', '현재증상'], key: 'currentSymptom' },
-                { aliases: ['사생활 보호를 위한 환자의 비밀 요구사항', '비밀 요구사항'], key: 'secretRequirement' },
-                { aliases: ['설명을 듣고 이해하셨습니까', '상기 내용에 대한 설명을 듣고 이해하셨습니까'], key: 'explanationConsent' }
-            ];
-
-            for (const line of lines) {
-                const colonIndex = line.indexOf(':');
-                if (colonIndex === -1) {
-                    const vitalMatch = line.match(/활력\s*징후\s*[:：]?\s*(.*)$/i);
-                    if (!vitalMatch) continue;
-                    const vitalText = vitalMatch[1];
-                    const bpMatch = vitalText.match(/혈압\s*([0-9]{2,3}\s*\/\s*[0-9]{2,3})/i);
-                    const hrMatch = vitalText.match(/맥박\s*([0-9]{1,3})/i);
-                    const rrMatch = vitalText.match(/호흡\s*([0-9]{1,3})/i);
-                    const btMatch = vitalText.match(/체온\s*([0-9]{2,3}(?:\.\d)?)/i);
-                    if (bpMatch) result.bp = bpMatch[1].replace(/\s+/g, '');
-                    if (hrMatch) result.hr = hrMatch[1];
-                    if (rrMatch) result.rr = rrMatch[1];
-                    if (btMatch) result.bt = btMatch[1];
-                    continue;
-                }
-
-                const beforeColon = line.slice(0, colonIndex).trim();
-                const afterColon = line.slice(colonIndex + 1).trim();
-                if (!beforeColon || !afterColon) continue;
-
-                const normalizedLabel = beforeColon.replace(/\s+/g, '');
-                const matched = labelPatterns.find(({ aliases }) => aliases.some(alias => normalize(alias).replace(/\s+/g, '') === normalizedLabel));
-                if (!matched) continue;
-
-                const value = afterColon.replace(/\s+/g, ' ').trim();
-                if (!value) continue;
-
-                const { key } = matched;
-                if (key === 'complaint') {
-                    if (!result.complaint) result.complaint = value;
-                    else if (!result.complaint.includes(value)) result.complaint += ' / ' + value;
-                } else if (key === 'patientId') {
-                    result.patientId = value.replace(/[^A-Za-z0-9-]/g, '');
-                } else if (key === 'explanationConsent' || key === 'secretRequirement') {
-                    result[key] = value;
-                } else {
-                    result[key] = value;
-                }
+        async function registerSelectedDocument() {
+            if (!pendingDocumentUpload) {
+                alert('먼저 PDF 파일을 첨부해 주세요.');
+                return;
             }
 
-            const fullText = normalize(text);
-            const fallbackName = fullText.match(/(?:성명|환자명|이름)\s*[:：]?\s*([^\n]+)/i);
-            if (fallbackName && !result.patientName) result.patientName = fallbackName[1].trim();
-            const fallbackComplaint = fullText.match(/주증상\s*및\s*입원동기\s*[:：]?\s*([^\n]+)/i) || fullText.match(/주호소\s*[:：]?\s*([^\n]+)/i);
-            if (fallbackComplaint && !result.complaint) result.complaint = fallbackComplaint[1].trim();
-            const diagnosisText = fullText.match(/진단명\s*[:：]?\s*([^\n]+)/i);
-            if (diagnosisText) {
-                const diagnosisVal = diagnosisText[1].trim();
-                if (!result.complaint) result.complaint = diagnosisVal;
-                else if (!result.complaint.includes(diagnosisVal)) result.complaint += ' / ' + diagnosisVal;
-            }
-            const fallbackWard = fullText.match(/병실\s*[:：]?\s*([^\n]+)/i) || fullText.match(/병동\s*[:：]?\s*([^\n]+)/i);
-            if (fallbackWard && !result.ward) result.ward = fallbackWard[1].trim();
-            const sexMatch = fullText.match(/성별\s*[:：]?\s*(남|여|기타)/i);
-            if (sexMatch && !result.sex) result.sex = sexMatch[1];
-            const ageMatch = fullText.match(/나이\s*[:：]?\s*(\d+\s*세|만\s*\d+\s*세|\d+)/i);
-            if (ageMatch && !result.age) result.age = ageMatch[1];
-
-            return result;
-        }
-
-        function getNursingAssessmentDefaults(p, importedData = null) {
-            const base = {
-                patientName: p.name || '',
-                patientId: p.hd || p.pod || '',
-                sex: p.sex || '',
-                age: p.age || '',
-                ward: '',
-                nurse: '',
-                admissionDate: '',
-                complaint: '',
-                admissionRoute: '',
-                bloodType: '',
-                job: '',
-                religion: '',
-                education: '',
-                currentSymptom: '',
-                bt: '',
-                hr: '',
-                rr: '',
-                bp: '',
-                spo2: '',
-                height: '',
-                weight: '',
-                pain: '',
-                mental: '',
-                mobility: '',
-                nutrition: '',
-                bowel: '',
-                urinary: '',
-                sleep: '',
-                risk: '',
-                nursingPlan: '',
-                admissionNursingEducation: '입원 시 준비물품, 병동시설 안내, 편의시설 안내, 주차 안내, 면회 시간, 식사 시간, 의사 회진시간, 감염관리, 간호사 호출기 사용, 낙상방지, 가스 전열기구 사용금지, 화재예방 및 화재 시 대피요령, 귀중품 관리, 도난방지, 금연안내 및 교육, 진단서 발급, 환자의 권리 및 책임, 불만 및 고충처리, 개인 사생활 및 정보에 대한 비밀보장, 입원 생활 안내문 제공',
-                admissionNursingEducationDetail: '',
-                secretRequirement: '',
-                secretRequirementDetail: '',
-                explanationConsent: '',
-                explanationConsentDetail: '',
-                mentalDetail: '',
-                mobilityDetail: '',
-                nutritionDetail: '',
-                bowelDetail: '',
-                sleepDetail: '',
-                guardianSignature: ''
-            };
-            return { ...base, ...(importedData || {}) };
-        }
-
-        function buildNursingAssessmentField(field, value, formData = {}) {
-            const safeValue = value == null ? '' : String(value);
-            const fieldValue = safeValue.replace(/"/g, '&quot;');
-            const detailValue = field.detailKey ? (formData[field.detailKey] || '') : '';
-            const detailValueEscaped = detailValue.replace(/"/g, '&quot;');
-            const showDetail = safeValue === '기타' || safeValue === '있음';
-
-            if (field.type === 'textarea') {
-                const defaultText = field.key === 'admissionNursingEducation' ? `입원 시 준비물품, 병동시설 안내, 편의시설 안내, 주차 안내, 면회 시간, 식사 시간, 의사 회진시간, 감염관리, 간호사 호출기 사용, 낙상방지, 가스 전열기구 사용금지, 화재예방 및 화재 시 대피요령, 귀중품 관리, 도난방지, 금연안내 및 교육, 진단서 발급, 환자의 권리 및 책임, 불만 및 고충처리, 개인 사생활 및 정보에 대한 비밀보장, 입원 생활 안내문 제공` : safeValue;
-                return `
-                    <div style="grid-column:1 / -1; display:grid; grid-template-columns: 220px 1fr; border-top:1px solid #dfe7f1; min-height:70px; align-items:start;">
-                        <div style="padding:10px 8px; font-size:12px; font-weight:700; color:#0f172a; line-height:1.4; background:#f8fafc; border-right:1px solid #dfe7f1;">${field.label}</div>
-                        <div style="padding:8px; background:#fff;">
-                            <textarea data-field="${field.key}" style="width:100%; min-height:${field.key === 'nursingPlan' || field.key === 'admissionNursingEducation' ? '150px' : '80px'}; resize:vertical; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box; font-size:12px; line-height:1.5; background:#fff;">${(safeValue || defaultText).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
-                        </div>
-                    </div>
-                `;
-            }
-
-            if (field.type === 'select') {
-                const options = (field.options || []).map(option => `
-                    <option value="${option}" ${safeValue === option ? 'selected' : ''}>${option}</option>
-                `).join('');
-                return `
-                    <div style="display:grid; grid-template-columns: 220px 1fr; border-top:1px solid #dfe7f1; min-height:56px; align-items:center;">
-                        <div style="padding:10px 8px; font-size:12px; font-weight:700; color:#0f172a; background:#f8fafc; border-right:1px solid #dfe7f1; line-height:1.4;">${field.label}</div>
-                        <div style="padding:8px; background:#fff;">
-                            <select data-field="${field.key}" data-detail-key="${field.detailKey || ''}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box; font-size:12px; background:#fff;">
-                                <option value="">선택</option>
-                                ${options}
-                            </select>
-                            ${field.detailKey ? `
-                                <div data-detail-container="${field.detailKey}" style="display:${showDetail ? 'block' : 'none'}; margin-top:8px;">
-                                    <input data-detail-field="${field.detailKey}" type="text" value="${detailValueEscaped}" placeholder="${field.detailPlaceholder || '세부 내용을 직접 입력하세요'}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box; font-size:12px; background:#fff;" />
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-
-            if (field.type === 'signature') {
-                return `
-                    <div style="grid-column:1 / -1; display:grid; grid-template-columns: 220px 1fr; border-top:1px solid #dfe7f1; min-height:150px; align-items:start;">
-                        <div style="padding:10px 8px; font-size:12px; font-weight:700; color:#0f172a; background:#f8fafc; border-right:1px solid #dfe7f1; line-height:1.4;">${field.label}</div>
-                        <div style="padding:8px; background:#fff;">
-                            <div style="border:1px solid #cbd5e1; border-radius:6px; overflow:hidden; background:#fff;">
-                                <canvas data-signature-field="${field.key}" width="760" height="160" style="display:block; width:100%; height:160px; background:#fff; cursor:crosshair;"></canvas>
-                            </div>
-                            <div style="display:flex; justify-content:flex-end; margin-top:8px;">
-                                <button type="button" data-clear-signature="${field.key}" style="padding:7px 10px; border:none; border-radius:6px; background:#e2e8f0; color:#0f172a; font-weight:700; cursor:pointer;">지우기</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            const inputType = field.type === 'date' ? 'date' : 'text';
-            return `
-                <div style="display:grid; grid-template-columns: 220px 1fr; border-top:1px solid #dfe7f1; min-height:56px; align-items:center;">
-                    <div style="padding:10px 8px; font-size:12px; font-weight:700; color:#0f172a; background:#f8fafc; border-right:1px solid #dfe7f1; line-height:1.4;">${field.label}</div>
-                    <div style="padding:8px; background:#fff;">
-                        <input data-field="${field.key}" type="${inputType}" value="${fieldValue}" style="width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box; font-size:12px; background:#fff;" />
-                    </div>
-                </div>
-            `;
-        }
-
-        function composeNursingSignatureImage(formValues = {}, signatureDataUrl = '') {
-            const canvas = document.createElement('canvas');
-            const width = 820;
-            const height = 1160;
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, width, height);
-            ctx.strokeStyle = '#111111';
-            ctx.lineWidth = 1.5;
-            ctx.font = '700 26px Malgun Gothic, sans-serif';
-            ctx.fillText('간호정보조사지', 60, 56);
-
-            ctx.font = '12px Malgun Gothic, sans-serif';
-            ctx.fillText(`작성일: ${new Date().toLocaleDateString('ko-KR')}   병동: ${formValues.ward || '-'}   담당간호사: ${formValues.nurse || '-'}`, 500, 60);
-
-            const drawBox = (x, y, w, h, label, value = '', align = 'left') => {
-                ctx.strokeRect(x, y, w, h);
-                ctx.fillStyle = '#f2f2f2';
-                ctx.fillRect(x, y, 170, h);
-                ctx.fillStyle = '#111';
-                ctx.font = '700 12px Malgun Gothic, sans-serif';
-                ctx.fillText(label, x + 12, y + 22);
-                ctx.fillStyle = '#111';
-                ctx.font = '12px Malgun Gothic, sans-serif';
-                const text = value || '';
-                const lines = text.length > 0 ? [text] : [''];
-                lines.forEach((line, index) => {
-                    ctx.fillText(line, x + 182, y + 22 + index * 16, w - 200);
-                });
-            };
-
-            drawBox(60, 90, 700, 44, '환자명', formValues.patientName || '');
-            drawBox(60, 134, 220, 44, '등록번호', formValues.patientId || '');
-            drawBox(280, 134, 150, 44, '성별', formValues.sex || '');
-            drawBox(430, 134, 150, 44, '나이', formValues.age || '');
-            drawBox(580, 134, 180, 44, '병실', formValues.ward || '');
-            drawBox(60, 178, 308, 42, '입원일', formValues.admissionDate || '');
-            drawBox(368, 178, 392, 42, '입원경로', formValues.admissionRoute || '');
-            drawBox(60, 220, 220, 42, '신장', formValues.height ? `${formValues.height} cm` : '');
-            drawBox(280, 220, 220, 42, '체중', formValues.weight ? `${formValues.weight} kg` : '');
-            drawBox(500, 220, 260, 42, '혈액형', formValues.bloodType || '');
-            drawBox(60, 262, 700, 42, '주증상 및 입원동기', formValues.mainComplaint || formValues.complaint || '');
-            drawBox(60, 304, 170, 42, '체온', formValues.bt || '');
-            drawBox(230, 304, 170, 42, '맥박', formValues.hr || '');
-            drawBox(400, 304, 170, 42, '호흡', formValues.rr || '');
-            drawBox(570, 304, 190, 42, '혈압', formValues.bp || '');
-            drawBox(60, 346, 170, 42, 'SpO2', formValues.spo2 || '');
-            drawBox(230, 346, 170, 42, '인지상태', formValues.mental || '');
-            drawBox(400, 346, 170, 42, '활동/보행', formValues.mobility || '');
-            drawBox(570, 346, 190, 42, '영양상태', formValues.nutrition || '');
-            drawBox(60, 388, 700, 62, '위험요인/관찰사항', formValues.risk || '');
-            drawBox(60, 450, 700, 120, '입원 시 간호 및 교육 내용(전문)', formValues.admissionNursingEducation || '');
-            drawBox(60, 570, 700, 74, '추가 교육 내용', formValues.admissionNursingEducationDetail || '');
-            drawBox(60, 644, 700, 42, '서명', '');
-
-            const signatureImage = signatureDataUrl || '';
-            if (signatureImage) {
-                const sigImg = new Image();
-                sigImg.src = signatureImage;
-                ctx.drawImage(sigImg, 320, 680, 220, 80);
-            }
-
-            return canvas.toDataURL('image/png');
-        }
-
-        function openNursingAssessmentEditor(docId = null, importedData = null) {
             const p = patients[currentPatientIndex];
             if (!p) return;
 
-            const docs = p.records && p.records.documents ? p.records.documents : [];
-            const existingDoc = docId ? docs.find(item => item.id == docId) : null;
-            const formData = existingDoc && existingDoc.formData ? existingDoc.formData : getNursingAssessmentDefaults(p, importedData);
+            if (pendingDocumentUpload.patientIndex !== currentPatientIndex) {
+                alert('다른 환자로 이동되어 첨부가 초기화됩니다. 다시 첨부해 주세요.');
+                clearPendingDocumentUpload(true);
+                return;
+            }
 
-            const overlay = document.createElement('div');
-            overlay.style.position = 'fixed';
-            overlay.style.top = '0';
-            overlay.style.left = '0';
-            overlay.style.width = '100vw';
-            overlay.style.height = '100vh';
-            overlay.style.background = 'rgba(15, 23, 42, 0.5)';
-            overlay.style.display = 'flex';
-            overlay.style.alignItems = 'center';
-            overlay.style.justifyContent = 'center';
-            overlay.style.zIndex = '2000';
-            overlay.style.padding = '16px';
-            overlay.style.boxSizing = 'border-box';
-            overlay.style.overflowY = 'auto';
+            const nameInput = document.getElementById('documentNameInput');
+            const typedName = nameInput && typeof nameInput.value === 'string' ? nameInput.value.trim() : '';
+            const name = typedName || pendingDocumentUpload.defaultName || '서류';
 
-            const modal = document.createElement('div');
-            modal.style.width = 'min(1100px, 94vw)';
-            modal.style.maxHeight = '90vh';
-            modal.style.overflowY = 'auto';
-            modal.style.background = '#f5f5f5';
-            modal.style.border = '2px solid #111';
-            modal.style.boxSizing = 'border-box';
-            modal.style.fontFamily = 'Malgun Gothic, Noto Sans KR, sans-serif';
-            modal.style.color = '#111';
-            modal.style.lineHeight = '1.3';
-
-            const titleCase = formData.title || '간호정보조사지';
-            const g = (value, fallback = '') => value == null ? fallback : String(value);
-
-            const makeTextField = (key, value, style = '', placeholder = '') => `
-                <input data-field="${key}" type="text" value="${String(value || '').replace(/"/g, '&quot;')}" placeholder="${placeholder}" style="${style}; border:1px solid #999; background:#fff; font-size:11px; padding:4px 6px; box-sizing:border-box;" />
-            `;
-
-            const makeSelectField = (key, value, options, width = '100%') => `
-                <select data-field="${key}" style="width:${width}; border:1px solid #999; background:#fff; font-size:11px; padding:4px 6px; box-sizing:border-box;">
-                    <option value="">선택</option>
-                    ${options.map(opt => `<option value="${opt}" ${value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
-                </select>
-            `;
-
-            const makeTextarea = (key, value, height = '60px', width = '100%') => `
-                <textarea data-field="${key}" style="width:${width}; min-height:${height}; border:1px solid #999; background:#fff; font-size:11px; padding:5px 6px; box-sizing:border-box; resize:vertical;">${String(value || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
-            `;
-
-            const makeCheckboxLine = (key, value, label, checked) => `
-                <label style="display:inline-flex; align-items:center; gap:4px; margin-right:8px; font-size:11px;">
-                    <input type="checkbox" data-field="${key}" value="${label}" ${checked ? 'checked' : ''} />
-                    ${label}
-                </label>
-            `;
-
-            modal.innerHTML = `
-                <style>
-                    .emr-form-box { border:2px solid #111; background:#fff; }
-                    .emr-form-head { background:#d9d9d9; border:2px solid #111; font-size:12px; font-weight:700; padding:5px 8px; }
-                    .emr-row { display:grid; grid-template-columns: 220px 1fr; border-top:1px solid #111; }
-                    .emr-label { background:#e9e9e9; border-right:1px solid #111; padding:7px 8px; font-size:11px; font-weight:700; }
-                    .emr-input { background:#fff; padding:6px 8px; }
-                    .signature-transparent-layer { position:absolute; left: 610px; top: 740px; width: 250px; height: 96px; z-index:20; background: rgba(255,255,255,0.12); border:1px dashed rgba(17,17,17,0.55); border-radius:4px; box-sizing:border-box; }
-                </style>
-                <div style="padding:10px 12px 12px; position:relative;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom:2px solid #111; padding-bottom:8px; margin-bottom:10px;">
-                        <div style="font-size:20px; font-weight:900; letter-spacing:-0.5px;">${titleCase}</div>
-                        <div style="display:flex; gap:8px;">
-                            <button type="button" id="nurseFormPrint" style="padding:7px 12px; border:1px solid #111; background:#dfe7f1; font-weight:700; cursor:pointer; font-size:12px;">인쇄/PDF 저장</button>
-                            <button type="button" id="nurseFormClose" style="padding:7px 12px; border:1px solid #111; background:#efefef; font-weight:700; cursor:pointer; font-size:12px;">닫기</button>
-                        </div>
-                    </div>
-
-                    <div style="position:relative; width:100%; min-height:960px; background:#fff; border:2px solid #111; box-sizing:border-box;">
-                        <div style="display:grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-bottom:2px solid #111; background:#fff;">
-                            <div style="display:flex; align-items:center; justify-content:center; border-right:2px solid #111; background:#f0f0f0; font-size:11px; font-weight:700; text-align:center; padding:8px; min-height:88px;">
-                                등록번호
-                            </div>
-                            <div style="display:flex; flex-direction:column; justify-content:center; gap:6px; border-right:2px solid #111; padding:8px; min-height:88px;">
-                                <span style="font-size:11px; font-weight:700;">등록번호</span>
-                                ${makeTextField('patientId', formData.patientId || '', 'width:100%; height:26px;')}
-                            </div>
-                            <div style="display:flex; flex-direction:column; justify-content:center; gap:6px; border-right:2px solid #111; padding:8px; min-height:88px;">
-                                <span style="font-size:11px; font-weight:700;">성명</span>
-                                ${makeTextField('patientName', formData.patientName || p.name || '', 'width:100%; height:26px;')}
-                            </div>
-                            <div style="display:flex; flex-direction:column; justify-content:center; gap:6px; border-right:2px solid #111; padding:8px; min-height:88px;">
-                                <span style="font-size:11px; font-weight:700;">성별/나이</span>
-                                <div style="display:flex; gap:6px;">
-                                    ${makeTextField('sex', formData.sex || '', 'width:60px; height:26px;')}
-                                    ${makeTextField('age', formData.age || '', 'width:70px; height:26px;')}
-                                </div>
-                            </div>
-                            <div style="display:flex; flex-direction:column; justify-content:center; gap:6px; padding:8px; min-height:88px;">
-                                <span style="font-size:11px; font-weight:700;">병실</span>
-                                ${makeTextField('ward', formData.ward || '', 'width:100%; height:26px;')}
-                            </div>
-                        </div>
-
-                        <div style="display:grid; grid-template-columns: 1.3fr 2.2fr; border-bottom:2px solid #111; background:#f7f7f7;">
-                            <div style="display:flex; align-items:center; justify-content:center; border-right:2px solid #111; background:#efefef; font-weight:700; font-size:11px; min-height:52px;">
-                                담당간호사
-                            </div>
-                            <div style="display:flex; align-items:center; justify-content:center; background:#f7f7f7; padding:8px; min-height:52px;">
-                                <div style="width:100%; display:flex; align-items:center; gap:8px;">
-                                    <span style="font-size:11px; font-weight:700;">담당간호사</span>
-                                    ${makeTextField('nurse', formData.nurse || '', 'width:100%; height:26px;')}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="padding:8px 10px 0; background:#fff;">
-                            <div style="display:flex; align-items:center; justify-content:center; flex-direction:column; gap:2px; border:2px solid #111; background:#efefef; padding:12px 10px; margin-bottom:10px;">
-                                <div style="font-size:18px; font-weight:900; letter-spacing:-0.5px;">간호정보조사지</div>
-                                <div style="font-size:11px; font-weight:700;">Initial Nursing Assessment Sheet</div>
-                            </div>
-                        </div>
-
-                        <div class="emr-form-head" style="margin-top:0;">일반정보 Basic information</div>
-                        <div class="emr-form-box">
-                            <div style="display:grid; grid-template-columns:1fr 1fr; border-bottom:2px solid #111;">
-                                <div class="emr-row" style="grid-template-columns: 132px 1fr; border-top:none;">
-                                    <div class="emr-label">입원(작성)일시</div>
-                                    <div class="emr-input">${makeTextField('admissionDate', formData.admissionDate || '', 'width:150px; height:26px;')}</div>
-                                </div>
-                                <div class="emr-row" style="grid-template-columns: 100px 1fr; border-top:none; border-left:2px solid #111;">
-                                    <div class="emr-label">입원경로</div>
-                                    <div class="emr-input">${makeSelectField('admissionRoute', formData.admissionRoute || '', ['외래', '응급실', '기타'], '160px')}</div>
-                                </div>
-                            </div>
-                            <div style="display:grid; grid-template-columns:1fr 1fr; border-bottom:2px solid #111;">
-                                <div class="emr-row" style="grid-template-columns: 90px 1fr; border-top:none;">
-                                    <div class="emr-label">신장</div>
-                                    <div class="emr-input"><div style="display:flex; align-items:center; gap:6px;">${makeTextField('height', formData.height || '', 'width:72px; height:26px;')}<span style="font-size:11px;">cm</span></div></div>
-                                </div>
-                                <div class="emr-row" style="grid-template-columns: 90px 1fr; border-top:none; border-left:2px solid #111;">
-                                    <div class="emr-label">체중</div>
-                                    <div class="emr-input"><div style="display:flex; align-items:center; gap:6px;">${makeTextField('weight', formData.weight || '', 'width:72px; height:26px;')}<span style="font-size:11px;">kg</span></div></div>
-                                </div>
-                            </div>
-                            <div style="display:grid; grid-template-columns:1fr 1fr;">
-                                <div class="emr-row" style="grid-template-columns: 90px 1fr; border-top:none;">
-                                    <div class="emr-label">혈액형</div>
-                                    <div class="emr-input">${makeSelectField('bloodType', formData.bloodType || '', ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-', '미기록'], '140px')}</div>
-                                </div>
-                                <div class="emr-row" style="grid-template-columns: 90px 1fr; border-top:none; border-left:2px solid #111;">
-                                    <div class="emr-label">직업</div>
-                                    <div class="emr-input">${makeTextField('job', formData.job || '', 'width:100%; height:26px;')}</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="emr-form-head" style="margin-top:12px;">사회적 · 경제적 사정 Social · Economic assessment</div>
-                        <div class="emr-form-box" style="padding:8px 8px 10px;">
-                            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
-                                <div>
-                                    <div style="font-size:11px; font-weight:700; margin-bottom:6px;">직업</div>
-                                    ${makeCheckboxLine('jobStatus', formData.jobStatus || '', '무직', g(formData.jobStatus) === '무직')}
-                                    ${makeCheckboxLine('jobStatus', formData.jobStatus || '', '기타', g(formData.jobStatus) === '기타')}
-                                </div>
-                                <div>
-                                    <div style="font-size:11px; font-weight:700; margin-bottom:6px;">종교</div>
-                                    ${makeCheckboxLine('religion', formData.religion || '', '무교', g(formData.religion) === '무교')}
-                                    ${makeCheckboxLine('religion', formData.religion || '', '기독교', g(formData.religion) === '기독교')}
-                                    ${makeCheckboxLine('religion', formData.religion || '', '불교', g(formData.religion) === '불교')}
-                                    ${makeCheckboxLine('religion', formData.religion || '', '천주교', g(formData.religion) === '천주교')}
-                                </div>
-                                <div>
-                                    <div style="font-size:11px; font-weight:700; margin-bottom:6px;">교육정도</div>
-                                    ${makeCheckboxLine('education', formData.education || '', '무', g(formData.education) === '무')}
-                                    ${makeCheckboxLine('education', formData.education || '', '초', g(formData.education) === '초')}
-                                    ${makeCheckboxLine('education', formData.education || '', '중', g(formData.education) === '중')}
-                                    ${makeCheckboxLine('education', formData.education || '', '고', g(formData.education) === '고')}
-                                    ${makeCheckboxLine('education', formData.education || '', '대학(원)', g(formData.education) === '대학(원)')}
-                                </div>
-                            </div>
-                            <div style="margin-top:12px; display:grid; grid-template-columns: 1fr 200px; gap:10px; align-items:center;">
-                                <div style="display:flex; align-items:center; gap:8px;">
-                                    <span style="font-size:11px; font-weight:700;">가족여부</span>
-                                    ${makeTextField('familyStatus', formData.familyStatus || '', 'width:100%; height:26px;')}
-                                </div>
-                                <div style="border:1px solid #111; background:#f2f2f2; font-size:11px; font-weight:700; text-align:center; padding:8px;">Pt : 환자</div>
-                            </div>
-                        </div>
-
-                        <div class="emr-form-head" style="margin-top:12px;">입원 정보 Admission information</div>
-                        <div class="emr-form-box" style="padding:8px;">
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                                <div style="display:flex; align-items:center; gap:8px; font-size:11px;">
-                                    <span style="font-weight:700; min-width:60px;">진단명</span>
-                                    ${makeTextField('diagnosis', formData.diagnosis || '', 'width:100%; height:26px;')}
-                                </div>
-                                <div style="display:flex; align-items:center; gap:8px; font-size:11px;">
-                                    <span style="font-weight:700; min-width:50px;">발병일</span>
-                                    <input data-field="onsetDate" type="date" value="${g(formData.onsetDate, '')}" style="width:100%; border:1px solid #999; background:#fff; font-size:11px; padding:4px 6px; height:26px; box-sizing:border-box;" />
-                                </div>
-                            </div>
-                            <div style="margin-top:10px; border-top:1px solid #111; padding-top:8px;">
-                                <div style="font-size:11px; font-weight:700; margin-bottom:6px;">주증상 및 입원동기</div>
-                                ${makeTextarea('mainComplaint', formData.mainComplaint || '', '70px')}
-                            </div>
-                        </div>
-
-                        <div class="emr-form-head" style="margin-top:12px;">신체 사정 Physical assessment</div>
-                        <div class="emr-form-box" style="padding:8px;">
-                            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; font-size:11px;">
-                                <div style="display:flex; align-items:center; gap:6px; border:1px solid #111; background:#f7f7f7; padding:4px 6px;">체온 ${makeTextField('bt', formData.bt || '', 'width:70px; height:24px;')}</div>
-                                <div style="display:flex; align-items:center; gap:6px; border:1px solid #111; background:#f7f7f7; padding:4px 6px;">맥박 ${makeTextField('hr', formData.hr || '', 'width:70px; height:24px;')}</div>
-                                <div style="display:flex; align-items:center; gap:6px; border:1px solid #111; background:#f7f7f7; padding:4px 6px;">호흡 ${makeTextField('rr', formData.rr || '', 'width:70px; height:24px;')}</div>
-                                <div style="display:flex; align-items:center; gap:6px; border:1px solid #111; background:#f7f7f7; padding:4px 6px;">혈압 ${makeTextField('bp', formData.bp || '', 'width:70px; height:24px;')}</div>
-                            </div>
-                            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin-top:8px; font-size:11px;">
-                                <div style="display:flex; align-items:center; gap:6px; border:1px solid #111; background:#f7f7f7; padding:4px 6px;">SpO2 ${makeTextField('spo2', formData.spo2 || '', 'width:70px; height:24px;')}</div>
-                                <div style="display:flex; align-items:center; gap:6px; border:1px solid #111; background:#f7f7f7; padding:4px 6px;">인지상태 ${makeSelectField('mental', formData.mental || '', ['명료', '혼돈', '반의식', '무의식', '기타'], '90px')}</div>
-                                <div style="display:flex; align-items:center; gap:6px; border:1px solid #111; background:#f7f7f7; padding:4px 6px;">활동/보행 ${makeSelectField('mobility', formData.mobility || '', ['자기보행', '보행보조', '침상안정', '기타'], '100px')}</div>
-                                <div style="display:flex; align-items:center; gap:6px; border:1px solid #111; background:#f7f7f7; padding:4px 6px;">영양상태 ${makeSelectField('nutrition', formData.nutrition || '', ['양호', '불량', '연하곤란', '기타'], '100px')}</div>
-                            </div>
-                            <div style="margin-top:10px;">
-                                <div style="font-size:11px; font-weight:700; margin-bottom:6px;">위험요인 / 관찰사항</div>
-                                ${makeTextarea('risk', formData.risk || '', '72px')}
-                            </div>
-                        </div>
-
-                        <div class="emr-form-head" style="margin-top:12px;">입원시 간호 및 교육</div>
-                        <div class="emr-form-box" style="padding:8px;">
-                            <div style="font-size:11px; font-weight:700; margin-bottom:6px;">입원 시 간호 및 교육 내용(전문)</div>
-                            ${makeTextarea('admissionNursingEducation', formData.admissionNursingEducation || '입원 시 준비물품, 병동시설 안내, 편의시설 안내, 주차 안내, 면회 시간, 식사 시간, 의사 회진시간, 감염관리, 간호사 호출기 사용, 낙상방지, 가스 전열기구 사용금지, 화재예방 및 화재 시 대피요령, 귀중품 관리, 도난방지, 금연안내 및 교육, 진단서 발급, 환자의 권리 및 책임, 불만 및 고충처리, 개인 사생활 및 정보에 대한 비밀보장, 입원 생활 안내문 제공', '120px')}
-                            <div style="font-size:11px; font-weight:700; margin:10px 0 6px;">추가 교육 내용</div>
-                            ${makeTextarea('admissionNursingEducationDetail', formData.admissionNursingEducationDetail || '', '70px')}
-                        </div>
-
-                        <div class="signature-transparent-layer">
-                            <canvas data-signature-field="guardianSignature" width="250" height="96" style="display:block; width:100%; height:100%; background:transparent; cursor:crosshair; touch-action:none; border-radius:4px;"></canvas>
-                            <button type="button" data-clear-signature="guardianSignature" style="position:absolute; right:6px; bottom:6px; padding:4px 8px; border:1px solid #111; background:rgba(255,255,255,0.7); font-size:10px; cursor:pointer; line-height:1;">지우기</button>
-                        </div>
-                    </div>
-
-                    <div style="display:flex; justify-content:flex-end; margin-top:12px; padding-top:8px; border-top:2px solid #111;">
-                        <button type="button" id="nurseFormSave" style="padding:8px 16px; border:1px solid #111; background:#111; color:#fff; font-weight:700; cursor:pointer; font-size:12px;">저장</button>
-                    </div>
-                </div>
-            `;
-
-            const bindSignature = (canvas) => {
-                if (!canvas) return;
-                const ctx = canvas.getContext('2d');
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                const previous = formData.guardianSignature || '';
-                if (previous) {
-                    const img = new Image();
-                    img.onload = () => {
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    };
-                    img.src = previous;
-                }
-                let drawing = false;
-                const getPoint = (event) => {
-                    const rect = canvas.getBoundingClientRect();
-                    const scaleX = canvas.width / rect.width;
-                    const scaleY = canvas.height / rect.height;
-                    return { x: (event.clientX - rect.left) * scaleX, y: (event.clientY - rect.top) * scaleY };
-                };
-                canvas.addEventListener('pointerdown', event => {
-                    drawing = true;
-                    const p = getPoint(event);
-                    ctx.beginPath();
-                    ctx.moveTo(p.x, p.y);
-                    ctx.lineWidth = 2.5;
-                    ctx.lineCap = 'round';
-                    ctx.lineJoin = 'round';
-                    ctx.strokeStyle = '#000';
-                });
-                canvas.addEventListener('pointermove', event => {
-                    if (!drawing) return;
-                    const p = getPoint(event);
-                    ctx.lineTo(p.x, p.y);
-                    ctx.stroke();
-                });
-                canvas.addEventListener('pointerup', () => drawing = false);
-                canvas.addEventListener('pointerleave', () => drawing = false);
-                canvas.addEventListener('pointercancel', () => drawing = false);
-            };
-
-            const sigCanvas = modal.querySelector('[data-signature-field]');
-            bindSignature(sigCanvas);
-            modal.querySelectorAll('[data-clear-signature]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const c = modal.querySelector('[data-signature-field]');
-                    if (!c) return;
-                    const context = c.getContext('2d');
-                    context.clearRect(0, 0, c.width, c.height);
-                });
+            if (!p.records) p.records = {};
+            if (!p.records.documents) p.records.documents = [];
+            p.records.documents.push({
+                id: Date.now(),
+                name,
+                type: 'pdf',
+                fileName: pendingDocumentUpload.fileName,
+                fileData: pendingDocumentUpload.fileData,
+                previewImageData: pendingDocumentUpload.previewImageData || null,
+                createdAt: new Date().toISOString()
             });
 
-            const closeModal = () => overlay.remove();
-            modal.querySelector('#nurseFormClose').addEventListener('click', closeModal);
-
-            modal.querySelector('#nurseFormSave').addEventListener('click', async () => {
-                const formValues = {};
-                modal.querySelectorAll('[data-field]').forEach(el => {
-                    const key = el.dataset.field;
-                    if (!key) return;
-                    formValues[key] = el.value;
-                });
-                if (sigCanvas) formValues.guardianSignature = sigCanvas.toDataURL('image/png');
-
-                if (!p.records) p.records = {};
-                if (!p.records.documents) p.records.documents = [];
-
-                const nameForFile = (p.name || '환자').replace(/[^\x00-\x7F]/g, '').trim() || '환자';
-                const today = new Date();
-                const dateStamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
-                const entry = existingDoc || {
-                    id: Date.now(),
-                    name: `${nameForFile}_간호정보조사지_${dateStamp}`,
-                    type: 'nursing-assessment',
-                    createdAt: new Date().toISOString(),
-                    formData: {}
-                };
-                entry.name = `${nameForFile}_간호정보조사지_${dateStamp}`;
-                entry.type = 'nursing-assessment';
-                entry.formData = formValues;
-                if (!existingDoc) p.records.documents.push(entry);
-
-                await savePatientToBackend(p);
-                renderDocumentsSection();
-                alert('간호정보조사지가 저장되었습니다.');
-                closeModal();
-            });
-
-            modal.querySelector('#nurseFormPrint').addEventListener('click', () => {
-                const formValues = {};
-                modal.querySelectorAll('[data-field]').forEach(el => {
-                    const key = el.dataset.field;
-                    if (!key) return;
-                    formValues[key] = el.value;
-                });
-                if (sigCanvas) formValues.guardianSignature = sigCanvas.toDataURL('image/png');
-
-                const printWindow = window.open('', '_blank');
-                if (!printWindow) {
-                    alert('팝업 차단을 해제해 주세요. 인쇄/PDF 저장이 가능합니다.');
-                    return;
-                }
-
-                const mergedImage = composeNursingSignatureImage(formValues, formValues.guardianSignature || '');
-                printWindow.document.write(`<!DOCTYPE html><html><head><title>간호정보조사지</title><style>
-                    @page { size: A4 portrait; margin: 12mm; }
-                    body { margin:0; padding:0; background:#fff; }
-                    img { display:block; width:100%; height:auto; }
-                </style></head><body>
-                    <img src="${mergedImage}" alt="간호정보조사지" />
-                </body></html>`);
-                printWindow.document.close();
-                setTimeout(() => { printWindow.focus(); printWindow.print(); }, 350);
-            });
-
-            overlay.appendChild(modal);
-            document.body.appendChild(overlay);
+            await savePatientToBackend(p);
+            renderDocumentsSection();
+            clearPendingDocumentUpload(true);
+            alert('PDF 서류가 등록되었습니다.');
         }
 
-        function openDocumentPreview(docId) {
+        function ensurePdfJsWorker() {
+            const lib = window.pdfjsLib;
+            if (!lib) return false;
+            const workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+            if (!lib.GlobalWorkerOptions.workerSrc) {
+                lib.GlobalWorkerOptions.workerSrc = workerSrc;
+            }
+            return true;
+        }
+
+        function dataUrlToUint8Array(dataUrl) {
+            if (!dataUrl || typeof dataUrl !== 'string') return null;
+            const parts = dataUrl.split(',');
+            if (parts.length < 2) return null;
+            const base64 = parts[1];
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i += 1) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes;
+        }
+
+        async function createPdfPreviewImage(pdfDataUrl) {
+            try {
+                if (!ensurePdfJsWorker()) return null;
+
+                const bytes = dataUrlToUint8Array(pdfDataUrl);
+                if (!bytes) return null;
+
+                const loadingTask = window.pdfjsLib.getDocument({ data: bytes });
+                const pdf = await loadingTask.promise;
+                const page = await pdf.getPage(1);
+                const viewport = page.getViewport({ scale: 1.5 });
+
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.ceil(viewport.width);
+                canvas.height = Math.ceil(viewport.height);
+                const context = canvas.getContext('2d');
+
+                await page.render({ canvasContext: context, viewport }).promise;
+                return canvas.toDataURL('image/png');
+            } catch (error) {
+                console.warn('PDF 미리보기 이미지 생성 실패:', error);
+                return null;
+            }
+        }
+
+        async function createPdfPreviewImages(pdfDataUrl) {
+            try {
+                if (!ensurePdfJsWorker()) return [];
+
+                const bytes = dataUrlToUint8Array(pdfDataUrl);
+                if (!bytes) return [];
+
+                const loadingTask = window.pdfjsLib.getDocument({ data: bytes });
+                const pdf = await loadingTask.promise;
+                const results = [];
+
+                for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+                    const page = await pdf.getPage(pageNumber);
+                    const viewport = page.getViewport({ scale: 1.5 });
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.ceil(viewport.width);
+                    canvas.height = Math.ceil(viewport.height);
+                    const context = canvas.getContext('2d');
+                    await page.render({ canvasContext: context, viewport }).promise;
+                    results.push(canvas.toDataURL('image/png'));
+                }
+
+                return results;
+            } catch (error) {
+                console.warn('PDF 페이지 이미지 생성 실패:', error);
+                return [];
+            }
+        }
+
+        async function openDocumentPreview(docId) {
             const p = patients[currentPatientIndex];
             if (!p || !p.records?.documents) return;
 
             const doc = p.records.documents.find(item => item.id == docId);
             if (!doc) return;
-
-            if (doc.type === 'nursing-assessment' && doc.formData) {
-                openNursingAssessmentEditor(doc.id);
-                return;
-            }
 
             if (!doc.fileData) return;
 
@@ -3767,19 +3570,216 @@ if (!note) return alert("처방 내역을 입력하세요.");
                     <div style="font-size:16px; font-weight:bold; color:#0f172a;">${doc.name}</div>
                     <button type="button" id="documentPreviewClose" style="padding:8px 12px; border:none; border-radius:8px; background:#e2e8f0; color:#0f172a; font-weight:bold; cursor:pointer;">닫기</button>
                 </div>
-                <div style="flex:1; border:1px solid #cbd5e1; border-radius:8px; overflow:hidden; background:#f8fafc;">
-                    <iframe src="${doc.fileData}" title="${doc.name}" style="width:100%; height:100%; border:none;"></iframe>
+                <div id="documentPreviewContent" style="flex:1; border:1px solid #cbd5e1; border-radius:8px; overflow:auto; background:#f8fafc; display:flex; align-items:center; justify-content:center;">
+                    <div style="color:#64748b; font-size:13px;">문서를 불러오는 중입니다...</div>
                 </div>
             `;
 
-            const closeModal = () => overlay.remove();
+            let previewCleanup = () => {};
+            const closeModal = () => {
+                previewCleanup();
+                overlay.remove();
+            };
             modal.querySelector('#documentPreviewClose').addEventListener('click', closeModal);
             overlay.addEventListener('click', (event) => {
                 if (event.target === overlay) closeModal();
             });
 
+            const content = modal.querySelector('#documentPreviewContent');
+            if (content) {
+                if (doc.type === 'pdf') {
+                    let previewPages = Array.isArray(doc.previewPagesData) ? doc.previewPagesData.filter(Boolean) : [];
+                    if (!previewPages.length) {
+                        previewPages = await createPdfPreviewImages(doc.fileData);
+                        if (previewPages.length) {
+                            doc.previewPagesData = previewPages;
+                            if (!doc.previewImageData) doc.previewImageData = previewPages[0];
+                            savePatientToBackend(p).catch((error) => {
+                                console.warn('PDF 페이지 이미지 저장 실패:', error);
+                            });
+                        }
+                    }
+
+                    const singlePreview = doc.editedImageData || doc.previewImageData || null;
+
+                    const setupZoomableViewer = (viewport, stage, image, zoomLabel) => {
+                        let zoomLevel = 1;
+                        const minZoom = 0.5;
+                        const maxZoom = 3;
+
+                        const applyZoom = () => {
+                            if (!image.naturalWidth || !image.naturalHeight) return;
+
+                            const vw = Math.max(1, viewport.clientWidth - 20);
+                            const vh = Math.max(1, viewport.clientHeight - 20);
+                            const fitScale = Math.min(vw / image.naturalWidth, vh / image.naturalHeight, 1);
+                            const targetScale = fitScale * zoomLevel;
+
+                            image.style.width = `${Math.round(image.naturalWidth * targetScale)}px`;
+                            image.style.height = `${Math.round(image.naturalHeight * targetScale)}px`;
+                            zoomLabel.innerText = `${Math.round(zoomLevel * 100)}%`;
+
+                            if (zoomLevel > 1) {
+                                stage.style.justifyContent = 'flex-start';
+                                stage.style.alignItems = 'flex-start';
+                            } else {
+                                stage.style.justifyContent = 'center';
+                                stage.style.alignItems = 'center';
+                            }
+                        };
+
+                        const setZoom = (nextZoom) => {
+                            zoomLevel = Math.max(minZoom, Math.min(maxZoom, nextZoom));
+                            applyZoom();
+                        };
+
+                        const onResize = () => applyZoom();
+                        window.addEventListener('resize', onResize);
+                        previewCleanup = () => {
+                            window.removeEventListener('resize', onResize);
+                        };
+
+                        image.addEventListener('load', applyZoom);
+                        return {
+                            zoomIn: () => setZoom(zoomLevel + 0.25),
+                            zoomOut: () => setZoom(zoomLevel - 0.25),
+                            zoomReset: () => setZoom(1),
+                            applyZoom,
+                            setZoom
+                        };
+                    };
+
+                    if (previewPages.length) {
+                        const pages = [...previewPages];
+                        if (doc.editedImageData) pages[0] = doc.editedImageData;
+
+                        content.innerHTML = `
+                            <div style="width:100%; height:100%; min-height:0; display:flex; flex-direction:column; gap:8px;">
+                                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <button type="button" id="pdfPrevPageBtn" class="btn-slate" style="padding:6px 10px;">이전</button>
+                                        <span id="pdfPageIndicator" style="font-size:12px; color:#334155; font-weight:bold;"></span>
+                                        <button type="button" id="pdfNextPageBtn" class="btn-slate" style="padding:6px 10px;">다음</button>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:8px; margin-left:auto;">
+                                        <button type="button" id="pdfZoomOutBtn" class="btn-slate" style="padding:6px 10px;">-</button>
+                                        <span id="pdfZoomLabel" style="min-width:48px; text-align:center; font-size:12px; color:#334155; font-weight:bold;">100%</span>
+                                        <button type="button" id="pdfZoomInBtn" class="btn-slate" style="padding:6px 10px;">+</button>
+                                        <button type="button" id="pdfZoomResetBtn" class="btn-slate" style="padding:6px 10px;">원본</button>
+                                    </div>
+                                </div>
+                                <div id="pdfImageViewport" style="flex:1; min-height:0; border:1px solid #cbd5e1; border-radius:8px; background:#fff; overflow:auto;">
+                                    <div id="pdfImageStage" style="min-width:100%; min-height:100%; display:flex; align-items:center; justify-content:center; padding:10px; box-sizing:border-box;">
+                                        <img id="pdfPageImage" alt="${doc.name}" style="display:block; width:auto; height:auto;" />
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+
+                        const pageImage = content.querySelector('#pdfPageImage');
+                        const indicator = content.querySelector('#pdfPageIndicator');
+                        const prevBtn = content.querySelector('#pdfPrevPageBtn');
+                        const nextBtn = content.querySelector('#pdfNextPageBtn');
+                        const zoomOutBtn = content.querySelector('#pdfZoomOutBtn');
+                        const zoomInBtn = content.querySelector('#pdfZoomInBtn');
+                        const zoomResetBtn = content.querySelector('#pdfZoomResetBtn');
+                        const zoomLabel = content.querySelector('#pdfZoomLabel');
+                        const viewport = content.querySelector('#pdfImageViewport');
+                        const stage = content.querySelector('#pdfImageStage');
+
+                        const zoomApi = setupZoomableViewer(viewport, stage, pageImage, zoomLabel);
+
+                        let pageIndex = 0;
+                        const renderPage = () => {
+                            viewport.scrollTop = 0;
+                            viewport.scrollLeft = 0;
+                            pageImage.src = pages[pageIndex];
+                            indicator.innerText = `${pageIndex + 1} / ${pages.length}`;
+                            prevBtn.disabled = pageIndex === 0;
+                            nextBtn.disabled = pageIndex === pages.length - 1;
+                            prevBtn.style.opacity = prevBtn.disabled ? '0.55' : '1';
+                            nextBtn.style.opacity = nextBtn.disabled ? '0.55' : '1';
+                            prevBtn.style.cursor = prevBtn.disabled ? 'not-allowed' : 'pointer';
+                            nextBtn.style.cursor = nextBtn.disabled ? 'not-allowed' : 'pointer';
+                            zoomApi.applyZoom();
+                        };
+
+                        prevBtn.addEventListener('click', () => {
+                            if (pageIndex <= 0) return;
+                            pageIndex -= 1;
+                            renderPage();
+                        });
+
+                        nextBtn.addEventListener('click', () => {
+                            if (pageIndex >= pages.length - 1) return;
+                            pageIndex += 1;
+                            renderPage();
+                        });
+
+                        zoomOutBtn.addEventListener('click', () => zoomApi.zoomOut());
+                        zoomInBtn.addEventListener('click', () => zoomApi.zoomIn());
+                        zoomResetBtn.addEventListener('click', () => zoomApi.zoomReset());
+
+                        renderPage();
+                    } else if (singlePreview) {
+                        content.innerHTML = `
+                            <div style="width:100%; height:100%; min-height:0; display:flex; flex-direction:column; gap:8px;">
+                                <div style="display:flex; justify-content:flex-end; align-items:center; gap:8px;">
+                                    <button type="button" id="singleZoomOutBtn" class="btn-slate" style="padding:6px 10px;">-</button>
+                                    <span id="singleZoomLabel" style="min-width:48px; text-align:center; font-size:12px; color:#334155; font-weight:bold;">100%</span>
+                                    <button type="button" id="singleZoomInBtn" class="btn-slate" style="padding:6px 10px;">+</button>
+                                    <button type="button" id="singleZoomResetBtn" class="btn-slate" style="padding:6px 10px;">원본</button>
+                                </div>
+                                <div id="singleImageViewport" style="flex:1; min-height:0; border:1px solid #cbd5e1; border-radius:8px; background:#fff; overflow:auto;">
+                                    <div id="singleImageStage" style="min-width:100%; min-height:100%; display:flex; align-items:center; justify-content:center; padding:10px; box-sizing:border-box;">
+                                        <img id="singleDocImage" src="${singlePreview}" alt="${doc.name}" style="display:block; width:auto; height:auto;" />
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+
+                        const singleImage = content.querySelector('#singleDocImage');
+                        const singleZoomLabel = content.querySelector('#singleZoomLabel');
+                        const singleViewport = content.querySelector('#singleImageViewport');
+                        const singleStage = content.querySelector('#singleImageStage');
+                        const singleZoomApi = setupZoomableViewer(singleViewport, singleStage, singleImage, singleZoomLabel);
+
+                        content.querySelector('#singleZoomOutBtn').addEventListener('click', () => singleZoomApi.zoomOut());
+                        content.querySelector('#singleZoomInBtn').addEventListener('click', () => singleZoomApi.zoomIn());
+                        content.querySelector('#singleZoomResetBtn').addEventListener('click', () => singleZoomApi.zoomReset());
+                        singleZoomApi.applyZoom();
+                    } else {
+                        content.innerHTML = `<iframe src="${doc.fileData}" title="${doc.name}" style="width:100%; height:100%; border:none;"></iframe>`;
+                    }
+                } else {
+                    content.innerHTML = `<iframe src="${doc.fileData}" title="${doc.name}" style="width:100%; height:100%; border:none;"></iframe>`;
+                }
+            }
+
             overlay.appendChild(modal);
             document.body.appendChild(overlay);
+        }
+
+        async function deleteDocumentRecord(docId) {
+            const p = patients[currentPatientIndex];
+            if (!p) return;
+
+            if (!confirm('선택한 서류를 삭제하시겠습니까?')) return;
+
+            if (!p.records) p.records = {};
+            if (!Array.isArray(p.records.documents)) p.records.documents = [];
+
+            const beforeCount = p.records.documents.length;
+            p.records.documents = p.records.documents.filter(doc => String(doc.id) !== String(docId));
+
+            if (p.records.documents.length === beforeCount) {
+                alert('삭제할 서류를 찾지 못했습니다.');
+                return;
+            }
+
+            await savePatientToBackend(p);
+            renderDocumentsSection();
+            alert('서류가 삭제되었습니다.');
         }
 
         function renderDocumentsSection() {
@@ -3788,15 +3788,14 @@ if (!note) return alert("처방 내역을 입력하세요.");
             if (!list || !p) return;
 
             const docs = (p.records && p.records.documents) ? p.records.documents : [];
-            const nursingDocs = docs.filter(doc => doc.type === 'nursing-assessment');
-            const rendered = [
-                ...nursingDocs.map(doc => ({
+            const rendered = [...docs]
+                .filter(doc => doc && doc.type === 'pdf' && doc.fileData)
+                .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+                .map(doc => ({
                     id: doc.id,
-                    name: doc.name || '간호정보조사지',
-                    type: 'nursing-assessment'
-                })),
-                { id: 'nursing-assessment-template', name: '간호정보조사지', type: 'nursing-assessment-template' }
-            ];
+                    name: doc.name || '서류',
+                    type: doc.type || 'pdf'
+                }));
 
             if (!rendered.length) {
                 list.innerHTML = '<div style="padding:14px; border:1px dashed #cbd5e1; border-radius:8px; color:#64748b; text-align:center;">등록된 서류 및 동의서가 없습니다.</div>';
@@ -3804,19 +3803,24 @@ if (!note) return alert("처방 내역을 입력하세요.");
             }
 
             list.innerHTML = rendered.map(item => `
-                <button type="button" data-doc-id="${item.id}" data-doc-type="${item.type}" style="text-align:left; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; background:white; cursor:pointer; font-size:13px; color:#0f172a;" class="document-item">
-                    ${item.name}
-                </button>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button type="button" data-doc-id="${item.id}" data-doc-type="${item.type}" style="flex:1; text-align:left; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; background:white; cursor:pointer; font-size:13px; color:#0f172a;" class="document-item">
+                        ${item.name}
+                    </button>
+                    <button type="button" data-delete-doc-id="${item.id}" class="document-delete-btn" style="padding:8px 10px; border:none; border-radius:8px; background:#ef4444; color:#fff; font-weight:bold; cursor:pointer; font-size:12px; white-space:nowrap;">삭제</button>
+                </div>
             `).join('');
 
             list.querySelectorAll('.document-item').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    const type = btn.dataset.docType;
-                    if (type === 'nursing-assessment' || type === 'nursing-assessment-template') {
-                        openNursingAssessmentEditor(type === 'nursing-assessment' ? Number(btn.dataset.docId) : null);
-                    } else {
-                        openDocumentPreview(Number(btn.dataset.docId));
-                    }
+                    openDocumentPreview(Number(btn.dataset.docId));
+                });
+            });
+
+            list.querySelectorAll('.document-delete-btn').forEach(btn => {
+                btn.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    deleteDocumentRecord(btn.dataset.deleteDocId);
                 });
             });
         }
