@@ -1123,6 +1123,18 @@
 
         let pinClickTimer = null;
         let targetPinIndex = null;
+        let hasShownStorageWarning = false;
+
+        function getSettingsStorageSafe() {
+            try {
+                const testKey = '__emr_settings_probe__';
+                localStorage.setItem(testKey, '1');
+                localStorage.removeItem(testKey);
+                return localStorage;
+            } catch (error) {
+                return null;
+            }
+        }
 
         function switchSettingTab(panelId, btnElement) {
             document.querySelectorAll('.setting-panel').forEach(panel => {
@@ -1188,7 +1200,18 @@
 
         function loadSettingsData() {
             try {
-                const raw = JSON.parse(localStorage.getItem('emr_settings') || '{}');
+                const storage = getSettingsStorageSafe();
+                if (!storage) {
+                    departments = [];
+                    doctors = [];
+                    diagnosisDatabase = [];
+                    drugDatabase = [];
+                    labDatabase = [];
+                    nurseDatabase = [];
+                    return;
+                }
+
+                const raw = JSON.parse(storage.getItem('emr_settings') || '{}');
                 departments = Array.isArray(raw.departments) ? raw.departments : [];
                 doctors = Array.isArray(raw.doctors) ? raw.doctors : [];
                 diagnosisDatabase = Array.isArray(raw.diagnoses) ? raw.diagnoses : [];
@@ -1215,7 +1238,27 @@
                 labdb: labDatabase,
                 nurseTemplates: nurseDatabase
             };
-            localStorage.setItem('emr_settings', JSON.stringify(payload));
+
+            try {
+                const storage = getSettingsStorageSafe();
+                if (!storage) {
+                    if (!hasShownStorageWarning) {
+                        hasShownStorageWarning = true;
+                        alert('브라우저 저장소 접근이 제한되어 설정이 영구 저장되지 않을 수 있습니다.');
+                    }
+                    return false;
+                }
+
+                storage.setItem('emr_settings', JSON.stringify(payload));
+                return true;
+            } catch (error) {
+                console.error('설정 저장 실패:', error);
+                if (!hasShownStorageWarning) {
+                    hasShownStorageWarning = true;
+                    alert('설정 저장에 실패했습니다. 브라우저 저장소 권한 또는 용량을 확인해 주세요.');
+                }
+                return false;
+            }
         }
 
         // 프로그램이 시작될 때 서버에서 데이터를 모두 가져오는(fetch) 함수입니다.
@@ -1790,13 +1833,15 @@ function getCurrentPatientName() {
             const code = document.getElementById('kcdCodeInput').value.trim();
             const name_ko = document.getElementById('kcdKorInput').value.trim();
             const name_en = document.getElementById('kcdEngInput').value.trim();
-            const category = document.getElementById('kcdDeptSelect').value;
+            const deptSelect = document.getElementById('kcdDeptSelect');
+            const category = deptSelect ? deptSelect.value : '';
             if (code && name_ko) {
                 diagnosisDatabase.push({ id: Date.now(), code, name_ko, name_en, category });
                 saveSettingsData();
                 document.getElementById('kcdCodeInput').value = '';
                 document.getElementById('kcdKorInput').value = '';
                 document.getElementById('kcdEngInput').value = '';
+                if (deptSelect) deptSelect.value = '';
                 renderSettings();
             }
         }
