@@ -770,7 +770,7 @@
                                 <div class="main-tab-bar">
                                     <button class="main-tab-btn active" onclick="openTopTab('prescriptionTab', this)">📋 처방내역</button>
                                     <button class="main-tab-btn" onclick="openTopTab('labTab', this)">🧪 검사 결과</button>
-                                    <button class="main-tab-btn" onclick="openTopTab('nurseTab', this)">📝 간호/투약 기록</button>
+                                    <button class="main-tab-btn" onclick="openTopTab('nurseTab', this)">📝 간호기록</button>
                                     <button class="main-tab-btn" onclick="openTopTab('documentTab', this)">📄 서류 및 동의서</button>
                                 </div>
 <!-- 처방내역 테이블 전용 스타일 정의 -->
@@ -4094,11 +4094,11 @@ if (!note) return alert("처방 내역을 입력하세요.");
                     scales: {
                         // 각 축(혈압, 맥박, 호흡, 체온)의 디자인과 최대/최소 범위를 세밀하게 지정합니다.
                         x: { ticks: { font: { size: 9 } } },
-                        yBP: { type: 'linear', display: vsVisibility.bp, position: 'left', min: 0, suggestedMax: maxBP, title: { display: true, text: '혈압', color: '#ef4444', font: { size: 10, weight: 'bold' } }, ticks: { color: '#ef4444', font: { size: 9 } } },
-                        yHR: { type: 'linear', display: vsVisibility.hr, position: 'left', min: 0, suggestedMax: maxHR, title: { display: true, text: '맥박', color: '#3b82f6', font: { size: 10, weight: 'bold' } }, ticks: { color: '#3b82f6', font: { size: 9 } } },
-                        yRR: { type: 'linear', display: vsVisibility.rr, position: 'left', min: 0, suggestedMax: maxRR, title: { display: true, text: '호흡', color: '#10b981', font: { size: 10, weight: 'bold' } }, ticks: { color: '#10b981', font: { size: 9 } } },
-                        yBT: { type: 'linear', display: vsVisibility.bt, position: 'left', suggestedMin: minBT, suggestedMax: maxBT, title: { display: true, text: '체온', color: '#8b5cf6', font: { size: 10, weight: 'bold' } }, ticks: { color: '#8b5cf6', font: { size: 9 } } },
-                        ySpO2: { type: 'linear', display: vsVisibility.spo2, position: 'right', min: 60, suggestedMax: maxSpO2, title: { display: true, text: 'SpO2', color: '#14b8a6', font: { size: 10, weight: 'bold' } }, ticks: { color: '#14b8a6', font: { size: 9 } } }
+                        yBT: { type: 'linear', display: vsVisibility.bt, position: 'left', weight: 4, suggestedMin: minBT, suggestedMax: maxBT, title: { display: true, text: '체온', rotation: 90, color: '#8b5cf6', font: { size: 10, weight: 'bold' } }, ticks: { color: '#8b5cf6', font: { size: 9 } } },
+                        yRR: { type: 'linear', display: vsVisibility.rr, position: 'left', weight: 3, min: 0, suggestedMax: maxRR, title: { display: true, text: '호흡', rotation: 90, color: '#10b981', font: { size: 10, weight: 'bold' } }, ticks: { color: '#10b981', font: { size: 9 } } },
+                        yHR: { type: 'linear', display: vsVisibility.hr, position: 'left', weight: 2, min: 0, suggestedMax: maxHR, title: { display: true, text: '맥박', rotation: 90, color: '#3b82f6', font: { size: 10, weight: 'bold' } }, ticks: { color: '#3b82f6', font: { size: 9 } } },
+                        yBP: { type: 'linear', display: vsVisibility.bp, position: 'left', weight: 1, min: 0, suggestedMax: maxBP, title: { display: true, text: '혈압', rotation: 90, color: '#ef4444', font: { size: 10, weight: 'bold' } }, ticks: { color: '#ef4444', font: { size: 9 } } },
+                        ySpO2: { type: 'linear', display: vsVisibility.spo2, position: 'right', weight: 1, min: 60, suggestedMax: maxSpO2, title: { display: true, text: 'SpO2', color: '#14b8a6', font: { size: 10, weight: 'bold' } }, ticks: { color: '#14b8a6', font: { size: 9 } } }
                     }
                 }
             });
