@@ -1124,6 +1124,79 @@
         let pinClickTimer = null;
         let targetPinIndex = null;
         let hasShownStorageWarning = false;
+        const SETTINGS_CHART_NO = '__EMR_SETTINGS__';
+
+        function getSettingsPayload() {
+            return {
+                departments,
+                doctors,
+                diagnoses: diagnosisDatabase,
+                prescriptions: drugDatabase,
+                labdb: labDatabase,
+                nurseTemplates: nurseDatabase
+            };
+        }
+
+        function applySettingsPayload(raw) {
+            departments = Array.isArray(raw?.departments) ? raw.departments : [];
+            doctors = Array.isArray(raw?.doctors) ? raw.doctors : [];
+            diagnosisDatabase = Array.isArray(raw?.diagnoses) ? raw.diagnoses : [];
+            drugDatabase = Array.isArray(raw?.prescriptions) ? raw.prescriptions : [];
+            labDatabase = Array.isArray(raw?.labdb) ? raw.labdb : [];
+            nurseDatabase = Array.isArray(raw?.nurseTemplates) ? raw.nurseTemplates : [];
+        }
+
+        function hasAnySettingsData(payload) {
+            const data = payload || getSettingsPayload();
+            return !!(
+                (data.departments && data.departments.length) ||
+                (data.doctors && data.doctors.length) ||
+                (data.diagnoses && data.diagnoses.length) ||
+                (data.prescriptions && data.prescriptions.length) ||
+                (data.labdb && data.labdb.length) ||
+                (data.nurseTemplates && data.nurseTemplates.length)
+            );
+        }
+
+        async function saveSettingsDataToBackend(payload) {
+            try {
+                if (!supabase || typeof supabase.from !== 'function') return false;
+
+                const settingsPayload = payload || getSettingsPayload();
+                const rowPayload = {
+                    chart_no: SETTINGS_CHART_NO,
+                    name: '__SYSTEM_SETTINGS__',
+                    birth: '000000',
+                    age: 0,
+                    gender: '-',
+                    blood_type: '-',
+                    dept: '-',
+                    doctor: '-',
+                    room: '-',
+                    hd: 0,
+                    pod: 0,
+                    diag_code: '-',
+                    diagnosis: '-',
+                    cc: '-',
+                    memo: 'SYSTEM_SETTINGS_ROW_DO_NOT_DELETE',
+                    body_marks: [],
+                    records: { settings: settingsPayload }
+                };
+
+                const { error } = await supabase
+                    .from('patients')
+                    .upsert(rowPayload, { onConflict: 'chart_no' });
+
+                if (error) {
+                    console.error('설정 백엔드 저장 실패:', error);
+                    return false;
+                }
+                return true;
+            } catch (error) {
+                console.error('설정 백엔드 저장 중 예외:', error);
+                return false;
+            }
+        }
 
         function getSettingsStorageSafe() {
             try {
@@ -1202,42 +1275,21 @@
             try {
                 const storage = getSettingsStorageSafe();
                 if (!storage) {
-                    departments = [];
-                    doctors = [];
-                    diagnosisDatabase = [];
-                    drugDatabase = [];
-                    labDatabase = [];
-                    nurseDatabase = [];
+                    applySettingsPayload({});
                     return;
                 }
 
                 const raw = JSON.parse(storage.getItem('emr_settings') || '{}');
-                departments = Array.isArray(raw.departments) ? raw.departments : [];
-                doctors = Array.isArray(raw.doctors) ? raw.doctors : [];
-                diagnosisDatabase = Array.isArray(raw.diagnoses) ? raw.diagnoses : [];
-                drugDatabase = Array.isArray(raw.prescriptions) ? raw.prescriptions : [];
-                labDatabase = Array.isArray(raw.labdb) ? raw.labdb : [];
-                nurseDatabase = Array.isArray(raw.nurseTemplates) ? raw.nurseTemplates : [];
+                applySettingsPayload(raw);
             } catch (error) {
                 console.warn('설정 데이터 로드 실패:', error);
-                departments = [];
-                doctors = [];
-                diagnosisDatabase = [];
-                drugDatabase = [];
-                labDatabase = [];
-                nurseDatabase = [];
+                applySettingsPayload({});
             }
         }
 
         function saveSettingsData() {
-            const payload = {
-                departments,
-                doctors,
-                diagnoses: diagnosisDatabase,
-                prescriptions: drugDatabase,
-                labdb: labDatabase,
-                nurseTemplates: nurseDatabase
-            };
+            const payload = getSettingsPayload();
+            let localSaved = false;
 
             try {
                 const storage = getSettingsStorageSafe();
@@ -1246,19 +1298,24 @@
                         hasShownStorageWarning = true;
                         alert('브라우저 저장소 접근이 제한되어 설정이 영구 저장되지 않을 수 있습니다.');
                     }
-                    return false;
+                } else {
+                    storage.setItem('emr_settings', JSON.stringify(payload));
+                    localSaved = true;
                 }
-
-                storage.setItem('emr_settings', JSON.stringify(payload));
-                return true;
             } catch (error) {
                 console.error('설정 저장 실패:', error);
                 if (!hasShownStorageWarning) {
                     hasShownStorageWarning = true;
                     alert('설정 저장에 실패했습니다. 브라우저 저장소 권한 또는 용량을 확인해 주세요.');
                 }
-                return false;
             }
+
+            // 접속 환경이 달라도 같은 목록을 보이도록 서버에도 동기화합니다.
+            saveSettingsDataToBackend(payload).catch((error) => {
+                console.error('설정 백엔드 동기화 실패:', error);
+            });
+
+            return localSaved;
         }
 
         // 프로그램이 시작될 때 서버에서 데이터를 모두 가져오는(fetch) 함수입니다.
@@ -1269,7 +1326,23 @@
                 const { data: patRes, error: patError } = await supabase.from('patients').select('*');
                 if (patError) throw patError;
 
-                patients = (patRes || []).map(r => {
+                const rows = patRes || [];
+                const settingsRow = rows.find(r => (r.chart_no || r.chartNo) === SETTINGS_CHART_NO);
+                if (settingsRow && settingsRow.records && settingsRow.records.settings) {
+                    applySettingsPayload(settingsRow.records.settings);
+
+                    const storage = getSettingsStorageSafe();
+                    if (storage) {
+                        storage.setItem('emr_settings', JSON.stringify(getSettingsPayload()));
+                    }
+                } else if (hasAnySettingsData()) {
+                    // 백엔드 설정 레코드가 아직 없다면 현재 설정으로 1회 생성
+                    await saveSettingsDataToBackend(getSettingsPayload());
+                }
+
+                patients = rows
+                .filter(r => (r.chart_no || r.chartNo) !== SETTINGS_CHART_NO)
+                .map(r => {
                     const recordObj = r.records || { vs: [], io: [], prescriptions: [], nurse: [], lab: [] };
                     const profile = recordObj.profile || {};
                     return {
