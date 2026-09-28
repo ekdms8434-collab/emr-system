@@ -343,13 +343,15 @@
         /* 상단(처방 등)과 하단(V/S 차트)을 나누는 구역입니다. */
         .split-container { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
         /* 상단/하단 각각의 창 설정입니다. */
-        .split-pane { flex: 1; background: white; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: flex 0.2s ease, max-height 0.2s ease; }
+        .split-pane { flex: 1; background: white; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: none; }
+        .split-pane.panel-animate { transition: flex-basis 0.28s ease, height 0.28s ease, min-height 0.28s ease, opacity 0.2s ease, border-width 0.2s ease; }
         /* 창이 접혔을 때(숨김)의 설정입니다. */
-        .split-pane.collapsed { display: none !important; flex: 0 !important; min-height: 0 !important; height: 0 !important; }
+        .split-pane.collapsed { flex: 0 0 0px !important; min-height: 0 !important; height: 0px !important; max-height: 0px !important; opacity: 0; border-width: 0; pointer-events: none; overflow: hidden; }
 
-        /* 상단과 하단을 나누는 중간 조절 바(클릭해서 접는 버튼) 디자인입니다. */
-        .collapsible-resizer-bar { height: 18px; background: #cbd5e1; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; margin: 4px 0; border-radius: 4px; transition: background 0.2s; }
+        /* 상단과 하단을 나누는 중간 조절 바(드래그로 높이 조절, 클릭으로 접기) 디자인입니다. */
+        .collapsible-resizer-bar { height: 18px; background: #cbd5e1; display: flex; align-items: center; justify-content: center; cursor: ns-resize; user-select: none; margin: 4px 0; border-radius: 4px; transition: background 0.2s; touch-action: none; }
         .collapsible-resizer-bar:hover { background: #94a3b8; }
+        .collapsible-resizer-bar.is-resizing { background: #64748b; }
         .collapsible-resizer-bar button { background: transparent; border: none; color: #1e293b; font-size: 10px; font-weight: bold; padding: 0; cursor: pointer; display: flex; align-items: center; gap: 4px; }
 
         /* 3열 상단의 주요 메뉴 탭(처방, 수술, 수혈 등) 묶음 바 디자인입니다. */
@@ -762,16 +764,23 @@
 
                     <!-- 3열 카드: 상세 처방, 간호기록, 검사결과 등이 들어가는 가장 넓은 영역입니다. -->
                     <div class="col-3">
-                        <div class="split-container">
+                        <div class="split-container" id="column3SplitContainer">
                             
                             <!-- 상단 패널 (처방, 검사, 간호기록 탭) -->
                             <div class="split-pane" id="topPane">
                                 <!-- 탭 버튼들 -->
-                                <div class="main-tab-bar">
-                                    <button class="main-tab-btn active" onclick="openTopTab('prescriptionTab', this)">📋 처방내역</button>
-                                    <button class="main-tab-btn" onclick="openTopTab('labTab', this)">🧪 검사 결과</button>
-                                    <button class="main-tab-btn" onclick="openTopTab('nurseTab', this)">📝 간호기록</button>
-                                    <button class="main-tab-btn" onclick="openTopTab('documentTab', this)">📄 서류 및 동의서</button>
+                                <div style="display:flex; align-items:center; gap:8px; background:#f1f5f9; border-bottom:1px solid var(--border-color); padding:4px;">
+                                    <div style="display:flex; justify-content:flex-start; align-items:center; gap:8px; margin-right:auto;">
+                                        <button type="button" id="prescriptionPrevDayBtn" style="width:28px; height:28px; border:1px solid #cbd5e1; border-radius:4px; background:#f8fafc; color:#0f172a; font-size:14px; font-weight:bold; cursor:pointer;">←</button>
+                                        <input type="date" id="prescriptionDateFilter" style="width:140px; border:1px solid #cbd5e1; border-radius:4px; padding:4px 6px; font-size:11px; background:white;">
+                                        <button type="button" id="prescriptionNextDayBtn" style="width:28px; height:28px; border:1px solid #cbd5e1; border-radius:4px; background:#f8fafc; color:#0f172a; font-size:14px; font-weight:bold; cursor:pointer;">→</button>
+                                    </div>
+                                    <div class="main-tab-bar" style="flex:1; padding:0; border:none; background:transparent; gap:3px; justify-content:flex-start;">
+                                        <button class="main-tab-btn active" onclick="openTopTab('prescriptionTab', this)">📋 처방내역</button>
+                                        <button class="main-tab-btn" onclick="openTopTab('nurseTab', this)">📝 간호기록</button>
+                                        <button class="main-tab-btn" onclick="openTopTab('labTab', this)">🧪 검사 결과</button>
+                                        <button class="main-tab-btn" onclick="openTopTab('documentTab', this)">📄 서류 및 동의서</button>
+                                    </div>
                                 </div>
 <!-- 처방내역 테이블 전용 스타일 정의 -->
 <style>
@@ -781,6 +790,22 @@
     padding-top: 4px !important;
     padding-bottom: 4px !important;
     line-height: 1.2 !important;
+  }
+
+  .prescription-category-header td {
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    text-align: left !important;
+    font-size: 10.5px !important;
+    border-top: 1px solid #cbd5e1 !important;
+    border-bottom: 1px solid #cbd5e1 !important;
+    position: sticky;
+    top: 20px;
+    z-index: 3;
+    padding-top: 7px !important;
+    padding-bottom: 7px !important;
+    line-height: 1.3 !important;
   }
 
   /* 2. '관리' 열(수정/삭제) 한 줄 표시 */
@@ -825,11 +850,11 @@
                                     <div class="input-bar-bottom" style="gap:5px; background:#f8fafc; padding:8px; border:1px solid var(--border-color); border-radius:3px;">
                                         <input type="datetime-local" id="prescTime" style="width:135px;">
                                         <select id="prescType" style="width:75px; font-weight:bold;" onchange="onPrescTypeChange(this.value)">
+                                            <option value="전달" selected>전달</option>
+                                            <option value="정규">정규</option>
                                             <option value="약물">약물</option>
-                                            <option value="처방">처방</option>
-                                            <option value="응급">응급</option>
-                                            <option value="루틴" selected>루틴</option>
-                                            <option value="PRN">PRN</option>
+                                            <option value="검사">검사</option>
+                                            <option value="방사선">방사선</option>
                                         </select>
                                         <select id="medDbSelect" onchange="selectMedFromDb(this)" style="width:170px; font-weight:bold; color:var(--primary-navy);">
                                             <option value="">-- 처방명 선택 --</option>
@@ -846,41 +871,6 @@
                                         <input type="text" id="prescIssuer" placeholder="처방발행자" style="width:70px;">
                                         <button class="btn-blue" onclick="addRecord('presc')" id="btnPrescSave">처방 입력</button>
                                         <button class="btn-slate" onclick="cancelPrescEdit()" id="btnPrescCancel" style="display:none;">취소</button>
-                                    </div>
-                                </div>
-
-                                <!-- 2. 검사 결과 탭 화면 -->
-                                <div id="labTab" class="tab-content">
-                                    <div class="table-scroll-area">
-                                        <table class="prescription-table-theme">
-                                            <thead>
-                                                <tr>
-                                                    <th style="width:120px;">일시</th>
-                                                    <th style="width:90px;">구분</th>
-                                                    <th style="width:120px;">검사명</th>
-                                                    <th>결과 및 판독소견</th>
-                                                    <th style="width:120px;">정상범위 수치</th>
-                                                    <th style="width:50px;">관리</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="labTable"></tbody>
-                                        </table>
-                                    </div>
-                                    <div class="input-bar-bottom">
-                                        <input type="datetime-local" id="labTime" style="width:140px;">
-                                        <select id="labCategorySelect" onchange="onLabCategoryChange(this.value)" style="width:90px;">
-                                            <option value="custom">-- 기타직접 --</option>
-                                        </select>
-                                        <input type="text" id="labCategoryCustom" placeholder="구분 입력" style="display:none; width:70px;">
-
-                                        <select id="labItemSelect" onchange="onLabItemChange(this)" style="width:150px;"></select>
-                                        <input type="text" id="labItemCustom" placeholder="검사명 입력" style="display:none; width:100px;">
-
-                                        <textarea id="labResult" class="auto-expand-textarea" placeholder="결과/판독소견" rows="1" style="flex:1;" oninput="autoExpandTextarea(this)"></textarea>
-                                        <input type="text" id="labRefRange" placeholder="정상범위 (예: 4.0-10.0)" style="width:130px;">
-                                        <input type="text" id="labUnit" placeholder="단위" style="width:50px;">
-
-                                        <button class="btn-blue" onclick="addRecord('lab_img')">검사 저장</button>
                                     </div>
                                 </div>
 
@@ -910,6 +900,41 @@
                                     </div>
                                 </div>
 
+                                <!-- 2. 검사 결과 탭 화면 -->
+                                <div id="labTab" class="tab-content">
+                                    <div class="table-scroll-area">
+                                        <table class="prescription-table-theme">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:120px;">일시</th>
+                                                    <th style="width:90px;">구분</th>
+                                                    <th style="width:120px;">검사명</th>
+                                                    <th>결과 및 임상소견</th>
+                                                    <th style="width:120px;">정상범위 수치</th>
+                                                    <th style="width:50px;">관리</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="labTable"></tbody>
+                                        </table>
+                                    </div>
+                                    <div class="input-bar-bottom">
+                                        <input type="datetime-local" id="labTime" style="width:140px;">
+                                        <select id="labCategorySelect" onchange="onLabCategoryChange(this.value)" style="width:90px;">
+                                            <option value="custom">-- 기타직접 --</option>
+                                        </select>
+                                        <input type="text" id="labCategoryCustom" placeholder="구분 입력" style="display:none; width:70px;">
+
+                                        <select id="labItemSelect" onchange="onLabItemChange(this)" style="width:150px;"></select>
+                                        <input type="text" id="labItemCustom" placeholder="검사명 입력" style="display:none; width:100px;">
+
+                                        <textarea id="labResult" class="auto-expand-textarea" placeholder="결과" rows="1" style="flex:1;" oninput="autoExpandTextarea(this)"></textarea>
+                                        <input type="text" id="labRefRange" placeholder="정상범위 (예: 4.0-10.0)" style="width:130px;">
+                                        <input type="text" id="labUnit" placeholder="단위" style="width:50px;">
+
+                                        <button class="btn-blue" onclick="addRecord('lab_img')">검사 저장</button>
+                                    </div>
+                                </div>
+
                                 <!-- 6. 서류 및 동의서 탭 화면 -->
                                 <div id="documentTab" class="tab-content">
                                     <div class="table-scroll-area">
@@ -926,7 +951,7 @@
                             </div>
 
                             <!-- 상단과 하단을 나누고 접을 수 있게 해주는 경계선 바입니다. -->
-                            <div class="collapsible-resizer-bar" onclick="toggleBottomPane()" title="클릭하여 하단 패널을 펼치거나 접습니다.">
+                            <div id="bottomPaneResizer" class="collapsible-resizer-bar" title="드래그로 크기 조절, 클릭으로 접기/펼치기">
                                 <button type="button" id="toggleResizerBtn">
                                     <span id="resizerIcon">▼</span> <span id="resizerText">하단 패널 접기 (V/S, I/O)</span>
                                 </button>
@@ -1254,22 +1279,140 @@
             }
         }
 
+        const bottomPaneResizeState = {
+            active: false,
+            startY: 0,
+            startTopHeight: 0,
+            moved: false
+        };
+
+        function applyBottomPaneSize(topHeightPx) {
+            const splitContainer = document.getElementById('column3SplitContainer');
+            const topPane = document.getElementById('topPane');
+            const bottomPane = document.getElementById('bottomPane');
+            const resizerBar = document.getElementById('bottomPaneResizer');
+
+            if (!splitContainer || !topPane || !bottomPane) return;
+
+            const barHeight = resizerBar ? resizerBar.offsetHeight : 18;
+            const totalHeight = Math.max(0, splitContainer.clientHeight - barHeight);
+            const minTop = 180;
+            const maxTop = Math.max(minTop, totalHeight - 180);
+            const clampedTop = Math.min(Math.max(topHeightPx, minTop), maxTop);
+
+            topPane.classList.remove('panel-animate');
+            bottomPane.classList.remove('panel-animate');
+
+            topPane.style.flex = `0 0 ${clampedTop}px`;
+            topPane.style.height = `${clampedTop}px`;
+            bottomPane.style.flex = '1 1 auto';
+            bottomPane.style.height = 'auto';
+            bottomPane.style.maxHeight = 'none';
+            bottomPane.classList.remove('collapsed');
+            topPane.dataset.lastHeight = String(clampedTop);
+        }
+
+        function initBottomPaneResizer() {
+            const resizerBar = document.getElementById('bottomPaneResizer');
+            if (!resizerBar) return;
+
+            resizerBar.addEventListener('pointerdown', (event) => {
+                if (event.button !== 0) return;
+
+                const bottomPane = document.getElementById('bottomPane');
+                const topPane = document.getElementById('topPane');
+                if (!bottomPane || !topPane || bottomPane.classList.contains('collapsed')) return;
+
+                bottomPaneResizeState.active = true;
+                bottomPaneResizeState.startY = event.clientY;
+                bottomPaneResizeState.startTopHeight = topPane.getBoundingClientRect().height || Number(topPane.dataset.lastHeight || 320);
+                bottomPaneResizeState.moved = false;
+                resizerBar.classList.add('is-resizing');
+                event.preventDefault();
+                document.body.style.userSelect = 'none';
+            });
+
+            resizerBar.addEventListener('click', (event) => {
+                if (bottomPaneResizeState.moved) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    bottomPaneResizeState.moved = false;
+                    return;
+                }
+                toggleBottomPane();
+            });
+
+            window.addEventListener('pointermove', (event) => {
+                if (!bottomPaneResizeState.active) return;
+
+                const splitContainer = document.getElementById('column3SplitContainer');
+                const topPane = document.getElementById('topPane');
+                const bottomPane = document.getElementById('bottomPane');
+                if (!splitContainer || !topPane || !bottomPane || bottomPane.classList.contains('collapsed')) {
+                    bottomPaneResizeState.active = false;
+                    resizerBar.classList.remove('is-resizing');
+                    document.body.style.userSelect = '';
+                    return;
+                }
+
+                const deltaY = event.clientY - bottomPaneResizeState.startY;
+                const nextTopHeight = bottomPaneResizeState.startTopHeight + deltaY;
+                bottomPaneResizeState.moved = Math.abs(deltaY) > 4;
+                applyBottomPaneSize(nextTopHeight);
+            });
+
+            window.addEventListener('pointerup', () => {
+                if (!bottomPaneResizeState.active) return;
+                bottomPaneResizeState.active = false;
+                resizerBar.classList.remove('is-resizing');
+                document.body.style.userSelect = '';
+            });
+        }
+
         // 하단 패널(V/S, I/O)을 접었다 폈다 하는 버튼 기능입니다.
         function toggleBottomPane() {
             const bottomPane = document.getElementById('bottomPane');
+            const topPane = document.getElementById('topPane');
             const icon = document.getElementById('resizerIcon');
             const text = document.getElementById('resizerText');
 
+            if (!bottomPane || !topPane) return;
+
             if (bottomPane.classList.contains('collapsed')) {
+                topPane.classList.add('panel-animate');
+                bottomPane.classList.add('panel-animate');
+                const savedHeight = Number(topPane.dataset.lastHeight || 320);
                 bottomPane.classList.remove('collapsed');
+                bottomPane.style.maxHeight = 'none';
+                applyBottomPaneSize(savedHeight);
+                setTimeout(() => {
+                    topPane.classList.remove('panel-animate');
+                    bottomPane.classList.remove('panel-animate');
+                }, 320);
                 icon.innerText = '▼';
                 text.innerText = '하단 패널 접기 (V/S, I/O)';
             } else {
+                if (topPane) {
+                    topPane.dataset.lastHeight = String(topPane.getBoundingClientRect().height || Number(topPane.dataset.lastHeight || 320));
+                }
+                topPane.classList.add('panel-animate');
+                bottomPane.classList.add('panel-animate');
+                topPane.style.flex = '1 1 auto';
+                topPane.style.height = '100%';
+                bottomPane.style.height = '0px';
+                bottomPane.style.flex = '0 0 0px';
+                bottomPane.style.maxHeight = '0px';
                 bottomPane.classList.add('collapsed');
+                setTimeout(() => {
+                    topPane.classList.remove('panel-animate');
+                    bottomPane.classList.remove('panel-animate');
+                }, 320);
                 icon.innerText = '▲';
                 text.innerText = '하단 패널 펼치기 (V/S, I/O)';
             }
         }
+
+        initBottomPaneResizer();
 
         function loadSettingsData() {
             try {
@@ -1433,7 +1576,7 @@
             if (!Array.isArray(recordsArray)) return;
             recordsArray.sort((a, b) => new Date(a.time) - new Date(b.time));
         }
-const N8N_CHATBOT_URL = "https://n8n-chatbot-u6zz.onrender.com/webhook/6ca57d85-7db0-4c6b-b2f0-0adc64dc4cc4/chat";
+const N8N_CHATBOT_URL = 'https://n8n-chatbot-u6zz.onrender.com/webhook/6ca57d85-7db0-4c6b-b2f0-0adc64dc4cc4/chat';
 
 const N8N_CHATBOT_MIN_WIDTH = 380;
 const N8N_CHATBOT_MIN_HEIGHT = 320;
@@ -1585,7 +1728,7 @@ function openN8nChatbot() {
 
     const iframe = document.getElementById('n8nChatbotFrame');
     if (iframe) {
-        iframe.src = "https://n8n-chatbot-u6zz.onrender.com/webhook/6ca57d85-7db0-4c6b-b2f0-0adc64dc4cc4/chat";
+        iframe.src = N8N_CHATBOT_URL;
     }
 
     modal.classList.remove('hidden');
@@ -1831,7 +1974,10 @@ function getCurrentPatientName() {
 
             const nurseTemplateSelect = document.getElementById('nurseTemplateSelect');
             if (nurseTemplateSelect) {
-                nurseTemplateSelect.innerHTML = '<option value="">-- 간호기록명 선택 --</option>' + nurseDatabase.map(item => `<option value="${item.id}">${item.name || item.title || '간호기록'}</option>`).join('');
+                const sortedTemplates = [...nurseDatabase].sort((a, b) =>
+                    String(a.name || a.title || '간호기록').localeCompare(String(b.name || b.title || '간호기록'), 'ko')
+                );
+                nurseTemplateSelect.innerHTML = '<option value="">-- 간호기록명 선택 --</option>' + sortedTemplates.map(item => `<option value="${item.id}">${item.name || item.title || '간호기록'}</option>`).join('');
                 nurseTemplateSelect.value = '';
             }
 
@@ -2318,7 +2464,10 @@ function getCurrentPatientName() {
         function updateMedDbDropdown() {
             const select = document.getElementById('medDbSelect');
             if (!select) return;
-            select.innerHTML = '<option value="">-- 처방명 선택 --</option>' + drugDatabase.map(d => `<option value="${d.id}" data-name="${d.name || ''}" data-content="${d.content || ''}">[${d.code}] ${d.name}</option>`).join('');
+            const sortedDrugs = [...drugDatabase].sort((a, b) =>
+                String(a.name || '').localeCompare(String(b.name || ''), 'ko')
+            );
+            select.innerHTML = '<option value="">-- 처방명 선택 --</option>' + sortedDrugs.map(d => `<option value="${d.id}" data-name="${d.name || ''}" data-content="${d.content || ''}">[${d.code}] ${d.name}</option>`).join('');
         }
 
         // EMR 차트 내에서 검사 구분을 선택했을 때 세부 검사목록을 바꿔주는 함수
@@ -2343,7 +2492,7 @@ function getCurrentPatientName() {
             const filtered = labDatabase.filter(item => {
                 const category = (item.category && item.category.trim()) || '기본';
                 return category === categoryValue || (!val && (category === '기본' || !item.category));
-            });
+            }).sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ko'));
 
             itemSelect.innerHTML = '<option value="">검사명 선택</option>' +
                 filtered.map(item => `<option value="${item.name}" data-ref="${item.refRange || ''}" data-unit="${item.unit || ''}">${item.name}</option>`).join('') +
@@ -3962,12 +4111,25 @@ if (!note) return alert("처방 내역을 입력하세요.");
             });
         }
 
+        function getDateFilteredRecords(records) {
+            const selectedDate = getPrescriptionFilterDate();
+            if (!selectedDate) return records;
+
+            return records.filter((record) => {
+                const timeStr = String(record?.time || '').trim();
+                if (!timeStr) return false;
+
+                const datePart = timeStr.includes('T') ? timeStr.split('T')[0] : timeStr.split(' ')[0];
+                return datePart === selectedDate;
+            });
+        }
+
         /* --- 활력징후(V/S) 표를 만들고 차트를 그리는 함수 --- */
         function renderVsSection() {
             if (currentPatientIndex === null) return;
             const p = patients[currentPatientIndex];
             // 활력징후 기록이 없다면 빈 배열([])을 준비합니다.
-            const vsRecords = (p.records && p.records.vs) ? p.records.vs : [];
+            const vsRecords = getDateFilteredRecords((p.records && p.records.vs) ? p.records.vs : []);
 
             // 1. 표(Table) 생성 구역
             const vsTableBody = document.getElementById('vsTableBody');
@@ -4013,7 +4175,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
 
                 // 기록된 데이터 개수만큼 반복하면서 오른쪽으로 칸(td)을 덧붙여 나갑니다.
                 vsRecords.forEach((r, idx) => {
-                    headerRow += `<th class="vs-header-time">${r.time}</th>`;
+                    headerRow += `<th class="vs-header-time">${formatDisplayTime(r.time)}</th>`;
                     bpRow += `<td class="vs-val">${r.bp || '-'}</td>`;
                     hrRow += `<td class="vs-val">${r.hr || '-'}</td>`;
                     rrRow += `<td class="vs-val">${r.rr || '-'}</td>`;
@@ -4136,7 +4298,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
             }
 
             // 차트의 맨 아래(X축)에 들어갈 시간 데이터들만 뽑아냅니다.
-            const labels = vsRecords.map(r => r.time);
+            const labels = vsRecords.map(r => formatDisplayTime(r.time));
 
             // 그래프가 너무 꽉 차지 않도록 축의 최대/최소 기본값을 넉넉하게 설정합니다.
             let maxBP = 200, maxHR = 200, maxRR = 80, maxSpO2 = 100;
@@ -4226,7 +4388,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
         function renderIoSection() {
             if (currentPatientIndex === null) return;
             const p = patients[currentPatientIndex];
-            const ioRecords = (p.records && p.records.io) ? p.records.io : [];
+            const ioRecords = getDateFilteredRecords((p.records && p.records.io) ? p.records.io : []);
 
             const ioTableBody = document.getElementById('ioTableBody');
             if (!ioTableBody) return;
@@ -4245,7 +4407,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
                 let delRow = `<tr><td class="vs-label" style="background:#fee2e2; color:#ef4444;">수정 및 삭제</td>`;
 
                 ioRecords.forEach((r, idx) => {
-                    headerRow += `<th class="vs-header-time">${r.time}</th>`;
+                    headerRow += `<th class="vs-header-time">${formatDisplayTime(r.time)}</th>`;
                     intakeRow += `<td class="vs-val" style="color:#3b82f6;">${r.intake || 0}</td>`;
                     outputRow += `<td class="vs-val" style="color:#ef4444;">${r.output || 0}</td>`;
                     delRow += `<td class="vs-val" style="white-space:nowrap;">
@@ -4341,7 +4503,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
                 ioChartInstance.destroy();
             }
 
-            const labels = ioRecords.map(r => r.time);
+            const labels = ioRecords.map(r => formatDisplayTime(r.time));
             ioChartInstance = new Chart(ctx, {
                 type: 'bar', // 막대그래프로 지정
                 data: {
@@ -4370,12 +4532,13 @@ if (!note) return alert("처방 내역을 입력하세요.");
         // 3. 데이터가 있다면 배열의 map() 기능을 써서 HTML 표 태그(<tr><td>) 모양으로 바꾼 뒤, 화면에 삽입한다.
 
         // [처방 내역 표 그리기]
-        function deletePresc(index) {
+        async function deletePresc(index) {
     if (!confirm("해당 처방 내역을 삭제하시겠습니까?")) return;
     const p = patients[currentPatientIndex];
     if (!p || !p.records?.prescriptions) return;
     p.records.prescriptions.splice(index, 1);
-    renderPrescriptionTable();
+    await savePatientToBackend(p);
+    renderAllRecords();
 }
 
 function editPresc(index) {
@@ -4394,52 +4557,190 @@ function editPresc(index) {
     if (document.getElementById('prescFreq')) document.getElementById('prescFreq').value = item.freq === '-' ? '' : (item.freq || '');
     if (document.getElementById('prescRoute')) document.getElementById('prescRoute').value = item.route === '-' ? '' : (item.route || '');
 }
+        function formatDisplayTime(value) {
+            if (!value) return '-';
+
+            const raw = String(value).trim();
+            const datePart = raw.includes('T') ? raw.split('T')[1] : raw.split(' ')[1] || raw;
+            if (!datePart) return raw;
+
+            const match = datePart.match(/(\d{1,2}):(\d{2})/);
+            if (!match) return raw;
+
+            return `${match[1].padStart(2, '0')}:${match[2]}`;
+        }
+
+        function getPrescriptionFilterDate() {
+            const input = document.getElementById('prescriptionDateFilter');
+            if (!input) return '';
+
+            if (!input.value) {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                input.value = `${yyyy}-${mm}-${dd}`;
+            }
+
+            return input.value;
+        }
+
+        function applySelectedDateToEntryInputs() {
+            const selectedDate = getPrescriptionFilterDate();
+            if (!selectedDate) return;
+
+            const defaultTime = '09:00';
+            const inputIds = ['prescTime', 'labTime', 'nurseTime', 'vsTime', 'ioTime'];
+
+            inputIds.forEach((id) => {
+                const input = document.getElementById(id);
+                if (!input) return;
+
+                if (!input.value) {
+                    input.value = `${selectedDate}T${defaultTime}`;
+                    return;
+                }
+
+                const rawValue = String(input.value).trim();
+                const currentDate = rawValue.includes('T') ? rawValue.split('T')[0] : rawValue.split(' ')[0];
+                const currentTime = rawValue.includes('T') ? (rawValue.split('T')[1] || defaultTime) : (rawValue.split(' ')[1] || defaultTime);
+
+                if (currentDate !== selectedDate) {
+                    input.value = `${selectedDate}T${currentTime}`;
+                }
+            });
+        }
+
+        function shiftPrescriptionDate(offsetDays) {
+            const input = document.getElementById('prescriptionDateFilter');
+            if (!input) return;
+
+            const current = input.value ? new Date(`${input.value}T00:00:00`) : new Date();
+            current.setDate(current.getDate() + offsetDays);
+
+            const yyyy = current.getFullYear();
+            const mm = String(current.getMonth() + 1).padStart(2, '0');
+            const dd = String(current.getDate()).padStart(2, '0');
+            input.value = `${yyyy}-${mm}-${dd}`;
+            applySelectedDateToEntryInputs();
+            renderPrescriptionTable();
+            renderLabTable();
+            renderNurseTable();
+            renderVsSection();
+            renderIoSection();
+        }
+
+        function getFilteredPrescriptionRecords(records) {
+            const selectedDate = getPrescriptionFilterDate();
+            if (!selectedDate) return records;
+
+            return records.filter((record) => {
+                const timeStr = String(record?.time || '').trim();
+                if (!timeStr) return false;
+
+                const datePart = timeStr.includes('T') ? timeStr.split('T')[0] : timeStr.split(' ')[0];
+                return datePart === selectedDate;
+            });
+        }
+
         function renderPrescriptionTable() {
             const p = patients[currentPatientIndex];
             const tbody = document.getElementById('prescriptionTable');
             if (!tbody || !p) return;
             const records = p.records?.prescriptions || [];
+            const selectedDate = getPrescriptionFilterDate();
+            const filteredRecords = getFilteredPrescriptionRecords(records);
 
-            if (records.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:#94a3b8;">등록된 처방 내역이 없습니다.</td></tr>`;
+            if (filteredRecords.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:#94a3b8;">선택한 날짜에 등록된 처방 내역이 없습니다.</td></tr>`;
                 return;
             }
 
-            // map과 join을 사용해 여러 개의 <tr> 태그를 한 덩어리의 문자열로 이어 붙입니다.
-         tbody.innerHTML = records.map((r, idx) => {
-        const statusBadge = (r.status === '수행완료' || r.status === '투약완료')
-            ? `<span class="status-badge-complete" onclick="openNurseInputModal(${idx})">✓ ${r.status}</span>`
-            : `<span class="status-badge-pending" onclick="openNurseInputModal(${idx})">⏳ 미수행</span>`;
+            const categoryOrder = ['전달', '정규', '약물', '검사', '방사선'];
+            const grouped = {};
+            categoryOrder.forEach(category => grouped[category] = []);
 
-        return `
-            <tr>
-                <td>${r.time}</td>
-                <td><b>${r.category}</b></td>
-                <td><span class="code-badge">${r.code || '-'}</span></td>
-                <td style="text-align:left;">${r.note}</td>
+            records.forEach((r, originalIndex) => {
+                const timeStr = String(r?.time || '').trim();
+                if (!timeStr) return;
 
-                <!-- 아래 3줄(용량, 횟수, 경로)이 추가되어야 처방의/수행상태가 오른쪽으로 밀립니다 -->
-                <td>${r.dose || '-'}</td>
-                <td>${r.freq || '-'}</td>
-                <td>${r.route || '-'}</td>
+                const datePart = timeStr.includes('T') ? timeStr.split('T')[0] : timeStr.split(' ')[0];
+                if (!selectedDate || datePart !== selectedDate) return;
 
-                <td>${r.issuer || '-'}</td>
-                <td>${statusBadge}</td>
-                <td>${r.nurse || '-'}</td>
-                <td>
-                    <button class="btn-slate" style="padding:1px 4px; font-size:10px;" onclick="editPresc(${idx})">수정</button>
-                    <button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deletePresc(${idx})">삭제</button>
-                </td>
-            </tr>
-        `;
-    }).join('');
-}
+                const key = categoryOrder.includes(r.category) ? r.category : '전달';
+                grouped[key].push({ ...r, __index: originalIndex });
+            });
+
+            const rowsHtml = categoryOrder.flatMap((category) => {
+                const items = grouped[category] || [];
+                if (items.length === 0) return [];
+
+                const categoryRows = items.map(({ __index, ...r }) => {
+                    const statusBadge = (r.status === '수행완료' || r.status === '투약완료')
+                        ? `<span class="status-badge-complete" onclick="openNurseInputModal(${__index})">✓ ${r.status}</span>`
+                        : `<span class="status-badge-pending" onclick="openNurseInputModal(${__index})">⏳ 미수행</span>`;
+
+                    return `
+                        <tr>
+                            <td>${formatDisplayTime(r.time)}</td>
+                            <td><b>${r.category}</b></td>
+                            <td><span class="code-badge">${r.code || '-'}</span></td>
+                            <td style="text-align:left;">${r.note}</td>
+                            <td>${r.dose || '-'}</td>
+                            <td>${r.freq || '-'}</td>
+                            <td>${r.route || '-'}</td>
+                            <td>${r.issuer || '-'}</td>
+                            <td>${statusBadge}</td>
+                            <td>${r.nurse || '-'}</td>
+                            <td>
+                                <button class="btn-slate" style="padding:1px 4px; font-size:10px;" onclick="editPresc(${__index})">수정</button>
+                                <button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deletePresc(${__index})">삭제</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                return [
+                    `<tr class="prescription-category-header"><td colspan="11">&lt;${category}&gt;</td></tr>`,
+                    ...categoryRows
+                ];
+            }).join('');
+
+            tbody.innerHTML = rowsHtml;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const dateFilter = document.getElementById('prescriptionDateFilter');
+            const prevBtn = document.getElementById('prescriptionPrevDayBtn');
+            const nextBtn = document.getElementById('prescriptionNextDayBtn');
+
+            if (dateFilter) {
+                dateFilter.addEventListener('change', () => {
+                    applySelectedDateToEntryInputs();
+                    renderPrescriptionTable();
+                    renderLabTable();
+                    renderNurseTable();
+                    renderVsSection();
+                    renderIoSection();
+                });
+                getPrescriptionFilterDate();
+                applySelectedDateToEntryInputs();
+            }
+
+            if (prevBtn) {
+                prevBtn.addEventListener('click', () => shiftPrescriptionDate(-1));
+            }
+
+            if (nextBtn) {
+                nextBtn.addEventListener('click', () => shiftPrescriptionDate(1));
+            }
+        });
         // [간호 기록 표 그리기]
         function renderNurseTable() {
             const p = patients[currentPatientIndex];
             const tbody = document.getElementById('nurseTable');
             if (!tbody || !p) return;
-            const records = p.records?.nurse || [];
+            const records = getDateFilteredRecords(p.records?.nurse || []);
 
             if (records.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#94a3b8;">등록된 간호기록이 없습니다.</td></tr>`;
@@ -4448,7 +4749,7 @@ function editPresc(index) {
 
             tbody.innerHTML = records.map((r, idx) => `
                 <tr>
-                    <td>${r.time}</td>
+                    <td>${formatDisplayTime(r.time)}</td>
                     <td style="text-align:left;">${r.note}</td>
                     <td><b>${r.nurse || '-'}</b></td>
                     <td><button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('nurse', ${idx})">삭제</button></td>
