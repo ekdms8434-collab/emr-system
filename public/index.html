@@ -271,17 +271,102 @@
         .vs-pivot-table td.vs-val { border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; text-align: center; padding: 4px 10px; font-weight: bold; white-space: nowrap; }
 
         .io-summary-table { width: 100%; min-width: 820px; border-collapse: collapse; background: white; table-layout: fixed; }
-        .io-summary-table th, .io-summary-table td { border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11px; text-align: center; vertical-align: middle; }
+        .io-summary-table th, .io-summary-table td { border: 1px solid #cbd5e1; padding: 3px 5px; font-size: 10.5px; text-align: center; vertical-align: middle; line-height: 1.15; }
         .io-summary-table th { background: #e2e8f0; color: #0f172a; font-weight: 700; }
-        .io-summary-table .io-group { background: #f8fafc; color: #0f172a; font-weight: 700; text-align: center; width: 120px; }
-        .io-summary-table .io-label { text-align: left; font-weight: 600; background: #f8fafc; }
-        .io-summary-table .io-note { text-align: left; font-weight: 600; background: #f8fafc; }
+        .io-summary-table .io-group { background: #f8fafc; color: #0f172a; font-weight: 700; text-align: center; width: 120px; padding: 2px 4px; }
+        .io-summary-table .io-label { text-align: left; font-weight: 600; background: #f8fafc; padding: 2px 6px; }
+        .io-summary-table .io-note { text-align: left; font-weight: 600; background: #f8fafc; padding: 2px 6px; }
+        .io-summary-table .io-cell { padding: 2px 4px; }
+        #ioTab .io-cell {
+            height: 26px !important;
+            min-height: 26px !important;
+            max-height: 26px !important;
+            padding: 2px 4px !important;
+            line-height: 1 !important;
+            vertical-align: middle;
+            overflow: hidden;
+        }
+        .io-slot-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            width: 100%;
+            min-height: 26px;
+        }
+        .io-slot-header-label {
+            font-size: 10px;
+            line-height: 1.1;
+            font-weight: 700;
+        }
+        .io-slot-action {
+            appearance: none;
+            -webkit-appearance: none;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #0f172a;
+            border-radius: 6px;
+            padding: 2px 7px;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            line-height: 1.4;
+        }
+        .io-slot-action.save {
+            background: #1d4ed8;
+            color: #ffffff;
+            border-color: #1d4ed8;
+        }
+        #ioTab .io-cell .io-input {
+            display: block;
+            width: 100%;
+            max-width: 56px;
+            height: 20px;
+            min-height: 20px;
+            margin: 0 auto;
+            padding: 0 2px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            background: #fff;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 18px;
+            box-sizing: border-box;
+            appearance: textfield;
+            -moz-appearance: textfield;
+        }
+        #ioTab .io-cell .io-input::-webkit-outer-spin-button,
+        #ioTab .io-cell .io-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
         .io-summary-table .io-val { font-weight: 700; }
-        .io-summary-table .io-val.blue { color: #1d4ed8; }
-        .io-summary-table .io-val.red { color: #b91c1c; }
-        .io-summary-table .io-val.green { color: #15803d; }
+        .io-summary-table .io-value-display,
+        .io-summary-table .io-readonly {
+            line-height: 1.1;
+        }
+        .io-summary-table .io-val.blue { color: #ffb0b0; }
+        .io-summary-table .io-val.red { color: #c2d2ff; }
+        .io-summary-table .io-val.green { color: #d5bdff; }
         .io-summary-table .io-val.bold { font-weight: 800; }
         .io-summary-table .io-empty { background: #f8fafc; color: #94a3b8; }
+        #ioTab .io-intake-row,
+        #ioTab .io-intake-row td,
+        #ioTab .io-intake-row th {
+            background-color: rgba(255, 164, 164, 0.08);
+        }
+        #ioTab .io-output-row,
+        #ioTab .io-output-row td,
+        #ioTab .io-output-row th {
+            background-color: rgba(174, 205, 255, 0.08);
+        }
+        #ioTab .io-balance-row,
+        #ioTab .io-balance-row td,
+        #ioTab .io-balance-row th {
+            background-color: rgba(218, 179, 255, 0.1);
+        }
         .io-summary-table .io-input {
             width: 100%;
             min-width: 70px;
@@ -294,24 +379,79 @@
             font-weight: 700;
             color: #0f172a;
         }
-        .io-summary-table .io-input.blue { color: #1d4ed8; }
-        .io-summary-table .io-input.red { color: #b91c1c; }
-        .io-summary-table .io-input.green { color: #15803d; }
-        .io-slot-btn {
-            margin-left: 6px;
+        .io-summary-table .io-input.blue { color: #c2410c; }
+        .io-summary-table .io-input.red { color: #1d4ed8; }
+        .io-summary-table .io-input.green { color: #7c3aed; }
+        .io-date-summary-wrap {
+            margin: 0 0 12px 0;
             border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #fff;
+        }
+        .io-date-summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            background: white;
+        }
+        .io-date-summary-table th,
+        .io-date-summary-table td {
+            border: 1px solid #cbd5e1;
+            padding: 6px 4px;
+            text-align: center;
+            font-size: 11px;
+            vertical-align: middle;
+        }
+        .io-date-summary-table thead th {
+            background: #e2e8f0;
+            color: #0f172a;
+            font-weight: 700;
+        }
+        .io-date-summary-table tbody th {
             background: #f8fafc;
             color: #0f172a;
-            border-radius: 4px;
-            padding: 2px 6px;
-            font-size: 10px;
             font-weight: 700;
-            cursor: pointer;
+            text-align: center;
+            width: 110px;
         }
-        .io-slot-btn.active {
-            background: #1d4ed8;
-            border-color: #1d4ed8;
-            color: #ffffff;
+        .io-date-summary-table .io-summary-selected {
+            background: transparent;
+            color: inherit;
+            font-weight: 800;
+        }
+        .io-summary-date-cell {
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+        .io-summary-date-cell:hover {
+            background: #f1f5f9;
+        }
+        .io-summary-date-cell.io-summary-selected {
+            background: transparent;
+            color: inherit;
+            font-weight: 800;
+        }
+        .io-date-summary-table th.io-selected-header {
+            background: #e2e8f0 !important;
+            color: #0f172a !important;
+            border-top: 3px solid #0f172a !important;
+            border-left: 3px solid #0f172a !important;
+            border-right: 3px solid #0f172a !important;
+            border-bottom: 1px solid #cbd5e1 !important;
+        }
+        .io-date-summary-table td.io-selected-intake,
+        .io-date-summary-table td.io-selected-output {
+            border-left: 3px solid #0f172a !important;
+            border-right: 3px solid #0f172a !important;
+            border-top: 1px solid #cbd5e1 !important;
+            border-bottom: 1px solid #cbd5e1 !important;
+        }
+        .io-date-summary-table td.io-selected-total {
+            border-left: 3px solid #0f172a !important;
+            border-right: 3px solid #0f172a !important;
+            border-bottom: 3px solid #0f172a !important;
+            border-top: 1px solid #cbd5e1 !important;
         }
 
         /* 1. 환자 목록 화면의 바깥 상자 디자인입니다. */
@@ -1029,6 +1169,12 @@
 
                                 <!-- I/O (섭취/배설) 탭 화면 -->
                                 <div id="ioTab" class="tab-content">
+                                    <div class="io-date-summary-wrap">
+                                        <table class="io-date-summary-table">
+                                            <thead id="ioDateSummaryHeader"></thead>
+                                            <tbody id="ioDateSummaryBody"></tbody>
+                                        </table>
+                                    </div>
                                     <div class="table-scroll-area">
                                         <table class="vs-pivot-table">
                                             <tbody id="ioTableBody"></tbody>
@@ -1173,6 +1319,7 @@
         let editingPatientIndex = null; // 수정 중인 환자가 누구인지 기억
         let editingOriginalChartNo = null; // 수정 시작 시점의 원래 등록번호
         let editingPrescIndex = null;   // 수정 중인 처방전 기록 기억
+        let activeIoEditSlot = null;     // I/O 탭에서 현재 수정 중인 시간대 컬럼
         let targetPrescModalIndex = null;
         let currentBodySide = 'front';  // 마네킹이 앞모습인지 뒷모습인지 기억
         let selectedMarkType = 'OP';    // 선택된 핀 종류(수술부위 등) 기억
@@ -1332,8 +1479,9 @@
 
             const barHeight = resizerBar ? resizerBar.offsetHeight : 18;
             const totalHeight = Math.max(0, splitContainer.clientHeight - barHeight);
-            const minTop = 180;
-            const maxTop = Math.max(minTop, totalHeight - 180);
+            const minBottomPaneHeight = 120;
+            const minTop = 0;
+            const maxTop = Math.max(minTop, totalHeight - minBottomPaneHeight);
             const clampedTop = Math.min(Math.max(topHeightPx, minTop), maxTop);
 
             topPane.classList.remove('panel-animate');
@@ -4143,17 +4291,43 @@ if (!note) return alert("처방 내역을 입력하세요.");
             });
         }
 
+        function normalizeDateKey(value) {
+            if (value === null || value === undefined) return '';
+
+            const raw = String(value).trim();
+            if (!raw) return '';
+
+            const datePart = raw.includes('T')
+                ? raw.split('T')[0]
+                : raw.includes(' ')
+                    ? raw.split(' ')[0]
+                    : raw;
+
+            const match = String(datePart).match(/^\d{4}-\d{2}-\d{2}$/);
+            if (!match) return '';
+
+            const [year, month, day] = match[0].split('-').map(Number);
+            const localDate = new Date(year, month - 1, day);
+            return `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
+        }
+
+        function addDaysToDateKey(dateKey, offsetDays) {
+            const clean = normalizeDateKey(dateKey);
+            if (!clean) return '';
+
+            const [year, month, day] = clean.split('-').map(Number);
+            const localDate = new Date(year, month - 1, day);
+            localDate.setDate(localDate.getDate() + offsetDays);
+            return `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
+        }
+
         function getDateFilteredRecords(records) {
-            const selectedDate = getPrescriptionFilterDate();
+            const selectedDate = normalizeDateKey(getPrescriptionFilterDate());
             if (!selectedDate) return records;
 
             return records.filter((record) => {
                 const candidate = record?.date || record?.time || '';
-                const timeStr = String(candidate).trim();
-                if (!timeStr) return false;
-
-                const datePart = timeStr.includes('T') ? timeStr.split('T')[0] : timeStr.split(' ')[0];
-                return datePart === selectedDate;
+                return normalizeDateKey(candidate) === selectedDate;
             });
         }
 
@@ -4427,6 +4601,20 @@ if (!note) return alert("처방 내역을 입력하세요.");
             return `${Math.round(numeric).toLocaleString()} mL`;
         }
 
+        function formatSignedIoValue(value) {
+            const numeric = Number(value) || 0;
+            const safe = Math.round(numeric);
+            if (safe === 0) return '0 mL';
+            const sign = safe > 0 ? '+' : '-';
+            return `${sign}${Math.abs(safe).toLocaleString()} mL`;
+        }
+
+        function getIoBalanceTextColor(value) {
+            if (value > 0) return '#b91c1c';
+            if (value < 0) return '#1d4ed8';
+            return '#7c3aed';
+        }
+
         function renderIoValueCell(value, colorClass) {
             const numeric = Number(value) || 0;
             return `<span class="io-val ${colorClass} bold">${formatIoValue(numeric)}</span>`;
@@ -4459,12 +4647,8 @@ if (!note) return alert("처방 내역을 입력하세요.");
             if (!p.records) p.records = {};
             if (!Array.isArray(p.records.io)) p.records.io = [];
 
-            const selectedDate = getPrescriptionFilterDate() || new Date().toISOString().slice(0, 10);
-            let entry = p.records.io.find((item) => {
-                const candidate = item?.date || item?.time || '';
-                const datePart = String(candidate).includes('T') ? String(candidate).split('T')[0] : String(candidate).split(' ')[0];
-                return datePart === selectedDate;
-            });
+            const selectedDate = normalizeDateKey(getPrescriptionFilterDate()) || normalizeDateKey(new Date());
+            let entry = p.records.io.find((item) => normalizeDateKey(item?.date || item?.time || '') === selectedDate);
 
             if (!entry) {
                 entry = {
@@ -4548,200 +4732,295 @@ if (!note) return alert("처방 내역을 입력하세요.");
         }
 
         /* --- 섭취/배설(I/O) 표를 그리는 함수 --- */
-        function renderIoSection() {
-            if (currentPatientIndex === null) return;
-            const p = patients[currentPatientIndex];
-            if (!p.records) p.records = {};
-            if (!Array.isArray(p.records.io)) p.records.io = [];
+        function getIoSummaryDateRange() {
+            const selectedDate = normalizeDateKey(getPrescriptionFilterDate());
+            if (!selectedDate) return [];
 
-            const selectedDate = getPrescriptionFilterDate() || new Date().toISOString().slice(0, 10);
-            const ioEntry = getSelectedIoEntry();
+            const dates = [];
+            for (let offset = -3; offset <= 3; offset++) {
+                dates.push(addDaysToDateKey(selectedDate, offset));
+            }
+            return dates.filter(Boolean);
+        }
+
+        function getIoSummaryValueForDate(dateStr) {
+            const p = patients[currentPatientIndex];
+            if (!p || !p.records || !Array.isArray(p.records.io)) {
+                return { intake: 0, output: 0, total: 0 };
+            }
+
+            const target = p.records.io.find((item) => normalizeDateKey(item?.date || item?.time || '') === normalizeDateKey(dateStr));
+
+            if (!target) {
+                return { intake: 0, output: 0, total: 0 };
+            }
+
+            const sumRows = (keys) => keys.reduce((total, rowKey) => {
+                const group = target[rowKey] || {};
+                return total + Number(group.day || 0) + Number(group.evening || 0) + Number(group.night || 0);
+            }, 0);
+
+            const intake = sumRows(['oral', 'iv', 'blood']);
+            const output = sumRows(['urine', 'stool', 'drainage']);
+            return { intake, output, total: intake - output };
+        }
+
+        function renderIoSummaryTable() {
+            const header = document.getElementById('ioDateSummaryHeader');
+            const body = document.getElementById('ioDateSummaryBody');
+            if (!header || !body) return;
+
+            const dates = getIoSummaryDateRange();
+            if (!dates.length) {
+                header.innerHTML = '';
+                body.innerHTML = '';
+                return;
+            }
+
+            const selectedDate = getPrescriptionFilterDate();
+            const formatHeaderDate = (dateStr) => {
+                const d = new Date(`${dateStr}T00:00:00`);
+                const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                return `${mm}/${dd} (${dayNames[d.getDay()]})`;
+            };
+
+            const headerHtml = `
+                <tr>
+                    <th style="width:110px;">구분</th>
+                    ${dates.map((dateStr) => {
+                        const isSelected = dateStr === selectedDate;
+                        const selectedClass = isSelected ? 'io-summary-selected io-selected-header' : '';
+                        return `<th class="io-summary-date-cell ${selectedClass}" data-date="${dateStr}" title="${dateStr} 선택">${formatHeaderDate(dateStr)}</th>`;
+                    }).join('')}
+                </tr>
+            `;
+
+            const rows = [
+                { key: 'intake', label: 'Intake', css: 'blue' },
+                { key: 'output', label: 'Output', css: 'red' },
+                { key: 'total', label: '합계', css: 'green' }
+            ];
+
+            const rowHtml = rows.map((row) => {
+                const cells = dates.map((dateStr) => {
+                    const value = getIoSummaryValueForDate(dateStr)[row.key];
+                    const display = row.key === 'total' ? formatSignedIoValue(value) : formatIoValue(value);
+                    const isSelected = dateStr === selectedDate;
+                    const selectedClass = isSelected ? `io-summary-selected io-selected-${row.key}` : '';
+                    return `<td class="io-val ${row.css} bold io-summary-date-cell ${selectedClass}" data-date="${dateStr}" title="${dateStr} 선택">${display}</td>`;
+                }).join('');
+                return `<tr><th>${row.label}</th>${cells}</tr>`;
+            }).join('');
+
+            header.innerHTML = headerHtml;
+            body.innerHTML = rowHtml;
+
+            body.querySelectorAll('.io-summary-date-cell').forEach((cell) => {
+                cell.addEventListener('click', () => {
+                    const selectedDateStr = cell.dataset.date;
+                    if (!selectedDateStr) return;
+
+                    const dateFilter = document.getElementById('prescriptionDateFilter');
+                    if (!dateFilter) return;
+
+                    dateFilter.value = selectedDateStr;
+                    applySelectedDateToEntryInputs();
+                    renderPrescriptionTable();
+                    renderLabTable();
+                    renderNurseTable();
+                    renderVsSection();
+                    renderIoSection();
+                });
+            });
+
+            header.querySelectorAll('.io-summary-date-cell').forEach((cell) => {
+                cell.addEventListener('click', () => {
+                    const selectedDateStr = cell.dataset.date;
+                    if (!selectedDateStr) return;
+
+                    const dateFilter = document.getElementById('prescriptionDateFilter');
+                    if (!dateFilter) return;
+
+                    dateFilter.value = selectedDateStr;
+                    applySelectedDateToEntryInputs();
+                    renderPrescriptionTable();
+                    renderLabTable();
+                    renderNurseTable();
+                    renderVsSection();
+                    renderIoSection();
+                });
+            });
+        }
+
+        function renderIoSection() {
             const ioTableBody = document.getElementById('ioTableBody');
             if (!ioTableBody) return;
 
-            const defaults = {
-                oral: { day: 0, evening: 0, night: 0 },
-                iv: { day: 0, evening: 0, night: 0 },
-                blood: { day: 0, evening: 0, night: 0 },
-                urine: { day: 0, evening: 0, night: 0 },
-                stool: { day: 0, evening: 0, night: 0 },
-                drainage: { day: 0, evening: 0, night: 0 }
+            renderIoSummaryTable();
+
+            const getEntry = () => getSelectedIoEntry();
+            const readValue = (rowKey, slotKey) => {
+                const entry = getEntry();
+                const row = entry?.[rowKey] || {};
+                const val = Number(row[slotKey] ?? 0);
+                return Number.isFinite(val) ? val : 0;
             };
 
-            const currentValues = {
-                oral: ioEntry?.oral || defaults.oral,
-                iv: ioEntry?.iv || defaults.iv,
-                blood: ioEntry?.blood || defaults.blood,
-                urine: ioEntry?.urine || defaults.urine,
-                stool: ioEntry?.stool || defaults.stool,
-                drainage: ioEntry?.drainage || defaults.drainage
+            const renderInputCell = (rowKey, slotKey, colorClass) => {
+                const value = readValue(rowKey, slotKey);
+                const color = colorClass === 'blue' ? '#1d4ed8' : colorClass === 'red' ? '#b91c1c' : '#15803d';
+                return `
+                    <input
+                        class="io-input ${colorClass}"
+                        type="number"
+                        min="0"
+                        step="1"
+                        value="${value}"
+                        data-row="${rowKey}"
+                        data-slot="${slotKey}"
+                        inputmode="numeric"
+                        style="color:${color};"
+                    >
+                `;
             };
 
-            const buildInput = (rowKey, slotKey, value, colorClass) => `
-                <div class="io-value-display" data-row="${rowKey}" data-slot="${slotKey}" data-color="${colorClass}" style="display:flex; align-items:center; justify-content:center; min-height:28px;">
-                    <input class="io-input ${colorClass}" type="number" min="0" step="1" data-row="${rowKey}" data-slot="${slotKey}" value="${Number(value) || 0}" style="display:none; width:100%; min-width:60px; text-align:center;" />
-                    <span class="io-readonly ${colorClass}" style="font-weight:700; display:flex; align-items:center; justify-content:center; width:100%;">${formatIoValue(value)}</span>
-                </div>
-            `;
+            const renderCellValue = (rowKey, slotKey, colorClass) => {
+                const value = readValue(rowKey, slotKey);
+                return `<span class="io-val ${colorClass} bold">${formatIoValue(value)}</span>`;
+            };
 
-            const buildSlotButton = (slot) => `
-                <button class="io-slot-btn" type="button" data-slot="${slot}" data-active="false">입력</button>
-            `;
+            const renderHeader = (slotKey, label) => {
+                const isEditing = activeIoEditSlot === slotKey;
+                return `
+                    <th style="width:150px;">
+                        <div class="io-slot-header">
+                            <div class="io-slot-header-label">${label}</div>
+                            <button type="button" class="io-slot-action ${isEditing ? 'save' : ''}" data-slot="${slotKey}" data-mode="${isEditing ? 'save' : 'edit'}">${isEditing ? '저장' : '입력'}</button>
+                        </div>
+                    </th>
+                `;
+            };
 
-            const oralTotal = Number(currentValues.oral.day || 0) + Number(currentValues.oral.evening || 0) + Number(currentValues.oral.night || 0);
-            const ivTotal = Number(currentValues.iv.day || 0) + Number(currentValues.iv.evening || 0) + Number(currentValues.iv.night || 0);
-            const bloodTotal = Number(currentValues.blood.day || 0) + Number(currentValues.blood.evening || 0) + Number(currentValues.blood.night || 0);
-            const urineTotal = Number(currentValues.urine.day || 0) + Number(currentValues.urine.evening || 0) + Number(currentValues.urine.night || 0);
-            const stoolTotal = Number(currentValues.stool.day || 0) + Number(currentValues.stool.evening || 0) + Number(currentValues.stool.night || 0);
-            const drainageTotal = Number(currentValues.drainage.day || 0) + Number(currentValues.drainage.evening || 0) + Number(currentValues.drainage.night || 0);
-
-            const intakeDay = Number(currentValues.oral.day || 0) + Number(currentValues.iv.day || 0) + Number(currentValues.blood.day || 0);
-            const intakeEvening = Number(currentValues.oral.evening || 0) + Number(currentValues.iv.evening || 0) + Number(currentValues.blood.evening || 0);
-            const intakeNight = Number(currentValues.oral.night || 0) + Number(currentValues.iv.night || 0) + Number(currentValues.blood.night || 0);
+            const intakeDay = ['oral', 'iv', 'blood'].reduce((sum, row) => sum + readValue(row, 'day'), 0);
+            const intakeEvening = ['oral', 'iv', 'blood'].reduce((sum, row) => sum + readValue(row, 'evening'), 0);
+            const intakeNight = ['oral', 'iv', 'blood'].reduce((sum, row) => sum + readValue(row, 'night'), 0);
             const intakeTotal = intakeDay + intakeEvening + intakeNight;
 
-            const outputDay = Number(currentValues.urine.day || 0) + Number(currentValues.stool.day || 0) + Number(currentValues.drainage.day || 0);
-            const outputEvening = Number(currentValues.urine.evening || 0) + Number(currentValues.stool.evening || 0) + Number(currentValues.drainage.evening || 0);
-            const outputNight = Number(currentValues.urine.night || 0) + Number(currentValues.stool.night || 0) + Number(currentValues.drainage.night || 0);
+            const outputDay = ['urine', 'stool', 'drainage'].reduce((sum, row) => sum + readValue(row, 'day'), 0);
+            const outputEvening = ['urine', 'stool', 'drainage'].reduce((sum, row) => sum + readValue(row, 'evening'), 0);
+            const outputNight = ['urine', 'stool', 'drainage'].reduce((sum, row) => sum + readValue(row, 'night'), 0);
             const outputTotal = outputDay + outputEvening + outputNight;
+
+            const balanceDay = intakeDay - outputDay;
+            const balanceEvening = intakeEvening - outputEvening;
+            const balanceNight = intakeNight - outputNight;
+            const balanceTotal = balanceDay + balanceEvening + balanceNight;
 
             ioTableBody.innerHTML = `
                 <tr>
                     <th style="width:120px;">구 분</th>
                     <th style="width:220px;">세부 항목</th>
-                    <th>Day (07:00~15:00) ${buildSlotButton('day')}</th>
-                    <th>Evening (15:00~23:00) ${buildSlotButton('evening')}</th>
-                    <th>Night (23:00~07:00) ${buildSlotButton('night')}</th>
-                    <th>24시간 총 누적</th>
+                    ${renderHeader('day', 'Day (07:00~15:00)')}
+                    ${renderHeader('evening', 'Evening (15:00~23:00)')}
+                    ${renderHeader('night', 'Night (23:00~07:00)')}
+                    <th>TOTAL</th>
                 </tr>
-                <tr>
+                <tr class="io-intake-row">
                     <td class="io-group" rowspan="4">Intake</td>
                     <td class="io-label">경구 (Oral)</td>
-                    <td class="io-cell">${buildInput('oral', 'day', currentValues.oral.day, 'blue')}</td>
-                    <td class="io-cell">${buildInput('oral', 'evening', currentValues.oral.evening, 'blue')}</td>
-                    <td class="io-cell">${buildInput('oral', 'night', currentValues.oral.night, 'blue')}</td>
-                    <td class="io-val blue bold" id="oral-total"></td>
+                    <td class="io-cell">${activeIoEditSlot === 'day' ? renderInputCell('oral', 'day', 'blue') : renderCellValue('oral', 'day', 'blue')}</td>
+                    <td class="io-cell">${activeIoEditSlot === 'evening' ? renderInputCell('oral', 'evening', 'blue') : renderCellValue('oral', 'evening', 'blue')}</td>
+                    <td class="io-cell">${activeIoEditSlot === 'night' ? renderInputCell('oral', 'night', 'blue') : renderCellValue('oral', 'night', 'blue')}</td>
+                    <td class="io-val blue bold">${formatIoValue(readValue('oral', 'day') + readValue('oral', 'evening') + readValue('oral', 'night'))}</td>
                 </tr>
-                <tr>
+                <tr class="io-intake-row">
                     <td class="io-label">비경구 (IV/Infusion)</td>
-                    <td class="io-cell">${buildInput('iv', 'day', currentValues.iv.day, 'blue')}</td>
-                    <td class="io-cell">${buildInput('iv', 'evening', currentValues.iv.evening, 'blue')}</td>
-                    <td class="io-cell">${buildInput('iv', 'night', currentValues.iv.night, 'blue')}</td>
-                    <td class="io-val blue bold" id="iv-total"></td>
+                    <td class="io-cell">${activeIoEditSlot === 'day' ? renderInputCell('iv', 'day', 'blue') : renderCellValue('iv', 'day', 'blue')}</td>
+                    <td class="io-cell">${activeIoEditSlot === 'evening' ? renderInputCell('iv', 'evening', 'blue') : renderCellValue('iv', 'evening', 'blue')}</td>
+                    <td class="io-cell">${activeIoEditSlot === 'night' ? renderInputCell('iv', 'night', 'blue') : renderCellValue('iv', 'night', 'blue')}</td>
+                    <td class="io-val blue bold">${formatIoValue(readValue('iv', 'day') + readValue('iv', 'evening') + readValue('iv', 'night'))}</td>
                 </tr>
-                <tr>
+                <tr class="io-intake-row">
                     <td class="io-label">혈액제제 (Blood)</td>
-                    <td class="io-cell">${buildInput('blood', 'day', currentValues.blood.day, 'blue')}</td>
-                    <td class="io-cell">${buildInput('blood', 'evening', currentValues.blood.evening, 'blue')}</td>
-                    <td class="io-cell">${buildInput('blood', 'night', currentValues.blood.night, 'blue')}</td>
-                    <td class="io-val blue bold" id="blood-total"></td>
+                    <td class="io-cell">${activeIoEditSlot === 'day' ? renderInputCell('blood', 'day', 'blue') : renderCellValue('blood', 'day', 'blue')}</td>
+                    <td class="io-cell">${activeIoEditSlot === 'evening' ? renderInputCell('blood', 'evening', 'blue') : renderCellValue('blood', 'evening', 'blue')}</td>
+                    <td class="io-cell">${activeIoEditSlot === 'night' ? renderInputCell('blood', 'night', 'blue') : renderCellValue('blood', 'night', 'blue')}</td>
+                    <td class="io-val blue bold">${formatIoValue(readValue('blood', 'day') + readValue('blood', 'evening') + readValue('blood', 'night'))}</td>
                 </tr>
-                <tr>
+                <tr class="io-intake-row">
                     <td class="io-label">섭취량 소계</td>
-                    <td class="io-val blue bold" id="intake-day-subtotal">${formatIoValue(intakeDay)}</td>
-                    <td class="io-val blue bold" id="intake-evening-subtotal">${formatIoValue(intakeEvening)}</td>
-                    <td class="io-val blue bold" id="intake-night-subtotal">${formatIoValue(intakeNight)}</td>
-                    <td class="io-val blue bold" id="intake-total-subtotal">${formatIoValue(intakeTotal)}</td>
+                    <td class="io-val blue bold">${formatIoValue(intakeDay)}</td>
+                    <td class="io-val blue bold">${formatIoValue(intakeEvening)}</td>
+                    <td class="io-val blue bold">${formatIoValue(intakeNight)}</td>
+                    <td class="io-val blue bold">${formatIoValue(intakeTotal)}</td>
                 </tr>
-                <tr>
+                <tr class="io-output-row">
                     <td class="io-group" rowspan="4">Output</td>
                     <td class="io-label">소변 (Urine)</td>
-                    <td class="io-cell">${buildInput('urine', 'day', currentValues.urine.day, 'red')}</td>
-                    <td class="io-cell">${buildInput('urine', 'evening', currentValues.urine.evening, 'red')}</td>
-                    <td class="io-cell">${buildInput('urine', 'night', currentValues.urine.night, 'red')}</td>
-                    <td class="io-val red bold" id="urine-total"></td>
+                    <td class="io-cell">${activeIoEditSlot === 'day' ? renderInputCell('urine', 'day', 'red') : renderCellValue('urine', 'day', 'red')}</td>
+                    <td class="io-cell">${activeIoEditSlot === 'evening' ? renderInputCell('urine', 'evening', 'red') : renderCellValue('urine', 'evening', 'red')}</td>
+                    <td class="io-cell">${activeIoEditSlot === 'night' ? renderInputCell('urine', 'night', 'red') : renderCellValue('urine', 'night', 'red')}</td>
+                    <td class="io-val red bold">${formatIoValue(readValue('urine', 'day') + readValue('urine', 'evening') + readValue('urine', 'night'))}</td>
                 </tr>
-                <tr>
+                <tr class="io-output-row">
                     <td class="io-label">대변 (Stool)</td>
-                    <td class="io-cell">${buildInput('stool', 'day', currentValues.stool.day, 'red')}</td>
-                    <td class="io-cell">${buildInput('stool', 'evening', currentValues.stool.evening, 'red')}</td>
-                    <td class="io-cell">${buildInput('stool', 'night', currentValues.stool.night, 'red')}</td>
-                    <td class="io-val red bold" id="stool-total"></td>
+                    <td class="io-cell">${activeIoEditSlot === 'day' ? renderInputCell('stool', 'day', 'red') : renderCellValue('stool', 'day', 'red')}</td>
+                    <td class="io-cell">${activeIoEditSlot === 'evening' ? renderInputCell('stool', 'evening', 'red') : renderCellValue('stool', 'evening', 'red')}</td>
+                    <td class="io-cell">${activeIoEditSlot === 'night' ? renderInputCell('stool', 'night', 'red') : renderCellValue('stool', 'night', 'red')}</td>
+                    <td class="io-val red bold">${formatIoValue(readValue('stool', 'day') + readValue('stool', 'evening') + readValue('stool', 'night'))}</td>
                 </tr>
-                <tr>
+                <tr class="io-output-row">
                     <td class="io-label">배액</td>
-                    <td class="io-cell">${buildInput('drainage', 'day', currentValues.drainage.day, 'red')}</td>
-                    <td class="io-cell">${buildInput('drainage', 'evening', currentValues.drainage.evening, 'red')}</td>
-                    <td class="io-cell">${buildInput('drainage', 'night', currentValues.drainage.night, 'red')}</td>
-                    <td class="io-val red bold" id="drainage-total"></td>
+                    <td class="io-cell">${activeIoEditSlot === 'day' ? renderInputCell('drainage', 'day', 'red') : renderCellValue('drainage', 'day', 'red')}</td>
+                    <td class="io-cell">${activeIoEditSlot === 'evening' ? renderInputCell('drainage', 'evening', 'red') : renderCellValue('drainage', 'evening', 'red')}</td>
+                    <td class="io-cell">${activeIoEditSlot === 'night' ? renderInputCell('drainage', 'night', 'red') : renderCellValue('drainage', 'night', 'red')}</td>
+                    <td class="io-val red bold">${formatIoValue(readValue('drainage', 'day') + readValue('drainage', 'evening') + readValue('drainage', 'night'))}</td>
                 </tr>
-                <tr>
+                <tr class="io-output-row">
                     <td class="io-label">배설량 소계</td>
-                    <td class="io-val red bold" id="output-day-subtotal">${formatIoValue(outputDay)}</td>
-                    <td class="io-val red bold" id="output-evening-subtotal">${formatIoValue(outputEvening)}</td>
-                    <td class="io-val red bold" id="output-night-subtotal">${formatIoValue(outputNight)}</td>
-                    <td class="io-val red bold" id="output-total-subtotal">${formatIoValue(outputTotal)}</td>
+                    <td class="io-val red bold">${formatIoValue(outputDay)}</td>
+                    <td class="io-val red bold">${formatIoValue(outputEvening)}</td>
+                    <td class="io-val red bold">${formatIoValue(outputNight)}</td>
+                    <td class="io-val red bold">${formatIoValue(outputTotal)}</td>
                 </tr>
-                <tr>
+                <tr class="io-balance-row">
                     <td class="io-group">Balance</td>
-                    <td class="io-note">Positive/Negative</td>
-                    <td class="io-val green bold" id="balance-day"></td>
-                    <td class="io-val green bold" id="balance-evening"></td>
-                    <td class="io-val green bold" id="balance-night"></td>
-                    <td class="io-val green bold" id="balance-total"></td>
-                </tr>
-                <tr>
-                    <td class="io-group">Total</td>
-                    <td class="io-note">누적 합계</td>
-                    <td class="io-empty"></td>
-                    <td class="io-empty"></td>
-                    <td class="io-empty"></td>
-                    <td class="io-val green bold" id="total-cumulative">${formatIoValue(intakeTotal + outputTotal)}</td>
+                    <td class="io-note">Positive/Negative (+ / -)</td>
+                    <td class="io-val bold" style="color:${getIoBalanceTextColor(balanceDay)};">${formatSignedIoValue(balanceDay)}</td>
+                    <td class="io-val bold" style="color:${getIoBalanceTextColor(balanceEvening)};">${formatSignedIoValue(balanceEvening)}</td>
+                    <td class="io-val bold" style="color:${getIoBalanceTextColor(balanceNight)};">${formatSignedIoValue(balanceNight)}</td>
+                    <td class="io-val bold" style="color:${getIoBalanceTextColor(balanceTotal)};">${formatSignedIoValue(balanceTotal)}</td>
                 </tr>
             `;
 
-            const setIoSlotState = (slot, enabled) => {
-                ioTableBody.querySelectorAll(`.io-input[data-slot="${slot}"]`).forEach((input) => {
-                    input.disabled = !enabled;
-                    input.style.display = enabled ? 'block' : 'none';
-                    input.style.opacity = enabled ? '1' : '0.8';
-                });
-
-                ioTableBody.querySelectorAll(`.io-readonly[data-slot="${slot}"]`).forEach((readOnlyText) => {
-                    readOnlyText.style.display = enabled ? 'none' : 'flex';
-                });
-
-                ioTableBody.querySelectorAll(`.io-slot-btn[data-slot="${slot}"]`).forEach((button) => {
-                    button.textContent = enabled ? '저장' : '입력';
-                    button.classList.toggle('active', enabled);
-                    button.dataset.active = String(enabled);
-                });
-            };
-
-            ioTableBody.querySelectorAll('.io-slot-btn').forEach((button) => {
+            ioTableBody.querySelectorAll('.io-slot-action').forEach((button) => {
                 button.addEventListener('click', async () => {
                     const slot = button.dataset.slot;
-                    const isActive = button.dataset.active === 'true';
+                    const mode = button.dataset.mode;
 
-                    if (isActive) {
-                        await saveIoEntryFromTable(ioTableBody);
-                        setIoSlotState(slot, false);
-                        updateIoSummaryValues(ioTableBody);
+                    if (mode === 'edit') {
+                        activeIoEditSlot = slot;
+                        renderIoSection();
                         return;
                     }
 
-                    ioTableBody.querySelectorAll('.io-slot-btn').forEach((otherBtn) => {
-                        if (otherBtn !== button && otherBtn.dataset.active === 'true') {
-                            const otherSlot = otherBtn.dataset.slot;
-                            setIoSlotState(otherSlot, false);
-                        }
+                    const entry = getSelectedIoEntry();
+                    if (!entry) return;
+
+                    ioTableBody.querySelectorAll(`.io-input[data-slot="${slot}"]`).forEach((input) => {
+                        const rowKey = input.dataset.row;
+                        const parsed = Number(input.value);
+                        if (!entry[rowKey]) return;
+                        entry[rowKey][slot] = Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
                     });
 
-                    setIoSlotState(slot, true);
+                    await savePatientToBackend(patients[currentPatientIndex]);
+                    activeIoEditSlot = null;
+                    renderIoSection();
                 });
             });
-
-            ioTableBody.querySelectorAll('.io-input').forEach((input) => {
-                input.addEventListener('input', async () => {
-                    const value = Number(input.value);
-                    input.value = Number.isFinite(value) ? Math.max(0, value) : 0;
-                    const display = input.parentElement.querySelector('.io-readonly');
-                    if (display) display.textContent = formatIoValue(input.value);
-                    updateIoSummaryValues(ioTableBody);
-                });
-            });
-
-            updateIoSummaryValues(ioTableBody);
         }
 
         function editIoRecord(index) {
@@ -4903,13 +5182,11 @@ function editPresc(index) {
             const input = document.getElementById('prescriptionDateFilter');
             if (!input) return;
 
-            const current = input.value ? new Date(`${input.value}T00:00:00`) : new Date();
-            current.setDate(current.getDate() + offsetDays);
+            const currentKey = normalizeDateKey(input.value) || normalizeDateKey(new Date());
+            const nextKey = addDaysToDateKey(currentKey, offsetDays);
+            if (!nextKey) return;
 
-            const yyyy = current.getFullYear();
-            const mm = String(current.getMonth() + 1).padStart(2, '0');
-            const dd = String(current.getDate()).padStart(2, '0');
-            input.value = `${yyyy}-${mm}-${dd}`;
+            input.value = nextKey;
             applySelectedDateToEntryInputs();
             renderPrescriptionTable();
             renderLabTable();
@@ -4919,16 +5196,10 @@ function editPresc(index) {
         }
 
         function getFilteredPrescriptionRecords(records) {
-            const selectedDate = getPrescriptionFilterDate();
+            const selectedDate = normalizeDateKey(getPrescriptionFilterDate());
             if (!selectedDate) return records;
 
-            return records.filter((record) => {
-                const timeStr = String(record?.time || '').trim();
-                if (!timeStr) return false;
-
-                const datePart = timeStr.includes('T') ? timeStr.split('T')[0] : timeStr.split(' ')[0];
-                return datePart === selectedDate;
-            });
+            return records.filter((record) => normalizeDateKey(record?.time || '') === selectedDate);
         }
 
         function renderPrescriptionTable() {
