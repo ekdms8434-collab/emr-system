@@ -4844,8 +4844,10 @@ if (!note) return alert("처방 내역을 입력하세요.");
                     const dateFilter = document.getElementById('prescriptionDateFilter');
                     if (!dateFilter) return;
 
+                    const isDateChanged = normalizeDateKey(dateFilter.value) !== normalizeDateKey(selectedDateStr);
                     dateFilter.value = selectedDateStr;
-                    applySelectedDateToEntryInputs();
+                    applySelectedDateToEntryInputs(isDateChanged);
+                    dateFilter.dataset.prevDate = dateFilter.value || '';
                     renderPrescriptionTable();
                     renderLabTable();
                     renderNurseTable();
@@ -4862,8 +4864,10 @@ if (!note) return alert("처방 내역을 입력하세요.");
                     const dateFilter = document.getElementById('prescriptionDateFilter');
                     if (!dateFilter) return;
 
+                    const isDateChanged = normalizeDateKey(dateFilter.value) !== normalizeDateKey(selectedDateStr);
                     dateFilter.value = selectedDateStr;
-                    applySelectedDateToEntryInputs();
+                    applySelectedDateToEntryInputs(isDateChanged);
+                    dateFilter.dataset.prevDate = dateFilter.value || '';
                     renderPrescriptionTable();
                     renderLabTable();
                     renderNurseTable();
@@ -5171,11 +5175,13 @@ function editPresc(index) {
             return input.value;
         }
 
-        function applySelectedDateToEntryInputs() {
+        function applySelectedDateToEntryInputs(resetTimeOnDateChange = false) {
             const selectedDate = getPrescriptionFilterDate();
             if (!selectedDate) return;
 
-            const defaultTime = '09:00';
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            const defaultTime = now.toISOString().slice(11, 16);
             const inputIds = ['prescTime', 'labTime', 'nurseTime', 'vsTime'];
 
             inputIds.forEach((id) => {
@@ -5192,7 +5198,8 @@ function editPresc(index) {
                 const currentTime = rawValue.includes('T') ? (rawValue.split('T')[1] || defaultTime) : (rawValue.split(' ')[1] || defaultTime);
 
                 if (currentDate !== selectedDate) {
-                    input.value = `${selectedDate}T${currentTime}`;
+                    const nextTime = resetTimeOnDateChange ? defaultTime : currentTime;
+                    input.value = `${selectedDate}T${nextTime}`;
                 }
             });
         }
@@ -5206,7 +5213,8 @@ function editPresc(index) {
             if (!nextKey) return;
 
             input.value = nextKey;
-            applySelectedDateToEntryInputs();
+            input.dataset.prevDate = input.value || '';
+            applySelectedDateToEntryInputs(true);
             renderPrescriptionTable();
             renderLabTable();
             renderNurseTable();
@@ -5294,7 +5302,11 @@ function editPresc(index) {
 
             if (dateFilter) {
                 dateFilter.addEventListener('change', () => {
-                    applySelectedDateToEntryInputs();
+                    const previousDate = normalizeDateKey(dateFilter.dataset.prevDate || '');
+                    const currentDate = normalizeDateKey(dateFilter.value || '');
+                    const isDateChanged = !!currentDate && previousDate !== currentDate;
+                    applySelectedDateToEntryInputs(isDateChanged);
+                    dateFilter.dataset.prevDate = dateFilter.value || '';
                     renderPrescriptionTable();
                     renderLabTable();
                     renderNurseTable();
@@ -5302,6 +5314,7 @@ function editPresc(index) {
                     renderIoSection();
                 });
                 getPrescriptionFilterDate();
+                dateFilter.dataset.prevDate = dateFilter.value || '';
                 applySelectedDateToEntryInputs();
             }
 
