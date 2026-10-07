@@ -2825,12 +2825,31 @@ function getCurrentPatientName() {
             ageInput.value = age >= 0 ? age : 0;
         }
 
-        // 입력창들에 '현재 시간'을 기본으로 꽂아주는 함수입니다.
+        // 입력창들에 날짜 제어값 기준 일시를 기본으로 꽂아주는 함수입니다.
         function initCurrentTimeInputs() {
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             const timeStr = now.toISOString().slice(0, 16);
-            document.querySelectorAll('input[type="datetime-local"]').forEach(input => input.value = timeStr);
+            const fallbackDate = timeStr.slice(0, 10);
+            const fallbackTime = timeStr.slice(11, 16);
+            const selectedDate = normalizeDateKey(getPrescriptionFilterDate()) || fallbackDate;
+            const inputIds = ['prescTime', 'labTime', 'nurseTime', 'vsTime'];
+
+            inputIds.forEach((id) => {
+                const input = document.getElementById(id);
+                if (!input) return;
+
+                const rawValue = String(input.value || '').trim();
+                let timePart = fallbackTime;
+                if (rawValue) {
+                    const extracted = rawValue.includes('T')
+                        ? rawValue.split('T')[1]
+                        : (rawValue.split(' ')[1] || '');
+                    if (extracted) timePart = extracted.slice(0, 5);
+                }
+
+                input.value = `${selectedDate}T${timePart}`;
+            });
             if(document.getElementById('prescIssuer')) {
                 const currentDocName = (currentPatientIndex !== null && patients[currentPatientIndex]) ? patients[currentPatientIndex].doctor : '박지은';
                 document.getElementById('prescIssuer').value = currentDocName || '박지은';
