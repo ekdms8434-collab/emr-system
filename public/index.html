@@ -718,12 +718,8 @@
     <div id="view-login" class="flex items-center justify-center min-h-screen">
         <div id="loginView" class="max-w-md w-full mx-auto bg-white p-6 rounded shadow">
             <h2 class="text-xl font-bold mb-4 text-center text-slate-900">EMR 시스템 로그인</h2>
-            <input type="text" id="uid" value="admin" class="w-full border p-2 mb-2 rounded" placeholder="아이디">
-            <input type="password" id="upw" value="1234" class="w-full border p-2 mb-4 rounded" placeholder="비밀번호">
-            <div class="mb-4" style="display:flex; align-items:center; justify-content:center; gap:14px; font-size:13px; color:#334155;">
-                <label style="display:inline-flex; align-items:center; gap:6px; font-weight:700;"><input type="radio" name="loginRole" value="admin" checked> 관리자용</label>
-                <label style="display:inline-flex; align-items:center; gap:6px; font-weight:700;"><input type="radio" name="loginRole" value="student"> 학생용</label>
-            </div>
+            <input type="text" id="uid" class="w-full border p-2 mb-2 rounded" placeholder="아이디" autocomplete="username">
+            <input type="password" id="upw" class="w-full border p-2 mb-4 rounded" placeholder="비밀번호" autocomplete="current-password">
             <!-- 버튼을 누르면 login() 자바스크립트 함수가 실행됩니다. -->
             <button onclick="login()" class="w-full bg-slate-900 text-white p-2 rounded font-bold hover:bg-slate-800">로그인</button>
         </div>
@@ -734,7 +730,7 @@
         <!-- 왼쪽 로고/제목 영역. 클릭하면 환자 목록 화면으로 이동합니다. -->
         <div class="flex items-center space-x-3 cursor-pointer" onclick="showView('patients')">
             <span class="text-xl">🏥</span>
-            <h1 class="text-lg font-bold text-slate-900">KBU NEC 스마트 EMR</h1>
+            <h1 class="text-lg font-bold text-slate-900">환자 관리 및 EMR 시스템</h1>
         </div>
         <!-- 오른쪽 설정 및 로그아웃 영역입니다. -->
         <div class="flex items-center space-x-4">
@@ -831,7 +827,7 @@
             <!-- 특정 환자를 클릭했을 때 나타나는 상세 EMR 메인 차트 페이지입니다. -->
            <div id="detailPage">
                 <div class="header-bar" style="margin-bottom: 8px;">
-                    <h1>📑 전자의무기록 (EMR Chart)</h1>
+                    <h1>📑 KBU NEC 전자의무기록 (EMR Chart)</h1>
                     <div style="display: flex; gap: 6px;">
                         <button class="btn-blue" onclick="downloadEmrTxt()">📄 EMR 요약 TXT 다운로드</button>
                         <button class="btn-blue" onclick="window.print()">🖨️ 차트 인쇄</button>
@@ -1360,12 +1356,6 @@
         let nurseDatabase = [];     // 간호기록 목록
         let patients = [];          // 환자 정보 목록
         let currentUserRole = 'admin';
-
-        function getSelectedLoginRole() {
-            const selected = document.querySelector('input[name="loginRole"]:checked');
-            const role = selected ? String(selected.value || '').trim() : 'admin';
-            return role === 'student' ? 'student' : 'admin';
-        }
 
         function isStudentUser() {
             return currentUserRole === 'student';
@@ -2862,23 +2852,24 @@
         async function login() {
             const uidInput = document.getElementById('uid').value.trim();
             const upw = document.getElementById('upw').value.trim();
-            currentUserRole = getSelectedLoginRole();
 
             if (!uidInput || !upw) {
                 alert('아이디와 비밀번호를 입력해 주세요.');
                 return;
             }
 
-            // 개발용 우회: 기존 하드코딩된 계정(admin / 1234)을 그대로 허용
-            // 개발 중 빠른 접근이 필요하면 이 블록을 사용하세요. 운영 시 반드시 제거하세요.
-            if (uidInput === 'admin' && upw === '1234') {
-                await showView('patients');
+            // 아이디/비밀번호 조합으로 역할을 결정합니다.
+            let roleFromCredential = null;
+            if (uidInput === 'necadmin' && upw === '1192') roleFromCredential = 'admin';
+            if (uidInput === 'nurse' && upw === '1234') roleFromCredential = 'student';
+            if (!roleFromCredential) {
+                alert('아이디 또는 비밀번호가 올바르지 않습니다.');
                 return;
             }
+            currentUserRole = roleFromCredential;
 
-            // uid를 이메일 형식으로 맞춥니다 (예: admin -> admin@example.com)
-            let uid = uidInput;
-            if (!uid.includes('@')) uid = uid + '@example.com';
+            // Supabase Auth와 연동할 때 사용할 이메일을 고정 매핑합니다.
+            const mappedAuthEmail = uidInput === 'necadmin' ? 'necadmin@example.com' : 'nurse@example.com';
 
             try {
                 if (!window.supabase || !supabase.auth) {
@@ -2886,18 +2877,10 @@
                     return;
                 }
 
-                // Supabase Auth로 로그인 시도
-                let { data, error } = await supabase.auth.signInWithPassword({ email: uid, password: upw });
+                // Supabase Auth 로그인은 시도하되, 실패해도 앱 로그인은 허용합니다.
+                const { error } = await supabase.auth.signInWithPassword({ email: mappedAuthEmail, password: upw });
                 if (error) {
-                    // 사용자가 없을 수 있으므로 개발용으로 자동 가입을 시도합니다.
-                    const { data: sData, error: sError } = await supabase.auth.signUp({ email: uid, password: upw });
-                    if (sError) {
-                        alert(sError.message || '로그인/가입 중 오류가 발생했습니다.');
-                        return;
-                    }
-                    // 가입 후 다시 로그인 시도
-                    const { data: d2, error: e2 } = await supabase.auth.signInWithPassword({ email: uid, password: upw });
-                    if (e2) { alert(e2.message || '자동 로그인에 실패했습니다.'); return; }
+                    console.warn('Supabase 로그인 실패(앱 로그인은 계속 진행):', error.message || error);
                 }
 
                 // 로그인 성공: 데이터 로드 및 화면 전환
