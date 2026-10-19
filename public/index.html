@@ -8,7 +8,7 @@
     <!-- 모바일 기기에서도 화면 크기가 적절하게 보이도록 비율을 맞춰줍니다. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- 브라우저 탭에 표시될 웹페이지의 제목입니다. -->
-    <title>경복대학교 간호교육센터 스마트 EMR</title>
+    <title>전자의무기록 (EMR Chart) 및 환자 관리 시스템</title>
     
     <!-- 외부 디자인 도구인 Tailwind CSS를 가져옵니다. HTML 태그 안에 직접 디자인 클래스를 적을 수 있게 해줍니다. -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -54,6 +54,7 @@
             --text-dark: #0f172a;          /* 기본 어두운 글씨색 */
             --text-muted: #475569;         /* 약간 옅은 회색 글씨색 (설명 등에 쓰임) */
             --border-color: #cbd5e1;       /* 테두리 색상 */
+               --login-bg-image: url('./세린센터+10층+외상센터.JPG');
         }
 
         /* *는 웹페이지의 '모든 요소'를 의미합니다. 전체 글꼴과 크기 기준을 잡습니다. */
@@ -640,6 +641,30 @@
             height: 18px !important;
             margin: 0 1px !important;
         }
+
+            #view-login {
+                position: relative;
+                overflow: hidden;
+                background: #615f63;
+            }
+
+            #view-login::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background-image: var(--login-bg-image);
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                opacity: 0.40;
+                z-index: 0;
+            }
+
+            #loginView {
+                position: relative;
+                z-index: 1;
+                backdrop-filter: blur(2px);
+            }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen font-sans">
@@ -695,6 +720,10 @@
             <h2 class="text-xl font-bold mb-4 text-center text-slate-900">EMR 시스템 로그인</h2>
             <input type="text" id="uid" value="admin" class="w-full border p-2 mb-2 rounded" placeholder="아이디">
             <input type="password" id="upw" value="1234" class="w-full border p-2 mb-4 rounded" placeholder="비밀번호">
+            <div class="mb-4" style="display:flex; align-items:center; justify-content:center; gap:14px; font-size:13px; color:#334155;">
+                <label style="display:inline-flex; align-items:center; gap:6px; font-weight:700;"><input type="radio" name="loginRole" value="admin" checked> 관리자용</label>
+                <label style="display:inline-flex; align-items:center; gap:6px; font-weight:700;"><input type="radio" name="loginRole" value="student"> 학생용</label>
+            </div>
             <!-- 버튼을 누르면 login() 자바스크립트 함수가 실행됩니다. -->
             <button onclick="login()" class="w-full bg-slate-900 text-white p-2 rounded font-bold hover:bg-slate-800">로그인</button>
         </div>
@@ -705,7 +734,7 @@
         <!-- 왼쪽 로고/제목 영역. 클릭하면 환자 목록 화면으로 이동합니다. -->
         <div class="flex items-center space-x-3 cursor-pointer" onclick="showView('patients')">
             <span class="text-xl">🏥</span>
-            <h1 class="text-lg font-bold text-slate-900">경복대학교 간호교육센터 스마트 EMR</h1>
+            <h1 class="text-lg font-bold text-slate-900">환자 관리 및 EMR 시스템</h1>
         </div>
         <!-- 오른쪽 설정 및 로그아웃 영역입니다. -->
         <div class="flex items-center space-x-4">
@@ -727,7 +756,7 @@
             <!-- 환자 목록을 보여주는 페이지입니다. (초기 화면) -->
             <div id="listPage">
                 <div class="header-bar">
-                    <h1>📋 KBU NEC EMR System - 환자 목록 관리</h1>
+                    <h1>📋 EMR System - 환자 목록 관리</h1>
                 </div>
                 
                 <!-- 신규 환자를 등록하거나 기존 환자를 수정하는 폼 영역입니다. -->
@@ -1330,6 +1359,45 @@
         let labDatabase = [];       // 검사결과 목록
         let nurseDatabase = [];     // 간호기록 목록
         let patients = [];          // 환자 정보 목록
+        let currentUserRole = 'admin';
+
+        function getSelectedLoginRole() {
+            const selected = document.querySelector('input[name="loginRole"]:checked');
+            const role = selected ? String(selected.value || '').trim() : 'admin';
+            return role === 'student' ? 'student' : 'admin';
+        }
+
+        function isStudentUser() {
+            return currentUserRole === 'student';
+        }
+
+        function applyStudentButtonDisable() {
+            const disable = isStudentUser();
+
+            const saveBtn = document.getElementById('btnSavePatient');
+            if (saveBtn) {
+                saveBtn.disabled = disable;
+                saveBtn.style.opacity = disable ? '0.55' : '1';
+                saveBtn.style.cursor = disable ? 'not-allowed' : 'pointer';
+                saveBtn.title = disable ? '학생용 계정에서는 환자 등록이 비활성화됩니다.' : '';
+            }
+
+            const cancelBtn = document.getElementById('btnCancelEdit');
+            if (cancelBtn) {
+                cancelBtn.disabled = disable;
+                cancelBtn.style.opacity = disable ? '0.55' : '1';
+                cancelBtn.style.cursor = disable ? 'not-allowed' : 'pointer';
+                cancelBtn.title = disable ? '학생용 계정에서는 비활성화됩니다.' : '';
+            }
+
+            const prescSaveBtn = document.getElementById('btnPrescSave');
+            if (prescSaveBtn) {
+                prescSaveBtn.disabled = disable;
+                prescSaveBtn.style.opacity = disable ? '0.55' : '1';
+                prescSaveBtn.style.cursor = disable ? 'not-allowed' : 'pointer';
+                prescSaveBtn.title = disable ? '학생용 계정에서는 처방 입력이 비활성화됩니다.' : '';
+            }
+        }
 
         // 현재 프로그램의 상태를 기억하는 변수들입니다.
         let currentPatientIndex = null; // 지금 보고 있는 환자가 누구인지 기억
@@ -2794,6 +2862,7 @@
         async function login() {
             const uidInput = document.getElementById('uid').value.trim();
             const upw = document.getElementById('upw').value.trim();
+            currentUserRole = getSelectedLoginRole();
 
             if (!uidInput || !upw) {
                 alert('아이디와 비밀번호를 입력해 주세요.');
@@ -2858,6 +2927,7 @@
         // 로그아웃 버튼을 누르면 Supabase 세션에서 로그아웃하고 로그인 창으로 돌아갑니다.
         async function handleLogout() {
             try { await supabase.auth.signOut(); } catch(e) { console.error(e); }
+            currentUserRole = 'admin';
             currentPatientIndex = null;
             editingPatientIndex = null;
             editingPrescIndex = null;
@@ -3166,6 +3236,8 @@ function getCurrentPatientName() {
                 onLabCategoryChange(document.getElementById('labCategorySelect').value);
                 onPrescTypeChange(document.getElementById('prescType').value);
             }
+
+            applyStudentButtonDisable();
         }
 
         function renderSettings() {
@@ -3971,6 +4043,10 @@ function getCurrentPatientName() {
 
         // 작성한 환자 폼을 최종적으로 묶어서 저장(또는 수정)하는 기능입니다.
         async function savePatientForm() {
+            if (isStudentUser()) {
+                alert('학생용 계정에서는 환자 등록/수정이 비활성화됩니다.');
+                return;
+            }
             const chartNo = document.getElementById('pChartNo').value.trim();
             const name = document.getElementById('pName').value.trim();
             const birth = document.getElementById('pBirth').value.trim();
@@ -4077,6 +4153,7 @@ function getCurrentPatientName() {
         function renderPatientList() {
             const tbody = document.getElementById('patientTableBody');
             tbody.innerHTML = patients.length ? '' : `<tr><td colspan="9">등록된 환자가 없습니다.</td></tr>`;
+            const studentMode = isStudentUser();
             patients.forEach((p, idx) => {
                 const genderStr = p.gender ? ` / ${p.gender}` : '';
                 // <tr> 은 한 줄(행)을 뜻하고, <td>는 칸(열)을 뜻합니다.
@@ -4091,17 +4168,23 @@ function getCurrentPatientName() {
                         <td><span class="code-badge">${p.diagCode||'-'}</span> ${p.diagnosis}</td>
                         <td style="text-align:left;">${p.cc}</td>
                         <td>
-                            <button class="btn-slate" style="padding:1px 5px; margin-right:2px;" onclick="editPatient(${idx})">수정</button>
-                            <button class="btn-blue" style="padding:1px 5px; margin-right:2px;" onclick="duplicatePatient(${idx})">복사등록</button>
-                            <button class="btn-red" style="padding:1px 5px;" onclick="deletePatient(${idx})">삭제</button>
+                            <button class="btn-slate" style="padding:1px 5px; margin-right:2px; ${studentMode ? 'opacity:0.55; cursor:not-allowed;' : ''}" onclick="editPatient(${idx})" ${studentMode ? 'disabled title="학생용 계정에서는 비활성화됩니다."' : ''}>수정</button>
+                            <button class="btn-blue" style="padding:1px 5px; margin-right:2px; ${studentMode ? 'opacity:0.55; cursor:not-allowed;' : ''}" onclick="duplicatePatient(${idx})" ${studentMode ? 'disabled title="학생용 계정에서는 비활성화됩니다."' : ''}>복사등록</button>
+                            <button class="btn-red" style="padding:1px 5px; ${studentMode ? 'opacity:0.55; cursor:not-allowed;' : ''}" onclick="deletePatient(${idx})" ${studentMode ? 'disabled title="학생용 계정에서는 비활성화됩니다."' : ''}>삭제</button>
                         </td>
                     </tr>
                 `;
             });
+
+            applyStudentButtonDisable();
         }
 
         // '수정' 버튼을 눌렀을 때 폼 안에 기존 데이터를 채워넣어 줍니다.
         function editPatient(idx) {
+            if (isStudentUser()) {
+                alert('학생용 계정에서는 수정 기능이 비활성화됩니다.');
+                return;
+            }
             editingPatientIndex = idx;
             editingOriginalChartNo = patients[idx]?.chartNo || null;
             const p = patients[idx];
@@ -4161,6 +4244,10 @@ function getCurrentPatientName() {
 
         // 환자 삭제 기능입니다.
         async function deletePatient(idx) {
+            if (isStudentUser()) {
+                alert('학생용 계정에서는 삭제 기능이 비활성화됩니다.');
+                return;
+            }
             if(confirm(`'${patients[idx].name}' 환자 정보를 삭제하시겠습니까?`)) {
                 const chartNo = patients[idx].chartNo;
                 const { data, error } = await supabase.from('patients').delete().eq('chart_no', chartNo);
@@ -4171,6 +4258,10 @@ function getCurrentPatientName() {
         }
 
         async function duplicatePatient(idx) {
+            if (isStudentUser()) {
+                alert('학생용 계정에서는 복사등록 기능이 비활성화됩니다.');
+                return;
+            }
             const source = patients[idx];
             if (!source) return;
 
@@ -4669,6 +4760,10 @@ function openPatientDetail(index) {
         // 활력징후, 처방, 수술, 간호 등 탭에서 입력한 다양한 의료 기록을 환자 데이터에 추가하는 통합 함수입니다.
         async function addRecord(type) {
             if(currentPatientIndex === null) return;
+            if (isStudentUser() && type === 'presc') {
+                alert('학생용 계정에서는 처방 입력이 비활성화됩니다.');
+                return;
+            }
             const p = patients[currentPatientIndex];
 
             // 환자 데이터 안에 기록을 담을 방(배열)이 없다면 각각 새로 만들어 줍니다.
@@ -4886,6 +4981,10 @@ if (!note) return alert("처방 내역을 입력하세요.");
         // 기록(처방, 간호, 수술 등)을 삭제하는 공통 비동기 함수입니다.
         async function deleteRecord(type, idx) {
             if (currentPatientIndex === null) return;
+            if (isStudentUser()) {
+                alert('학생용 계정에서는 삭제 기능이 비활성화됩니다.');
+                return;
+            }
             // 정말 삭제할 것인지 사용자에게 한 번 더 물어봅니다. '취소'를 누르면 함수가 종료됩니다.
             if (!confirm("해당 기록을 삭제하시겠습니까?")) return;
 
@@ -4936,6 +5035,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
             renderVsSection();
             renderIoSection();
             renderDocumentsSection();
+            applyStudentButtonDisable();
         }
 
         function readFileAsDataURL(file) {
@@ -5619,6 +5719,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
                 let btRow = `<tr><td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.bt ? 'checked' : ''} onchange="toggleVsMetric('bt')"> 체온 (BT)</label></td>`;
                 let spo2Row = `<tr><td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.spo2 ? 'checked' : ''} onchange="toggleVsMetric('spo2')"> 산소포화도 (SpO2)</label></td>`;
                 let delRow = `<tr><td class="vs-label" style="background:#fee2e2; color:#ef4444;">수정 및 삭제</td>`;
+                const studentMode = isStudentUser();
 
                 // 기록된 데이터 개수만큼 반복하면서 오른쪽으로 칸(td)을 덧붙여 나갑니다.
                 vsRecords.forEach((r, idx) => {
@@ -5629,8 +5730,8 @@ if (!note) return alert("처방 내역을 입력하세요.");
                     btRow += `<td class="vs-val">${r.bt || '-'}</td>`;
                     spo2Row += `<td class="vs-val">${r.spo2 !== null && r.spo2 !== undefined ? r.spo2 : '-'}</td>`;
                     delRow += `<td class="vs-val" style="white-space:nowrap;">
-                        <button class="btn-slate" style="padding:1px 4px; font-size:10px; margin-right:3px;" onclick="editVsRecord(${idx})">수정</button>
-                        <button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('vs', ${idx})">삭제</button>
+                        <button class="btn-slate" style="padding:1px 4px; font-size:10px; margin-right:3px; ${studentMode ? 'opacity:0.55; cursor:not-allowed;' : ''}" onclick="editVsRecord(${idx})" ${studentMode ? 'disabled title="학생용 계정에서는 비활성화됩니다."' : ''}>수정</button>
+                        <button class="btn-red" style="padding:1px 4px; font-size:10px; ${studentMode ? 'opacity:0.55; cursor:not-allowed;' : ''}" onclick="deleteRecord('vs', ${idx})" ${studentMode ? 'disabled title="학생용 계정에서는 비활성화됩니다."' : ''}>삭제</button>
                     </td>`;
                 });
 
@@ -5646,6 +5747,10 @@ if (!note) return alert("처방 내역을 입력하세요.");
         }
 
         function editVsRecord(index) {
+            if (isStudentUser()) {
+                alert('학생용 계정에서는 수정 기능이 비활성화됩니다.');
+                return;
+            }
             const p = patients[currentPatientIndex];
             if (!p || !p.records?.vs) return;
             const item = p.records.vs[index];
@@ -6344,6 +6449,10 @@ if (!note) return alert("처방 내역을 입력하세요.");
 
         // [처방 내역 표 그리기]
         async function deletePresc(index) {
+    if (isStudentUser()) {
+        alert('학생용 계정에서는 삭제 기능이 비활성화됩니다.');
+        return;
+    }
     if (!confirm("해당 처방 내역을 삭제하시겠습니까?")) return;
     const p = patients[currentPatientIndex];
     if (!p || !p.records?.prescriptions) return;
@@ -6353,6 +6462,10 @@ if (!note) return alert("처방 내역을 입력하세요.");
 }
 
 function editPresc(index) {
+    if (isStudentUser()) {
+        alert('학생용 계정에서는 수정 기능이 비활성화됩니다.');
+        return;
+    }
     const p = patients[currentPatientIndex];
     if (!p || !p.records?.prescriptions) return;
     const item = p.records.prescriptions[index];
@@ -6454,6 +6567,7 @@ function editPresc(index) {
             const p = patients[currentPatientIndex];
             const tbody = document.getElementById('prescriptionTable');
             if (!tbody || !p) return;
+            const studentMode = isStudentUser();
             const records = p.records?.prescriptions || [];
             const selectedDate = getPrescriptionFilterDate();
             const filteredRecords = getFilteredPrescriptionRecords(records);
@@ -6500,8 +6614,8 @@ function editPresc(index) {
                             <td>${statusBadge}</td>
                             <td>${r.nurse || '-'}</td>
                             <td>
-                                <button class="btn-slate" style="padding:1px 4px; font-size:10px;" onclick="editPresc(${__index})">수정</button>
-                                <button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deletePresc(${__index})">삭제</button>
+                                <button class="btn-slate" style="padding:1px 4px; font-size:10px; ${studentMode ? 'opacity:0.55; cursor:not-allowed;' : ''}" onclick="editPresc(${__index})" ${studentMode ? 'disabled title="학생용 계정에서는 비활성화됩니다."' : ''}>수정</button>
+                                <button class="btn-red" style="padding:1px 4px; font-size:10px; ${studentMode ? 'opacity:0.55; cursor:not-allowed;' : ''}" onclick="deletePresc(${__index})" ${studentMode ? 'disabled title="학생용 계정에서는 비활성화됩니다."' : ''}>삭제</button>
                             </td>
                         </tr>
                     `;
@@ -6552,6 +6666,7 @@ function editPresc(index) {
             const p = patients[currentPatientIndex];
             const tbody = document.getElementById('nurseTable');
             if (!tbody || !p) return;
+            const studentMode = isStudentUser();
             const records = getDateFilteredRecords(p.records?.nurse || []);
 
             if (records.length === 0) {
@@ -6564,7 +6679,7 @@ function editPresc(index) {
                     <td>${formatDisplayTime(r.time)}</td>
                     <td style="text-align:left;">${r.note}</td>
                     <td><b>${r.nurse || '-'}</b></td>
-                    <td><button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('nurse', ${idx})">삭제</button></td>
+                    <td><button class="btn-red" style="padding:1px 4px; font-size:10px; ${studentMode ? 'opacity:0.55; cursor:not-allowed;' : ''}" onclick="deleteRecord('nurse', ${idx})" ${studentMode ? 'disabled title="학생용 계정에서는 비활성화됩니다."' : ''}>삭제</button></td>
                 </tr>
             `).join('');
         }
@@ -6594,6 +6709,10 @@ function editPresc(index) {
         }
 
         function editLabRecord(idx) {
+            if (isStudentUser()) {
+                alert('학생용 계정에서는 수정 기능이 비활성화됩니다.');
+                return;
+            }
             const p = patients[currentPatientIndex];
             if (!p || !p.records?.lab) return;
             const item = p.records.lab[idx];
@@ -6686,6 +6805,7 @@ function editPresc(index) {
             const p = patients[currentPatientIndex];
             const tbody = document.getElementById('labTable');
             if (!tbody || !p) return;
+            const studentMode = isStudentUser();
             const records = p.records?.lab || [];
 
             if (records.length === 0) {
@@ -6707,8 +6827,8 @@ function editPresc(index) {
                     <td style="text-align:left; white-space:nowrap;">${resultHtml}</td>
                     <td>${r.refRange ? (r.refRange + ' ' + (r.unit||'')) : '-'}</td>
                     <td style="white-space:nowrap;">
-                        <button class="btn-slate" style="padding:1px 4px; font-size:10px; margin-right:3px;" onclick="editLabRecord(${idx})">수정</button>
-                        <button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('lab_img', ${idx})">삭제</button>
+                        <button class="btn-slate" style="padding:1px 4px; font-size:10px; margin-right:3px; ${studentMode ? 'opacity:0.55; cursor:not-allowed;' : ''}" onclick="editLabRecord(${idx})" ${studentMode ? 'disabled title="학생용 계정에서는 비활성화됩니다."' : ''}>수정</button>
+                        <button class="btn-red" style="padding:1px 4px; font-size:10px; ${studentMode ? 'opacity:0.55; cursor:not-allowed;' : ''}" onclick="deleteRecord('lab_img', ${idx})" ${studentMode ? 'disabled title="학생용 계정에서는 비활성화됩니다."' : ''}>삭제</button>
                     </td>
                 </tr>
             `;
