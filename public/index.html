@@ -1126,7 +1126,7 @@
                                     </div>
                                     <div class="input-bar-bottom" style="padding:8px; border:1px solid var(--border-color); border-radius:4px; background:#f8fafc; gap:8px;">
                                         <input type="text" id="documentNameInput" placeholder="서류 표시 이름 입력" style="width:220px;">
-                                        <button class="btn-slate" onclick="openDocumentUploadFallback()">PDF 서류 업로드</button>
+                                        <button class="btn-purple" onclick="openSchoolConsentModal()">✍️ 전자동의서 확인 및 서명</button>
                                         <button class="btn-green" id="documentRegisterBtn" onclick="registerSelectedDocument()" disabled style="opacity:0.55; cursor:not-allowed;">등록</button>
                                         <div id="documentAttachInfo" style="display:none; font-size:11px; color:#334155; background:#e2e8f0; border:1px solid #cbd5e1; border-radius:999px; padding:4px 8px;"></div>
                                     </div>
@@ -1211,6 +1211,7 @@
             <button class="setting-tab-btn" onclick="switchSettingTab('drug-panel', this)">💊 처방 관리</button>
             <button class="setting-tab-btn" onclick="switchSettingTab('labdb-panel', this)">🧪 검사결과 관리</button>
             <button class="setting-tab-btn" onclick="switchSettingTab('nursedb-panel', this)">📝 간호기록 템플릿</button>
+            <button class="setting-tab-btn" onclick="switchSettingTab('shared-doc-panel', this)">📄 양식 DB 관리</button>
         </div>
 
         <div class="mt-4 w-full">
@@ -1298,6 +1299,22 @@
                 </form>
                 <ul id="nursedb-list" class="divide-y divide-slate-100 border rounded-lg overflow-y-auto flex-1 min-h-[350px]"></ul>
             </div>
+
+            <div id="shared-doc-panel" class="setting-panel bg-white p-6 rounded-xl shadow-sm border space-y-4 flex flex-col min-h-[500px] w-full hidden">
+                <h3 class="text-[17px] font-bold text-gray-800 flex items-center justify-between border-b pb-3">
+                    <span>📄 공용 양식 DB 관리</span>
+                    <span id="shared-doc-count" class="text-[13px] bg-slate-100 text-slate-800 px-3 py-1 rounded-full font-medium">0개</span>
+                </h3>
+                <div class="flex flex-wrap gap-2 items-center max-w-4xl">
+                    <input type="text" id="sharedDocNameInput" placeholder="양식 이름 입력" class="w-64 px-3 py-2 border rounded-lg text-[13px]">
+                    <button type="button" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-[13px] rounded-lg font-bold" onclick="openSharedDocumentUploadPicker()">PDF 선택</button>
+                    <button type="button" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-[13px] rounded-lg font-bold" onclick="registerSharedDocumentToDb()">DB 업로드</button>
+                    <button type="button" class="px-4 py-2 border rounded-lg text-[13px] font-bold text-slate-700 hover:bg-slate-50" onclick="refreshSharedDocuments(true)">목록 새로고침</button>
+                    <div id="sharedDocAttachInfo" class="text-[12px] text-slate-600 bg-slate-100 px-2 py-1 rounded hidden"></div>
+                </div>
+
+                <ul id="shared-doc-list" class="divide-y divide-slate-100 border rounded-lg overflow-y-auto flex-1 min-h-[350px]"></ul>
+            </div>
         </div>
     </main>
 
@@ -1325,6 +1342,34 @@
         let selectedMarkType = 'OP';    // 선택된 핀 종류(수술부위 등) 기억
         let vsChartInstance = null;     // V/S 그래프 객체
         let pendingDocumentUpload = null; // PDF 선택 후 등록 전 임시 보관
+        let sharedDocuments = [];       // DB에 저장된 공용 서류 템플릿 목록
+        let pendingSharedDocumentUpload = null; // 시스템설정에서 공용 양식 업로드 전 임시 보관
+
+        const CONSENT_FORM_OPTION_DEFAULTS = {
+            transfusion: {
+                reason: 'blood_loss',
+                bloodProduct: 'rbc'
+            },
+            anesthesia: {
+                special: 'none',
+                method: 'general'
+            },
+            op_anesthesia: {
+                special: 'none',
+                wardType: 'ward',
+                anesthesiaMethod: 'general',
+                proxyAgreement: 'agree'
+            },
+            initial_nursing: {
+                admissionRoute: 'outpatient',
+                admissionMethod: 'walk',
+                smoking: 'none',
+                drinking: 'none',
+                painRisk: 'none',
+                orientation: 'yes',
+                consciousness: 'clear'
+            }
+        };
 
         // V/S 항목 중 어떤 것을 차트에 보여줄지 숨길지 결정하는 값입니다.
         let vsVisibility = { bp: true, hr: true, rr: true, bt: true, spo2: true };
@@ -1364,6 +1409,1042 @@
                 (data.labdb && data.labdb.length) ||
                 (data.nurseTemplates && data.nurseTemplates.length)
             );
+        }
+
+        function getCurrentConsentOptionState() {
+            const p = patients[currentPatientIndex];
+            if (!p) return {};
+            if (!p.records) p.records = {};
+            if (!p.records.consentOptions || typeof p.records.consentOptions !== 'object') {
+                p.records.consentOptions = {};
+            }
+            return p.records.consentOptions;
+        }
+
+        function getConsentOptionValue(formKey, optionKey) {
+            const defaults = CONSENT_FORM_OPTION_DEFAULTS[formKey] || {};
+            const state = getCurrentConsentOptionState();
+            if (!state[formKey]) state[formKey] = {};
+            if (String(formKey).startsWith('sharedpdf:') && String(optionKey).startsWith('pdf_cb_') && !state[formKey][optionKey]) {
+                state[formKey][optionKey] = 'off';
+            }
+            return state[formKey][optionKey] || defaults[optionKey] || '';
+        }
+
+        function setConsentOptionValue(formKey, optionKey, value) {
+            const p = patients[currentPatientIndex];
+            if (!p) return;
+            if (!p.records) p.records = {};
+            if (!p.records.consentOptions || typeof p.records.consentOptions !== 'object') {
+                p.records.consentOptions = {};
+            }
+            if (!p.records.consentOptions[formKey]) p.records.consentOptions[formKey] = {};
+            p.records.consentOptions[formKey][optionKey] = value;
+            renderSchoolConsentDoc();
+        }
+
+        function setConsentTextValue(formKey, optionKey, value) {
+            const p = patients[currentPatientIndex];
+            if (!p) return;
+            if (!p.records) p.records = {};
+            if (!p.records.consentOptions || typeof p.records.consentOptions !== 'object') {
+                p.records.consentOptions = {};
+            }
+            if (!p.records.consentOptions[formKey]) p.records.consentOptions[formKey] = {};
+            p.records.consentOptions[formKey][optionKey] = value;
+            renderSchoolConsentDoc();
+        }
+
+        function buildOptionGroupHtml(formKey, key, label, options) {
+            const current = getConsentOptionValue(formKey, key);
+            const radios = options.map((option) => {
+                const checked = current === option.value ? 'checked' : '';
+                return `<label style="display:inline-flex; align-items:center; gap:5px; font-size:12px; color:#1e293b; font-weight:600; white-space:nowrap;"><input type="radio" name="opt-${formKey}-${key}" value="${option.value}" ${checked} onchange="setConsentOptionValue('${formKey}','${key}',this.value)"> ${option.label}</label>`;
+            }).join('');
+            return `
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; margin-bottom:8px;">
+                    <div style="font-size:12px; font-weight:800; color:#0f172a; margin-bottom:6px;">${label}</div>
+                    <div style="display:flex; gap:8px 14px; flex-wrap:wrap; align-items:center;">${radios}</div>
+                </div>
+            `;
+        }
+
+        function buildTextInputHtml(formKey, key, label, placeholder = '') {
+            const current = getConsentOptionValue(formKey, key);
+            return `
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
+                    <span style="min-width:120px; font-size:12px; font-weight:700; color:#0f172a;">${label}</span>
+                    <input
+                        type="text"
+                        value="${escapeHtml(current)}"
+                        placeholder="${escapeHtml(placeholder)}"
+                        oninput="setConsentTextValue('${formKey}','${key}',this.value)"
+                        style="flex:1; min-width:180px; border:1px solid #cbd5e1; border-radius:6px; padding:4px 8px; font-size:12px; color:#0f172a;"
+                    >
+                </div>
+            `;
+        }
+
+        function renderSchoolFormOptionPanel() {
+            const panel = document.getElementById('schoolFormOptionPanel');
+            const select = document.getElementById('schoolFormSelect');
+            if (!panel || !select) return;
+
+            const formKey = select.value;
+            let html = '';
+
+            if (String(formKey).startsWith('sharedpdf:')) {
+                const doc = getSharedPdfDocByKey(formKey);
+                const schema = doc ? sharedPdfSchemaCache[String(doc.id)] : null;
+                if (!schema) {
+                    panel.innerHTML = '<div style="font-size:11px; color:#475569; font-weight:700;">양식 분석 중입니다. 잠시 후 다시 선택해 주세요.</div>';
+                    return;
+                }
+
+                const fields = Array.isArray(schema.checkboxes) ? schema.checkboxes : [];
+                if (!fields.length) {
+                    panel.innerHTML = '<div style="font-size:11px; color:#475569; font-weight:700;">자동으로 탐지된 체크 항목이 없습니다. 서명은 하단 지정 영역에서 가능합니다.</div>';
+                    return;
+                }
+
+                fields.forEach((field) => {
+                    html += buildOptionGroupHtml(formKey, field.key, field.label, [
+                        { value: 'off', label: '미선택' },
+                        { value: 'on', label: '선택' }
+                    ]);
+                });
+                panel.innerHTML = `<div style="font-size:11px; color:#475569; font-weight:700; margin-bottom:4px;">업로드 양식 체크 항목(라디오)</div>${html}`;
+                return;
+            }
+
+            if (formKey === 'transfusion') {
+                html += buildOptionGroupHtml(formKey, 'reason', '수혈 필요 사유', [
+                    { value: 'blood_loss', label: '혈액량 부족' },
+                    { value: 'anemia', label: '빈혈 교정' },
+                    { value: 'platelet', label: '혈소판 보충' },
+                    { value: 'coagulation', label: '응고인자 보충' },
+                    { value: 'other', label: '기타' }
+                ]);
+                html += buildOptionGroupHtml(formKey, 'bloodProduct', '혈액제제', [
+                    { value: 'rbc', label: '적혈구제제' },
+                    { value: 'platelet', label: '혈소판제제' },
+                    { value: 'plasma', label: '혈장제제' },
+                    { value: 'other', label: '기타' }
+                ]);
+            } else if (formKey === 'anesthesia') {
+                html += buildOptionGroupHtml(formKey, 'special', '특이사항', [
+                    { value: 'none', label: '없음' },
+                    { value: 'htn', label: '고혈압' },
+                    { value: 'dm', label: '당뇨' },
+                    { value: 'heart', label: '심장질환' },
+                    { value: 'kidney', label: '신장질환' },
+                    { value: 'tb', label: '결핵' },
+                    { value: 'liver', label: '간질환' },
+                    { value: 'allergy', label: '알레르기' },
+                    { value: 'resp', label: '호흡기질환' },
+                    { value: 'thyroid', label: '갑상선질환' },
+                    { value: 'medication', label: '복용중 약물' },
+                    { value: 'past', label: '과거 수술/마취경험' },
+                    { value: 'other', label: '기타' }
+                ]);
+                html += buildOptionGroupHtml(formKey, 'method', '마취방법', [
+                    { value: 'general', label: '전신' },
+                    { value: 'spinal', label: '척추' },
+                    { value: 'epidural', label: '경막외' },
+                    { value: 'brachial', label: '상완신경총 차단' },
+                    { value: 'other', label: '기타' }
+                ]);
+            } else if (formKey === 'op_anesthesia') {
+                html += buildOptionGroupHtml(formKey, 'special', '특이사항', [
+                    { value: 'none', label: '없음' },
+                    { value: 'htn', label: '고혈압' },
+                    { value: 'dm', label: '당뇨' },
+                    { value: 'heart', label: '심장질환' },
+                    { value: 'kidney', label: '신장질환' },
+                    { value: 'tb', label: '결핵' },
+                    { value: 'liver', label: '간질환' },
+                    { value: 'allergy', label: '알레르기' },
+                    { value: 'resp', label: '호흡기질환' },
+                    { value: 'thyroid', label: '갑상선질환' },
+                    { value: 'medication', label: '복용중 약물' },
+                    { value: 'past', label: '과거 수술/마취경험' },
+                    { value: 'other', label: '기타' }
+                ]);
+                html += buildOptionGroupHtml(formKey, 'wardType', '입원구분', [
+                    { value: 'outpatient', label: '외래' },
+                    { value: 'icu', label: '중환자실' },
+                    { value: 'ward', label: '병동' }
+                ]);
+                html += buildOptionGroupHtml(formKey, 'anesthesiaMethod', '마취방법', [
+                    { value: 'general', label: '전신' },
+                    { value: 'spinal', label: '척추' },
+                    { value: 'epidural', label: '경막외' },
+                    { value: 'brachial', label: '상완신경총 차단' },
+                    { value: 'other', label: '기타' }
+                ]);
+                html += buildOptionGroupHtml(formKey, 'proxyAgreement', '대리인 개인정보 동의', [
+                    { value: 'agree', label: '동의함' },
+                    { value: 'disagree', label: '동의하지 않음' }
+                ]);
+            } else if (formKey === 'initial_nursing') {
+                html += buildOptionGroupHtml(formKey, 'admissionRoute', '입원경로', [
+                    { value: 'outpatient', label: '외래' },
+                    { value: 'er', label: '응급실' },
+                    { value: 'other', label: '기타' }
+                ]);
+                html += buildOptionGroupHtml(formKey, 'admissionMethod', '입원방법', [
+                    { value: 'walk', label: '도보' },
+                    { value: 'wheelchair', label: '휠체어' },
+                    { value: 'stretcher', label: '눕는차' }
+                ]);
+                html += buildOptionGroupHtml(formKey, 'smoking', '흡연력', [
+                    { value: 'none', label: '무' },
+                    { value: 'yes', label: '유' }
+                ]);
+                html += buildOptionGroupHtml(formKey, 'drinking', '음주', [
+                    { value: 'none', label: '무' },
+                    { value: 'yes', label: '유' }
+                ]);
+                html += buildOptionGroupHtml(formKey, 'painRisk', '통증위험', [
+                    { value: 'none', label: '무' },
+                    { value: 'yes', label: '유' },
+                    { value: 'unknown', label: '측정곤란' }
+                ]);
+                html += buildOptionGroupHtml(formKey, 'orientation', '지남력', [
+                    { value: 'yes', label: '있음' },
+                    { value: 'no', label: '없음' }
+                ]);
+                html += buildOptionGroupHtml(formKey, 'consciousness', '의식상태', [
+                    { value: 'clear', label: '명료' },
+                    { value: 'confused', label: '혼돈' },
+                    { value: 'semicoma', label: '반의식' },
+                    { value: 'coma', label: '무의식' }
+                ]);
+
+                html += '<div style="margin-top:8px; padding-top:8px; border-top:1px dashed #cbd5e1; font-size:11px; color:#475569; font-weight:700;">단답형 입력</div>';
+                html += buildTextInputHtml(formKey, 'admitDateTime', '입원(작성)일시', '예: 2026.10.19 09:30');
+                html += buildTextInputHtml(formKey, 'informant', '정보제공자', '예: 본인');
+                html += buildTextInputHtml(formKey, 'writer', '작성자', '예: 간호사');
+                html += buildTextInputHtml(formKey, 'heightText', '신장(cm)', '예: 170.2');
+                html += buildTextInputHtml(formKey, 'weightText', '체중(kg)', '예: 63.4');
+                html += buildTextInputHtml(formKey, 'bloodTypeText', '혈액형', '예: A+');
+                html += buildTextInputHtml(formKey, 'contactHome', '연락처(집)', '예: 02-1234-5678');
+                html += buildTextInputHtml(formKey, 'contact1', '전화번호1', '예: 010-1111-2222');
+                html += buildTextInputHtml(formKey, 'contact2', '전화번호2', '예: 010-3333-4444');
+                html += buildTextInputHtml(formKey, 'onsetDate', '발병일', '예: 2026.10.18');
+                html += buildTextInputHtml(formKey, 'symptomReason', '주증상 및 입원동기', '예: Fever, Abdominal pain...');
+                html += buildTextInputHtml(formKey, 'pastHistoryText', '과거력(직접입력)', '예: 고혈압/당뇨/수술력');
+                html += buildTextInputHtml(formKey, 'familyHistoryText', '가족력(직접입력)', '예: 없음');
+                html += buildTextInputHtml(formKey, 'recentMedicationText', '최근투약(직접입력)', '예: 본원 항생제 복용');
+                html += buildTextInputHtml(formKey, 'allergyText', '알레르기(직접입력)', '예: 페니실린, 갑각류');
+            }
+
+            panel.innerHTML = html
+                ? `<div style="font-size:11px; color:#475569; font-weight:800; margin-bottom:6px;">선택형 항목(라디오 버튼)</div><div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px;">${html}</div>`
+                : '<div style="font-size:11px; color:#475569; font-weight:700;">양식을 선택해 주세요.</div>';
+        }
+
+        async function onSchoolFormSelectChange() {
+            try {
+                const select = document.getElementById('schoolFormSelect');
+                const formKey = select ? select.value : '';
+                if (String(formKey).startsWith('sharedpdf:')) {
+                    await ensureSharedPdfSchemaPrepared(formKey);
+                }
+                renderSchoolFormOptionPanel();
+                renderSchoolConsentDoc();
+            } catch (error) {
+                console.error('전자동의서 양식 전환 오류:', error);
+                alert('양식 로딩 중 오류가 발생했습니다. 다시 선택해 주세요.');
+            }
+        }
+
+        function getOptionMark(current, value) {
+            return current === value ? '■' : '□';
+        }
+
+        function normalizeFormKey(raw) {
+            return String(raw || '')
+                .trim()
+                .toLowerCase()
+                .replace(/\s+/g, '_')
+                .replace(/[^a-z0-9_]/g, '_')
+                .replace(/_+/g, '_')
+                .replace(/^_|_$/g, '');
+        }
+
+        function getEasyFormDocuments() {
+            return (sharedDocuments || []).filter((doc) => String(doc.type || '') === 'custom_rich');
+        }
+
+        function getEasyFormDocByKey(formKey) {
+            if (!String(formKey).startsWith('custom:')) return null;
+            const id = String(formKey).slice('custom:'.length);
+            return getEasyFormDocuments().find((doc) => String(doc.id) === id) || null;
+        }
+
+        function getSharedPdfDocByKey(formKey) {
+            if (!String(formKey).startsWith('sharedpdf:')) return null;
+            const id = String(formKey).slice('sharedpdf:'.length);
+            return (sharedDocuments || []).find((doc) => {
+                if (String(doc.id) !== id) return false;
+                const t = String(doc.type || 'pdf');
+                return t === 'pdf' || t === 'image';
+            }) || null;
+        }
+
+        let sharedPdfSchemaCache = {};
+
+        function loadImageFromDataUrl(dataUrl) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => reject(new Error('이미지 로드 실패'));
+                img.src = dataUrl;
+            });
+        }
+
+        function detectCheckboxFieldsFromImage(img) {
+            if (!img || !img.width || !img.height) return [];
+            const maxW = 1200;
+            const scale = img.width > maxW ? (maxW / img.width) : 1;
+            const w = Math.max(1, Math.round(img.width * scale));
+            const h = Math.max(1, Math.round(img.height * scale));
+
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+
+            const imageData = ctx.getImageData(0, 0, w, h);
+            const d = imageData.data;
+            const dark = new Uint8Array(w * h);
+
+            for (let i = 0, p = 0; i < d.length; i += 4, p += 1) {
+                const lum = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+                dark[p] = lum < 92 ? 1 : 0;
+            }
+
+            const visited = new Uint8Array(w * h);
+            const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+            const fields = [];
+
+            for (let y = 0; y < h; y += 1) {
+                for (let x = 0; x < w; x += 1) {
+                    const idx = y * w + x;
+                    if (!dark[idx] || visited[idx]) continue;
+
+                    const stack = [idx];
+                    visited[idx] = 1;
+                    let minX = x, maxX = x, minY = y, maxY = y, count = 0;
+
+                    while (stack.length) {
+                        const cur = stack.pop();
+                        const cx = cur % w;
+                        const cy = Math.floor(cur / w);
+                        count += 1;
+                        if (cx < minX) minX = cx;
+                        if (cx > maxX) maxX = cx;
+                        if (cy < minY) minY = cy;
+                        if (cy > maxY) maxY = cy;
+
+                        for (const [dx, dy] of dirs) {
+                            const nx = cx + dx;
+                            const ny = cy + dy;
+                            if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+                            const nidx = ny * w + nx;
+                            if (visited[nidx] || !dark[nidx]) continue;
+                            visited[nidx] = 1;
+                            stack.push(nidx);
+                        }
+                    }
+
+                    const bw = maxX - minX + 1;
+                    const bh = maxY - minY + 1;
+                    const area = bw * bh;
+                    if (area <= 0) continue;
+                    const fillRatio = count / area;
+                    const aspect = bw / bh;
+                    const topHalf = minY < h * 0.8;
+                    const likelySquare = bw >= 9 && bw <= 34 && bh >= 9 && bh <= 34 && aspect > 0.62 && aspect < 1.42;
+                    const likelyOutline = fillRatio > 0.16 && fillRatio < 0.72;
+                    if (!topHalf || !likelySquare || !likelyOutline) continue;
+
+                    const centerX = (minX + maxX) / 2;
+                    const centerY = (minY + maxY) / 2;
+                    const duplicate = fields.some((f) => Math.abs(f.cx - centerX) < 10 && Math.abs(f.cy - centerY) < 10);
+                    if (duplicate) continue;
+
+                    fields.push({
+                        cx: centerX,
+                        cy: centerY,
+                        x: minX / scale,
+                        y: minY / scale,
+                        w: bw / scale,
+                        h: bh / scale
+                    });
+                }
+            }
+
+            fields.sort((a, b) => (a.cy - b.cy) || (a.cx - b.cx));
+            return fields.slice(0, 40).map((f, i) => ({
+                key: `pdf_cb_${i + 1}`,
+                label: `체크항목 ${i + 1}`,
+                x: f.x,
+                y: f.y,
+                w: f.w,
+                h: f.h
+            }));
+        }
+
+        async function ensureSharedPdfSchemaPrepared(formKey) {
+            const doc = getSharedPdfDocByKey(formKey);
+            if (!doc) return null;
+
+            const cacheKey = String(doc.id);
+            if (sharedPdfSchemaCache[cacheKey]) return sharedPdfSchemaCache[cacheKey];
+
+            let preview = doc.preview_image_data || doc.previewImageData || null;
+            if (!preview) {
+                preview = await createPdfPreviewImage(doc.file_data || doc.fileData || '');
+                if (preview) {
+                    doc.preview_image_data = preview;
+                    doc.previewImageData = preview;
+                }
+            }
+
+            let checkboxes = [];
+            if (preview) {
+                try {
+                    const img = await loadImageFromDataUrl(preview);
+                    checkboxes = detectCheckboxFieldsFromImage(img);
+                    const sigW = Math.max(160, Math.round(img.width * 0.22));
+                    const sigH = Math.max(56, Math.round(img.height * 0.05));
+                    const signatureBox = {
+                        x: Math.max(20, Math.round(img.width * 0.62)),
+                        y: Math.max(20, Math.round(img.height * 0.86)),
+                        w: sigW,
+                        h: sigH,
+                        label: '환자(보호자) 서명'
+                    };
+
+                    sharedPdfSchemaCache[cacheKey] = {
+                        imageWidth: img.width,
+                        imageHeight: img.height,
+                        checkboxes,
+                        signatureBox
+                    };
+                    return sharedPdfSchemaCache[cacheKey];
+                } catch (error) {
+                    console.warn('PDF 체크박스 자동 탐지 실패:', error);
+                }
+            }
+
+            sharedPdfSchemaCache[cacheKey] = {
+                imageWidth: 1000,
+                imageHeight: 1400,
+                checkboxes: [],
+                signatureBox: { x: 620, y: 1220, w: 220, h: 70, label: '환자(보호자) 서명' }
+            };
+            return sharedPdfSchemaCache[cacheKey];
+        }
+
+        function parseEasyFormSchema(doc) {
+            if (!doc) return null;
+            const raw = doc.file_data || doc.fileData || doc.data_url || '';
+            if (!raw || typeof raw !== 'string') return null;
+            try {
+                const parsed = JSON.parse(raw);
+                if (parsed && parsed.mode === 'rich_text' && typeof parsed.content === 'string') {
+                    return parsed;
+                }
+            } catch (_) {
+                return null;
+            }
+            return null;
+        }
+
+        function parseEasyFormRadios(schema) {
+            const lines = String(schema?.content || '').split(/\r?\n/);
+            const radios = [];
+            lines.forEach((line) => {
+                const t = String(line || '').trim();
+                const m = t.match(/^\[RADIO\|([^|\]]+)\|([^|\]]+)\|([^\]]+)\]$/i);
+                if (!m) return;
+                const key = normalizeFormKey(m[1]);
+                const label = m[2].trim();
+                const options = m[3].split(',').map((s) => s.trim()).filter(Boolean).map((txt) => ({ value: normalizeFormKey(txt) || txt, label: txt }));
+                if (!key || !options.length) return;
+                radios.push({ key, label, options });
+            });
+            return radios;
+        }
+
+        function getEasyFormSignatureLabel(schema) {
+            const lines = String(schema?.content || '').split(/\r?\n/);
+            for (const line of lines) {
+                const t = String(line || '').trim();
+                const m = t.match(/^\[SIGN\|([^\]]+)\]$/i);
+                if (m) return m[1].trim() || '환자(보호자) 서명';
+            }
+            return '환자(보호자) 서명';
+        }
+
+        function estimateEasyFormHeight(schema) {
+            const lineCount = String(schema?.content || '').split(/\r?\n/).length;
+            return Math.max(1000, Math.min(1700, 240 + lineCount * 26));
+        }
+
+        function buildSchoolFormSelectOptions() {
+            const select = document.getElementById('schoolFormSelect');
+            if (!select) return;
+
+            const prev = select.value;
+            const options = [
+                '<option value="transfusion">[경복대학교 병원] 수혈동의서 (전문)</option>',
+                '<option value="anesthesia">[경복대학교 병원] 마취동의서 (전문)</option>',
+                '<option value="op_anesthesia">[경기도의료원 안성병원] 수술·마취동의서 (전문)</option>',
+                '<option value="initial_nursing">간호정보조사지 (일반/통증사정 전문)</option>'
+            ];
+
+            (sharedDocuments || [])
+                .filter((doc) => {
+                    if (!doc) return false;
+                    const t = String(doc.type || 'pdf');
+                    return t === 'pdf' || t === 'image';
+                })
+                .forEach((doc) => {
+                    const name = doc.name || doc.title || `업로드 양식 ${doc.id}`;
+                    const label = String(doc.type || 'pdf') === 'image' ? '[업로드이미지]' : '[업로드PDF]';
+                    options.push(`<option value="sharedpdf:${doc.id}">${label} ${name}</option>`);
+                });
+
+            select.innerHTML = options.join('');
+            if (prev && select.querySelector(`option[value="${prev.replace(/"/g, '&quot;')}"]`)) {
+                select.value = prev;
+            }
+        }
+
+        let easyFormBlocks = [];
+
+        function createEasyFormBlock(type, data = {}) {
+            if (type === 'heading') return { type: 'heading', text: data.text || '양식 제목' };
+            if (type === 'subheading') return { type: 'subheading', text: data.text || '소제목' };
+            if (type === 'radio') {
+                const label = data.label || '라디오 항목';
+                return {
+                    type: 'radio',
+                    key: normalizeFormKey(data.key || label) || 'radio_item',
+                    label,
+                    options: Array.isArray(data.options) && data.options.length ? data.options : ['선택1', '선택2']
+                };
+            }
+            if (type === 'signature') return { type: 'signature', label: data.label || '환자(보호자) 서명' };
+            return { type: 'paragraph', text: data.text || '본문을 입력하세요.' };
+        }
+
+        function getDefaultEasyFormBlocks() {
+            return [
+                createEasyFormBlock('heading', { text: '양식 제목' }),
+                createEasyFormBlock('subheading', { text: '부제목' }),
+                createEasyFormBlock('paragraph', { text: '여기에 본문을 자유롭게 입력하세요.' }),
+                createEasyFormBlock('radio', { key: 'anesthesia_method', label: '마취 방법', options: ['전신', '척추', '경막외', '기타'] }),
+                createEasyFormBlock('signature', { label: '환자(보호자) 서명' })
+            ];
+        }
+
+        function escapeHtml(text) {
+            return String(text || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function renderEasyFormBlocks() {
+            const editor = document.getElementById('easyFormEditor');
+            if (!editor) return;
+
+            if (!easyFormBlocks.length) {
+                editor.innerHTML = '<div class="text-[12px] text-slate-400">블록이 없습니다. 상단 버튼으로 추가하세요.</div>';
+                return;
+            }
+
+            editor.innerHTML = easyFormBlocks.map((block, idx) => {
+                const moveControls = `
+                    <div class="flex items-center gap-1">
+                        <button type="button" onclick="moveEasyFormBlock(${idx}, -1)" class="px-1.5 py-0.5 border rounded text-[11px]">↑</button>
+                        <button type="button" onclick="moveEasyFormBlock(${idx}, 1)" class="px-1.5 py-0.5 border rounded text-[11px]">↓</button>
+                        <button type="button" onclick="deleteEasyFormBlock(${idx})" class="px-1.5 py-0.5 border rounded text-[11px] text-red-600">✕</button>
+                    </div>`;
+
+                if (block.type === 'heading') {
+                    return `<div class="border rounded p-2 mb-2 bg-slate-50"><div class="flex justify-between items-center mb-1"><span class="text-[11px] font-bold text-slate-600">제목</span>${moveControls}</div><input type="text" value="${escapeHtml(block.text)}" oninput="updateEasyFormBlock(${idx}, 'text', this.value)" class="w-full px-2 py-1.5 border rounded text-[14px] font-bold"></div>`;
+                }
+                if (block.type === 'subheading') {
+                    return `<div class="border rounded p-2 mb-2 bg-slate-50"><div class="flex justify-between items-center mb-1"><span class="text-[11px] font-bold text-slate-600">소제목</span>${moveControls}</div><input type="text" value="${escapeHtml(block.text)}" oninput="updateEasyFormBlock(${idx}, 'text', this.value)" class="w-full px-2 py-1.5 border rounded text-[13px] font-bold"></div>`;
+                }
+                if (block.type === 'paragraph') {
+                    return `<div class="border rounded p-2 mb-2 bg-white"><div class="flex justify-between items-center mb-1"><span class="text-[11px] font-bold text-slate-600">본문</span>${moveControls}</div><textarea oninput="updateEasyFormBlock(${idx}, 'text', this.value)" class="w-full px-2 py-1.5 border rounded text-[13px] min-h-[64px]">${escapeHtml(block.text)}</textarea></div>`;
+                }
+                if (block.type === 'radio') {
+                    return `<div class="border rounded p-2 mb-2 bg-blue-50"><div class="flex justify-between items-center mb-1"><span class="text-[11px] font-bold text-blue-700">라디오</span>${moveControls}</div><div class="grid grid-cols-1 md:grid-cols-3 gap-2"><input type="text" value="${escapeHtml(block.key)}" oninput="updateEasyFormBlock(${idx}, 'key', this.value)" class="px-2 py-1.5 border rounded text-[12px]" placeholder="키"><input type="text" value="${escapeHtml(block.label)}" oninput="updateEasyFormBlock(${idx}, 'label', this.value)" class="px-2 py-1.5 border rounded text-[12px]" placeholder="항목명"><input type="text" value="${escapeHtml((block.options || []).join(', '))}" oninput="updateEasyFormBlock(${idx}, 'options', this.value)" class="px-2 py-1.5 border rounded text-[12px]" placeholder="선택지(쉼표구분)"></div></div>`;
+                }
+                return `<div class="border rounded p-2 mb-2 bg-amber-50"><div class="flex justify-between items-center mb-1"><span class="text-[11px] font-bold text-amber-700">서명칸</span>${moveControls}</div><input type="text" value="${escapeHtml(block.label || '')}" oninput="updateEasyFormBlock(${idx}, 'label', this.value)" class="w-full px-2 py-1.5 border rounded text-[12px]" placeholder="서명 라벨"></div>`;
+            }).join('');
+        }
+
+        function updateEasyFormBlock(index, field, value) {
+            const block = easyFormBlocks[index];
+            if (!block) return;
+            if (block.type === 'radio' && field === 'options') {
+                block.options = String(value || '').split(',').map((s) => s.trim()).filter(Boolean);
+                return;
+            }
+            if (block.type === 'radio' && field === 'key') {
+                block.key = normalizeFormKey(value);
+                return;
+            }
+            block[field] = value;
+        }
+
+        function addEasyFormBlock(type) {
+            easyFormBlocks.push(createEasyFormBlock(type));
+            renderEasyFormBlocks();
+        }
+
+        function moveEasyFormBlock(index, delta) {
+            const next = index + delta;
+            if (next < 0 || next >= easyFormBlocks.length) return;
+            const item = easyFormBlocks[index];
+            easyFormBlocks.splice(index, 1);
+            easyFormBlocks.splice(next, 0, item);
+            renderEasyFormBlocks();
+        }
+
+        function deleteEasyFormBlock(index) {
+            easyFormBlocks.splice(index, 1);
+            renderEasyFormBlocks();
+        }
+
+        function easyFormBlocksToContent(blocks) {
+            return (blocks || []).map((b) => {
+                if (!b) return '';
+                if (b.type === 'heading') return `# ${String(b.text || '').trim()}`;
+                if (b.type === 'subheading') return `## ${String(b.text || '').trim()}`;
+                if (b.type === 'paragraph') return String(b.text || '').trim();
+                if (b.type === 'radio') {
+                    const key = normalizeFormKey(b.key || b.label || 'radio_item') || 'radio_item';
+                    const label = String(b.label || '선택 항목').trim();
+                    const opts = (b.options || []).map((s) => String(s || '').trim()).filter(Boolean).join(',');
+                    return `[RADIO|${key}|${label}|${opts}]`;
+                }
+                if (b.type === 'signature') return `[SIGN|${String(b.label || '환자(보호자) 서명').trim()}]`;
+                return '';
+            }).filter(Boolean).join('\n\n');
+        }
+
+        function contentToEasyFormBlocks(content) {
+            const blocks = [];
+            const lines = String(content || '').split(/\r?\n/);
+            lines.forEach((raw) => {
+                const line = String(raw || '').trim();
+                if (!line) return;
+                if (line.startsWith('# ')) {
+                    blocks.push(createEasyFormBlock('heading', { text: line.slice(2).trim() }));
+                    return;
+                }
+                if (line.startsWith('## ')) {
+                    blocks.push(createEasyFormBlock('subheading', { text: line.slice(3).trim() }));
+                    return;
+                }
+                const r = line.match(/^\[RADIO\|([^|\]]+)\|([^|\]]+)\|([^\]]+)\]$/i);
+                if (r) {
+                    const options = r[3].split(',').map((s) => s.trim()).filter(Boolean);
+                    blocks.push(createEasyFormBlock('radio', { key: normalizeFormKey(r[1]), label: r[2].trim(), options }));
+                    return;
+                }
+                const s = line.match(/^\[SIGN\|([^\]]+)\]$/i);
+                if (s) {
+                    blocks.push(createEasyFormBlock('signature', { label: s[1].trim() }));
+                    return;
+                }
+                blocks.push(createEasyFormBlock('paragraph', { text: line }));
+            });
+            return blocks.length ? blocks : getDefaultEasyFormBlocks();
+        }
+
+        function initEasyFormEditor() {
+            const editor = document.getElementById('easyFormEditor');
+            if (!editor) return;
+            if (!editor.dataset.seeded) {
+                easyFormBlocks = getDefaultEasyFormBlocks();
+                editor.dataset.seeded = '1';
+            }
+            if (!easyFormBlocks.length) easyFormBlocks = getDefaultEasyFormBlocks();
+            renderEasyFormBlocks();
+        }
+
+        function insertEasyFormHeading() {
+            addEasyFormBlock('heading');
+        }
+
+        function insertEasyFormSubHeading() {
+            addEasyFormBlock('subheading');
+        }
+
+        function insertEasyFormParagraph() {
+            addEasyFormBlock('paragraph');
+        }
+
+        function insertEasyFormRadioToken() {
+            addEasyFormBlock('radio');
+        }
+
+        function insertEasyFormSignatureToken() {
+            addEasyFormBlock('signature');
+        }
+
+        async function saveEasyFormTemplateToDb() {
+            if (!window.supabase || typeof window.supabase.from !== 'function') {
+                alert('DB 연결을 확인할 수 없습니다.');
+                return;
+            }
+            const nameInput = document.getElementById('easyFormNameInput');
+            const name = (nameInput?.value || '').trim();
+            const content = easyFormBlocksToContent(easyFormBlocks).trim();
+            if (!name) {
+                alert('양식 이름을 입력해 주세요.');
+                return;
+            }
+            if (!content) {
+                alert('양식 내용을 입력해 주세요.');
+                return;
+            }
+
+            const schema = {
+                version: 1,
+                mode: 'rich_text',
+                name,
+                content,
+                blocks: easyFormBlocks,
+                createdAt: new Date().toISOString()
+            };
+
+            const payload = {
+                name,
+                type: 'custom_rich',
+                file_name: `${name}.json`,
+                file_data: JSON.stringify(schema),
+                preview_image_data: null,
+                created_at: new Date().toISOString()
+            };
+
+            const { error } = await window.supabase.from('documents').insert(payload);
+            if (error) {
+                console.error('간편 양식 저장 실패:', error);
+                alert('양식 저장에 실패했습니다. documents 테이블 권한/컬럼을 확인해 주세요.');
+                return;
+            }
+
+            await refreshSharedDocuments(false);
+            buildSchoolFormSelectOptions();
+            renderSharedDocumentSettingsList();
+            alert('간편 양식을 DB에 저장했습니다.');
+        }
+
+        function loadEasyFormTemplateIntoEditor(docId) {
+            const doc = getEasyFormDocuments().find((item) => String(item.id) === String(docId));
+            const schema = parseEasyFormSchema(doc);
+            if (!schema) {
+                alert('불러올 양식 데이터가 올바르지 않습니다.');
+                return;
+            }
+
+            const nameInput = document.getElementById('easyFormNameInput');
+            if (nameInput) nameInput.value = schema.name || doc.name || '';
+            if (Array.isArray(schema.blocks) && schema.blocks.length) {
+                easyFormBlocks = schema.blocks;
+            } else {
+                easyFormBlocks = contentToEasyFormBlocks(schema.content || '');
+            }
+            renderEasyFormBlocks();
+            const editor = document.getElementById('easyFormEditor');
+            if (editor) editor.dataset.seeded = '1';
+        }
+
+        async function fetchSettingsRowFromBackend() {
+            if (!window.supabase || typeof window.supabase.from !== 'function') return null;
+            const { data, error } = await window.supabase
+                .from('patients')
+                .select('*')
+                .eq('chart_no', SETTINGS_CHART_NO)
+                .maybeSingle();
+
+            if (error) {
+                console.warn('설정 레코드 조회 실패:', error);
+                return null;
+            }
+            return data || null;
+        }
+
+        async function loadSharedDocumentsFromSettingsRow() {
+            const row = await fetchSettingsRowFromBackend();
+            const docs = row?.records?.shared_documents;
+            return Array.isArray(docs) ? docs : [];
+        }
+
+        async function saveSharedDocumentsToSettingsRow(docs) {
+            if (!window.supabase || typeof window.supabase.from !== 'function') return false;
+            const row = await fetchSettingsRowFromBackend();
+            const baseRecords = row?.records && typeof row.records === 'object' ? row.records : {};
+            const nextRecords = { ...baseRecords, shared_documents: docs };
+
+            const payload = {
+                chart_no: SETTINGS_CHART_NO,
+                name: row?.name || '__SYSTEM_SETTINGS__',
+                birth: row?.birth || '000000',
+                age: row?.age || 0,
+                gender: row?.gender || '-',
+                blood_type: row?.blood_type || '-',
+                dept: row?.dept || '-',
+                doctor: row?.doctor || '-',
+                room: row?.room || '-',
+                hd: row?.hd || 0,
+                pod: row?.pod || 0,
+                diag_code: row?.diag_code || '-',
+                diagnosis: row?.diagnosis || '-',
+                cc: row?.cc || '-',
+                memo: row?.memo || 'SYSTEM_SETTINGS_ROW_DO_NOT_DELETE',
+                body_marks: row?.body_marks || [],
+                records: nextRecords
+            };
+
+            const { error } = await window.supabase
+                .from('patients')
+                .upsert(payload, { onConflict: 'chart_no' });
+
+            if (error) {
+                console.error('설정 레코드 공용 양식 저장 실패:', error);
+                return false;
+            }
+            return true;
+        }
+
+        async function refreshSharedDocuments(showMessage = false) {
+            try {
+                if (!window.supabase || typeof window.supabase.from !== 'function') {
+                    sharedDocuments = [];
+                    if (showMessage) alert('DB 연결을 확인할 수 없습니다.');
+                    renderDocumentsSection();
+                    return;
+                }
+
+                const settingsDocs = await loadSharedDocumentsFromSettingsRow();
+                let docsTable = [];
+                try {
+                    const { data } = await window.supabase
+                        .from('documents')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+                    docsTable = Array.isArray(data) ? data : [];
+                } catch (tableError) {
+                    console.warn('documents 테이블 조회 실패(설정행 fallback 사용):', tableError);
+                }
+
+                const merged = [...settingsDocs];
+                docsTable.forEach((d) => {
+                    if (!merged.some((x) => String(x.id) === String(d.id))) merged.push(d);
+                });
+
+                sharedDocuments = merged;
+                renderDocumentsSection();
+                renderSharedDocumentSettingsList();
+                buildSchoolFormSelectOptions();
+                if (showMessage) {
+                    alert(`DB 공용 서류 ${sharedDocuments.length}건을 불러왔습니다.`);
+                }
+            } catch (error) {
+                console.error('공용 서류 조회 중 예외:', error);
+                if (showMessage) alert('DB 서류 조회 중 오류가 발생했습니다.');
+            }
+        }
+
+        function updateSharedDocumentUploadUi() {
+            const info = document.getElementById('sharedDocAttachInfo');
+            if (!info) return;
+            if (pendingSharedDocumentUpload) {
+                info.classList.remove('hidden');
+                info.innerText = `첨부됨: ${pendingSharedDocumentUpload.fileName}`;
+            } else {
+                info.classList.add('hidden');
+                info.innerText = '';
+            }
+        }
+
+        function clearPendingSharedDocumentUpload(clearNameInput = false) {
+            pendingSharedDocumentUpload = null;
+            if (clearNameInput) {
+                const nameInput = document.getElementById('sharedDocNameInput');
+                if (nameInput) nameInput.value = '';
+            }
+            updateSharedDocumentUploadUi();
+        }
+
+        function openSharedDocumentUploadPicker() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp';
+            input.onchange = async () => {
+                const file = input.files && input.files[0];
+                if (!file) return;
+
+                const lowerName = file.name.toLowerCase();
+                const isPdf = file.type.includes('pdf') || lowerName.endsWith('.pdf');
+                const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(lowerName);
+                if (!isPdf && !isImage) {
+                    alert('PDF 또는 이미지(PNG/JPG/WEBP) 파일만 업로드할 수 있습니다.');
+                    return;
+                }
+
+                const fileData = await readFileAsDataURL(file);
+                const previewImageData = isPdf ? await createPdfPreviewImage(fileData) : fileData;
+                const defaultName = file.name.replace(/\.(pdf|png|jpe?g|webp)$/i, '') || '공용 양식';
+                const nameInput = document.getElementById('sharedDocNameInput');
+
+                pendingSharedDocumentUpload = {
+                    docType: isPdf ? 'pdf' : 'image',
+                    fileName: file.name,
+                    defaultName,
+                    fileData,
+                    previewImageData
+                };
+
+                if (nameInput && !(nameInput.value || '').trim()) {
+                    nameInput.value = defaultName;
+                }
+
+                updateSharedDocumentUploadUi();
+            };
+            input.click();
+        }
+
+        async function registerSharedDocumentToDb() {
+            if (!pendingSharedDocumentUpload) {
+                alert('먼저 업로드할 양식(PDF/이미지)을 선택해 주세요.');
+                return;
+            }
+            if (!window.supabase || typeof window.supabase.from !== 'function') {
+                alert('DB 연결을 확인할 수 없습니다.');
+                return;
+            }
+
+            const nameInput = document.getElementById('sharedDocNameInput');
+            const name = (nameInput && nameInput.value ? nameInput.value.trim() : '') || pendingSharedDocumentUpload.defaultName || '공용 양식';
+
+            const payload = {
+                id: Date.now(),
+                name,
+                type: pendingSharedDocumentUpload.docType || 'pdf',
+                file_name: pendingSharedDocumentUpload.fileName,
+                file_data: pendingSharedDocumentUpload.fileData,
+                preview_image_data: pendingSharedDocumentUpload.previewImageData || null,
+                created_at: new Date().toISOString()
+            };
+
+            const current = await loadSharedDocumentsFromSettingsRow();
+            current.unshift(payload);
+            const settingsSaved = await saveSharedDocumentsToSettingsRow(current);
+
+            let tableSaved = false;
+            let tableError = null;
+            try {
+                const { error } = await window.supabase.from('documents').insert(payload);
+                tableSaved = !error;
+                tableError = error;
+            } catch (e) {
+                tableError = e;
+            }
+
+            if (!settingsSaved && !tableSaved) {
+                console.error('공용 양식 업로드 실패(모든 경로):', tableError);
+                const detail = tableError?.message ? `\n상세: ${tableError.message}` : '';
+                alert(`DB 업로드에 실패했습니다. 권한(RLS)/컬럼/용량을 확인해 주세요.${detail}`);
+                return;
+            }
+
+            clearPendingSharedDocumentUpload(true);
+            await refreshSharedDocuments(false);
+            if (!tableSaved && settingsSaved) {
+                alert('양식 업로드를 설정행 fallback 경로로 저장했습니다. (documents 테이블 저장은 실패)');
+            } else {
+                alert('공용 양식을 DB에 업로드했습니다.');
+            }
+        }
+
+        async function deleteSharedDocumentFromDb(docId) {
+            if (!window.supabase || typeof window.supabase.from !== 'function') {
+                alert('DB 연결을 확인할 수 없습니다.');
+                return;
+            }
+            if (!confirm('해당 공용 양식을 DB에서 삭제하시겠습니까?')) return;
+
+            const current = await loadSharedDocumentsFromSettingsRow();
+            const filtered = current.filter((d) => String(d.id) !== String(docId));
+            const settingsSaved = await saveSharedDocumentsToSettingsRow(filtered);
+
+            let tableSaved = false;
+            try {
+                const { error } = await window.supabase.from('documents').delete().eq('id', docId);
+                tableSaved = !error;
+                if (error) console.warn('documents 테이블 삭제 실패:', error);
+            } catch (e) {
+                console.warn('documents 테이블 삭제 예외:', e);
+            }
+
+            if (!settingsSaved && !tableSaved) {
+                alert('DB 삭제에 실패했습니다.');
+                return;
+            }
+            await refreshSharedDocuments(false);
+            alert('공용 양식을 삭제했습니다.');
+        }
+
+        function renderSharedDocumentSettingsList() {
+            const list = document.getElementById('shared-doc-list');
+            const countEl = document.getElementById('shared-doc-count');
+            const docs = (sharedDocuments || []).filter((doc) => {
+                if (!doc) return false;
+                const t = String(doc.type || 'pdf');
+                return t === 'pdf' || t === 'image';
+            });
+            if (countEl) countEl.innerText = `${docs.length}개`;
+            if (!list) return;
+
+            if (!docs.length) {
+                list.innerHTML = '<li class="p-3 text-[12px] text-gray-400 text-center">등록된 공용 양식이 없습니다.</li>';
+                return;
+            }
+
+            list.innerHTML = docs.map((doc) => {
+                const name = doc.name || doc.title || '공용 양식';
+                const created = doc.created_at || doc.createdAt || '';
+                return `
+                    <li class="p-2.5 flex justify-between items-center text-[12px]">
+                        <div class="max-w-[75%] overflow-hidden">
+                            <span class="bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-bold">${name}</span>
+                            <span class="ml-1 bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">${String(doc.type || 'pdf') === 'image' ? '이미지' : 'PDF'}</span>
+                            <p class="text-gray-500 mt-1 truncate">${created ? new Date(created).toLocaleString('ko-KR') : ''}</p>
+                        </div>
+                        <div class="space-x-1">
+                            <button onclick="openDocumentPreview('shared:${doc.id}')" class="text-slate-800 hover:underline font-bold">보기</button>
+                            <button onclick="deleteSharedDocumentFromDb('${String(doc.id).replace(/'/g, "\\'")}')" class="text-red-500 hover:underline">삭제</button>
+                        </div>
+                    </li>
+                `;
+            }).join('');
         }
 
         async function saveSettingsDataToBackend(payload) {
@@ -1435,6 +2516,11 @@
 
             if (btnElement) {
                 btnElement.classList.add('active');
+            }
+
+            if (panelId === 'shared-doc-panel') {
+                refreshSharedDocuments(false);
+                renderSharedDocumentSettingsList();
             }
         }
 
@@ -1696,6 +2782,8 @@
                     };
                 });
 
+                await refreshSharedDocuments(false);
+
             } catch (err) {
                 console.error('데이터 로드 오류:', err);
             }
@@ -1707,11 +2795,15 @@
             const uidInput = document.getElementById('uid').value.trim();
             const upw = document.getElementById('upw').value.trim();
 
+            if (!uidInput || !upw) {
+                alert('아이디와 비밀번호를 입력해 주세요.');
+                return;
+            }
+
             // 개발용 우회: 기존 하드코딩된 계정(admin / 1234)을 그대로 허용
             // 개발 중 빠른 접근이 필요하면 이 블록을 사용하세요. 운영 시 반드시 제거하세요.
             if (uidInput === 'admin' && upw === '1234') {
-                await fetchInitialData();
-                showView('patients');
+                await showView('patients');
                 return;
             }
 
@@ -1720,6 +2812,11 @@
             if (!uid.includes('@')) uid = uid + '@example.com';
 
             try {
+                if (!window.supabase || !supabase.auth) {
+                    alert('로그인 서버 연결이 초기화되지 않았습니다. 관리자에게 문의해 주세요.');
+                    return;
+                }
+
                 // Supabase Auth로 로그인 시도
                 let { data, error } = await supabase.auth.signInWithPassword({ email: uid, password: upw });
                 if (error) {
@@ -1735,13 +2832,28 @@
                 }
 
                 // 로그인 성공: 데이터 로드 및 화면 전환
-                await fetchInitialData();
-                showView('patients');
+                await showView('patients');
             } catch (err) {
                 console.error('로그인 처리 중 오류:', err);
                 alert('로그인 중 오류가 발생했습니다. 콘솔을 확인하세요.');
             }
         }
+        window.login = login;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const uidEl = document.getElementById('uid');
+            const upwEl = document.getElementById('upw');
+            if (!uidEl || !upwEl) return;
+
+            const submitOnEnter = (e) => {
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+                login();
+            };
+
+            uidEl.addEventListener('keydown', submitOnEnter);
+            upwEl.addEventListener('keydown', submitOnEnter);
+        });
 
         // 로그아웃 버튼을 누르면 Supabase 세션에서 로그아웃하고 로그인 창으로 돌아갑니다.
         async function handleLogout() {
@@ -2169,6 +3281,7 @@ function getCurrentPatientName() {
             updateDiagnosisDropdown();
             updateMedDbDropdown();
             updateLabSelectionOptions();
+            renderSharedDocumentSettingsList();
         }
 
         function applySelectedNurseTemplate(templateId) {
@@ -4017,13 +5130,25 @@ if (!note) return alert("처방 내역을 입력하세요.");
         }
 
         async function openDocumentPreview(docId) {
-            const p = patients[currentPatientIndex];
-            if (!p || !p.records?.documents) return;
-
-            const doc = p.records.documents.find(item => item.id == docId);
+            const p = (currentPatientIndex !== null && patients[currentPatientIndex]) ? patients[currentPatientIndex] : null;
+            const localDocs = Array.isArray(p?.records?.documents) ? p.records.documents : [];
+            let doc = localDocs.find(item => String(item.id) === String(docId));
+            if (!doc) {
+                doc = sharedDocuments.find(item => (`shared:${item.id}` === String(docId)) || String(item.id) === String(docId));
+            }
             if (!doc) return;
 
-            if (!doc.fileData) return;
+            const normalizedDoc = {
+                ...doc,
+                name: doc.name || doc.title || '서류',
+                type: doc.type || 'pdf',
+                fileData: doc.fileData || doc.file_data || doc.data_url || doc.file_url || '',
+                previewImageData: doc.previewImageData || doc.preview_image_data || null,
+                previewPagesData: doc.previewPagesData || doc.preview_pages_data || null,
+                editedImageData: doc.editedImageData || doc.edited_image_data || null
+            };
+
+            if (!normalizedDoc.fileData) return;
 
             const overlay = document.createElement('div');
             overlay.style.position = 'fixed';
@@ -4052,13 +5177,83 @@ if (!note) return alert("처방 내역을 입력하세요.");
 
             modal.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                    <div style="font-size:16px; font-weight:bold; color:#0f172a;">${doc.name}</div>
-                    <button type="button" id="documentPreviewClose" style="padding:8px 12px; border:none; border-radius:8px; background:#e2e8f0; color:#0f172a; font-weight:bold; cursor:pointer;">닫기</button>
+                    <div style="font-size:16px; font-weight:bold; color:#0f172a;">${normalizedDoc.name}</div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <button type="button" id="documentPreviewPrint" class="btn-blue" style="padding:8px 12px;">인쇄</button>
+                        <button type="button" id="documentPreviewClose" style="padding:8px 12px; border:none; border-radius:8px; background:#e2e8f0; color:#0f172a; font-weight:bold; cursor:pointer;">닫기</button>
+                    </div>
                 </div>
                 <div id="documentPreviewContent" style="flex:1; border:1px solid #cbd5e1; border-radius:8px; overflow:auto; background:#f8fafc; display:flex; align-items:center; justify-content:center;">
                     <div style="color:#64748b; font-size:13px;">문서를 불러오는 중입니다...</div>
                 </div>
             `;
+
+            const printDocument = () => {
+                const src = normalizedDoc.fileData;
+                if (!src) {
+                    alert('인쇄할 문서 데이터가 없습니다.');
+                    return;
+                }
+
+                const printFrame = document.createElement('iframe');
+                printFrame.style.position = 'fixed';
+                printFrame.style.right = '0';
+                printFrame.style.bottom = '0';
+                printFrame.style.width = '0';
+                printFrame.style.height = '0';
+                printFrame.style.border = '0';
+
+                const cleanup = () => {
+                    setTimeout(() => {
+                        if (printFrame.parentNode) printFrame.parentNode.removeChild(printFrame);
+                    }, 1200);
+                };
+
+                printFrame.onload = () => {
+                    try {
+                        printFrame.contentWindow.focus();
+                        printFrame.contentWindow.print();
+                        cleanup();
+                    } catch (err) {
+                        console.warn('iframe 인쇄 실패, 새 창 인쇄로 전환:', err);
+                        cleanup();
+                        const win = window.open('', '_blank');
+                        if (!win) {
+                            alert('브라우저 팝업 차단으로 인쇄 창을 열지 못했습니다. 팝업 허용 후 다시 시도해 주세요.');
+                            return;
+                        }
+                        win.document.write(`
+                            <!doctype html>
+                            <html>
+                            <head>
+                                <meta charset="utf-8" />
+                                <title>${normalizedDoc.name}</title>
+                                <style>
+                                    html, body { margin: 0; padding: 0; background: #fff; }
+                                    img { width: 100%; height: auto; display: block; }
+                                    @page { margin: 10mm; }
+                                </style>
+                            </head>
+                            <body>
+                                <img src="${src}" alt="${normalizedDoc.name}" />
+                            </body>
+                            </html>
+                        `);
+                        win.document.close();
+                        win.onload = () => {
+                            try {
+                                win.focus();
+                                win.print();
+                            } catch (printErr) {
+                                console.warn('새 창 인쇄 실패:', printErr);
+                            }
+                        };
+                    }
+                };
+
+                printFrame.src = src;
+                document.body.appendChild(printFrame);
+            };
 
             let previewCleanup = () => {};
             const closeModal = () => {
@@ -4066,26 +5261,29 @@ if (!note) return alert("처방 내역을 입력하세요.");
                 overlay.remove();
             };
             modal.querySelector('#documentPreviewClose').addEventListener('click', closeModal);
+            modal.querySelector('#documentPreviewPrint').addEventListener('click', printDocument);
             overlay.addEventListener('click', (event) => {
                 if (event.target === overlay) closeModal();
             });
 
             const content = modal.querySelector('#documentPreviewContent');
             if (content) {
-                if (doc.type === 'pdf') {
-                    let previewPages = Array.isArray(doc.previewPagesData) ? doc.previewPagesData.filter(Boolean) : [];
+                if (normalizedDoc.type === 'pdf' || String(normalizedDoc.fileData).startsWith('data:application/pdf')) {
+                    let previewPages = Array.isArray(normalizedDoc.previewPagesData) ? normalizedDoc.previewPagesData.filter(Boolean) : [];
                     if (!previewPages.length) {
-                        previewPages = await createPdfPreviewImages(doc.fileData);
+                        previewPages = await createPdfPreviewImages(normalizedDoc.fileData);
                         if (previewPages.length) {
-                            doc.previewPagesData = previewPages;
-                            if (!doc.previewImageData) doc.previewImageData = previewPages[0];
-                            savePatientToBackend(p).catch((error) => {
-                                console.warn('PDF 페이지 이미지 저장 실패:', error);
-                            });
+                            if (doc.fileData) {
+                                doc.previewPagesData = previewPages;
+                                if (!doc.previewImageData) doc.previewImageData = previewPages[0];
+                                savePatientToBackend(p).catch((error) => {
+                                    console.warn('PDF 페이지 이미지 저장 실패:', error);
+                                });
+                            }
                         }
                     }
 
-                    const singlePreview = doc.editedImageData || doc.previewImageData || null;
+                    const singlePreview = normalizedDoc.editedImageData || normalizedDoc.previewImageData || null;
 
                     const setupZoomableViewer = (viewport, stage, image, zoomLabel) => {
                         let zoomLevel = 1;
@@ -4096,8 +5294,9 @@ if (!note) return alert("처방 내역을 입력하세요.");
                             if (!image.naturalWidth || !image.naturalHeight) return;
 
                             const vw = Math.max(1, viewport.clientWidth - 20);
-                            const vh = Math.max(1, viewport.clientHeight - 20);
-                            const fitScale = Math.min(vw / image.naturalWidth, vh / image.naturalHeight, 1);
+                            // 세로가 긴 동의서는 "가로폭 맞춤"이 읽기 좋다.
+                            // 이전의 가로/세로 동시 맞춤은 문서를 지나치게 작게 만들었다.
+                            const fitScale = Math.min(vw / image.naturalWidth, 1);
                             const targetScale = fitScale * zoomLevel;
 
                             image.style.width = `${Math.round(image.naturalWidth * targetScale)}px`;
@@ -4105,7 +5304,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
                             zoomLabel.innerText = `${Math.round(zoomLevel * 100)}%`;
 
                             if (zoomLevel > 1) {
-                                stage.style.justifyContent = 'flex-start';
+                                stage.style.justifyContent = 'center';
                                 stage.style.alignItems = 'flex-start';
                             } else {
                                 stage.style.justifyContent = 'center';
@@ -4136,7 +5335,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
 
                     if (previewPages.length) {
                         const pages = [...previewPages];
-                        if (doc.editedImageData) pages[0] = doc.editedImageData;
+                        if (normalizedDoc.editedImageData) pages[0] = normalizedDoc.editedImageData;
 
                         content.innerHTML = `
                             <div style="width:100%; height:100%; min-height:0; display:flex; flex-direction:column; gap:8px;">
@@ -4155,7 +5354,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
                                 </div>
                                 <div id="pdfImageViewport" style="flex:1; min-height:0; border:1px solid #cbd5e1; border-radius:8px; background:#fff; overflow:auto;">
                                     <div id="pdfImageStage" style="min-width:100%; min-height:100%; display:flex; align-items:center; justify-content:center; padding:10px; box-sizing:border-box;">
-                                        <img id="pdfPageImage" alt="${doc.name}" style="display:block; width:auto; height:auto;" />
+                                        <img id="pdfPageImage" alt="${normalizedDoc.name}" style="display:block; width:auto; height:auto;" />
                                     </div>
                                 </div>
                             </div>
@@ -4217,7 +5416,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
                                 </div>
                                 <div id="singleImageViewport" style="flex:1; min-height:0; border:1px solid #cbd5e1; border-radius:8px; background:#fff; overflow:auto;">
                                     <div id="singleImageStage" style="min-width:100%; min-height:100%; display:flex; align-items:center; justify-content:center; padding:10px; box-sizing:border-box;">
-                                        <img id="singleDocImage" src="${singlePreview}" alt="${doc.name}" style="display:block; width:auto; height:auto;" />
+                                        <img id="singleDocImage" src="${singlePreview}" alt="${normalizedDoc.name}" style="display:block; width:auto; height:auto;" />
                                     </div>
                                 </div>
                             </div>
@@ -4234,10 +5433,10 @@ if (!note) return alert("처방 내역을 입력하세요.");
                         content.querySelector('#singleZoomResetBtn').addEventListener('click', () => singleZoomApi.zoomReset());
                         singleZoomApi.applyZoom();
                     } else {
-                        content.innerHTML = `<iframe src="${doc.fileData}" title="${doc.name}" style="width:100%; height:100%; border:none;"></iframe>`;
+                        content.innerHTML = `<iframe src="${normalizedDoc.fileData}" title="${normalizedDoc.name}" style="width:100%; height:100%; border:none;"></iframe>`;
                     }
                 } else {
-                    content.innerHTML = `<iframe src="${doc.fileData}" title="${doc.name}" style="width:100%; height:100%; border:none;"></iframe>`;
+                    content.innerHTML = `<iframe src="${normalizedDoc.fileData}" title="${normalizedDoc.name}" style="width:100%; height:100%; border:none;"></iframe>`;
                 }
             }
 
@@ -4273,32 +5472,54 @@ if (!note) return alert("처방 내역을 입력하세요.");
             if (!list || !p) return;
 
             const docs = (p.records && p.records.documents) ? p.records.documents : [];
-            const rendered = [...docs]
+            const localRendered = [...docs]
                 .filter(doc => doc && doc.type === 'pdf' && doc.fileData)
                 .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
                 .map(doc => ({
-                    id: doc.id,
+                    id: String(doc.id),
                     name: doc.name || '서류',
-                    type: doc.type || 'pdf'
+                    type: doc.type || 'pdf',
+                    source: 'patient'
                 }));
+
+            const sharedRendered = [...sharedDocuments]
+                .filter(doc => {
+                    if (!doc) return false;
+                    const t = String(doc.type || 'pdf');
+                    return (t === 'pdf' || t === 'image') && (doc.file_data || doc.fileData || doc.data_url || doc.file_url);
+                })
+                .sort((a, b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0))
+                .map(doc => ({
+                    id: `shared:${doc.id}`,
+                    name: `[DB] ${doc.name || doc.title || '공용 서류'}`,
+                    type: doc.type || 'pdf',
+                    source: 'shared'
+                }));
+
+            const rendered = [...localRendered, ...sharedRendered];
 
             if (!rendered.length) {
                 list.innerHTML = '<div style="padding:14px; border:1px dashed #cbd5e1; border-radius:8px; color:#64748b; text-align:center;">등록된 서류 및 동의서가 없습니다.</div>';
                 return;
             }
 
-            list.innerHTML = rendered.map(item => `
+            list.innerHTML = rendered.map(item => {
+                const actionHtml = item.source === 'patient'
+                    ? `<button type="button" data-delete-doc-id="${item.id}" class="document-delete-btn" style="padding:8px 10px; border:none; border-radius:8px; background:#ef4444; color:#fff; font-weight:bold; cursor:pointer; font-size:12px; white-space:nowrap;">삭제</button>`
+                    : '<button type="button" disabled style="padding:8px 10px; border:none; border-radius:8px; background:#cbd5e1; color:#334155; font-weight:bold; cursor:not-allowed; font-size:12px; white-space:nowrap;">공용</button>';
+                return `
                 <div style="display:flex; align-items:center; gap:8px;">
                     <button type="button" data-doc-id="${item.id}" data-doc-type="${item.type}" style="flex:1; text-align:left; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; background:white; cursor:pointer; font-size:13px; color:#0f172a;" class="document-item">
                         ${item.name}
                     </button>
-                    <button type="button" data-delete-doc-id="${item.id}" class="document-delete-btn" style="padding:8px 10px; border:none; border-radius:8px; background:#ef4444; color:#fff; font-weight:bold; cursor:pointer; font-size:12px; white-space:nowrap;">삭제</button>
+                    ${actionHtml}
                 </div>
-            `).join('');
+            `;
+            }).join('');
 
             list.querySelectorAll('.document-item').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    openDocumentPreview(Number(btn.dataset.docId));
+                    openDocumentPreview(btn.dataset.docId);
                 });
             });
 
@@ -5493,6 +6714,1212 @@ function editPresc(index) {
             `;
             }).join('');
         }
+        // =========================================================================
+// ✍️ 학교/병원 공식 서식 원문 전문 렌더링 & 동적 터치 서명 통합 엔진
+// =========================================================================
+let schoolCanvas = null;
+let schoolCtx = null;
+let isDrawingSchoolSig = false;
+let schoolStrokes = []; // 자필 서명 획 저장 배열
+let schoolSignatureImageData = '';
+let currentDocBottomY = 0;
+let currentSigBoxY = 850; // 서명 박스 시작 Y 좌표 (본문 길이에 따라 동적 계산됨)
+let currentSigBox = { x: 30, y: 850, w: 590, h: 130 };
+let currentSharedPdfCheckboxRects = [];
+let lastSchoolFormKey = '';
+let signaturePadCanvas = null;
+let signaturePadCtx = null;
+let isDrawingSignaturePad = false;
+let signaturePadStrokes = [];
+
+// 모달 열기
+async function openSchoolConsentModal() {
+    if (currentPatientIndex === null || !patients[currentPatientIndex]) {
+        alert("먼저 차트를 조회할 환자를 선택해 주세요.");
+        return;
+    }
+
+    const modal = document.getElementById('schoolConsentModal');
+    if (modal) modal.classList.remove('hidden');
+
+    try {
+        await refreshSharedDocuments(false);
+        buildSchoolFormSelectOptions();
+        await onSchoolFormSelectChange();
+    } catch (error) {
+        console.error('전자동의서 모달 초기화 오류:', error);
+    }
+
+    schoolStrokes = [];
+    schoolSignatureImageData = '';
+    renderSchoolFormOptionPanel();
+    
+    setTimeout(() => {
+        initSchoolConsentCanvas();
+        renderSchoolConsentDoc();
+        updateSchoolSignatureButtonPosition();
+    }, 100);
+}
+
+// 모달 닫기
+function closeSchoolConsentModal() {
+    document.getElementById('schoolConsentModal').classList.add('hidden');
+    closeSchoolSignaturePadModal();
+    schoolStrokes = [];
+    schoolSignatureImageData = '';
+}
+
+// 대리인 입력란 토글
+function onSchoolSignerTypeChange() {
+    const isGuardian = document.querySelector('input[name="schoolSignerType"]:checked').value === 'guardian';
+    const row = document.getElementById('schoolGuardianRow');
+    if (row) row.style.display = isGuardian ? 'flex' : 'none';
+    renderSchoolConsentDoc();
+    updateSchoolSignatureButtonPosition();
+}
+
+// 캔버스 초기화 및 마우스/태블릿 터치 이벤트 바인딩 (좌표 및 스크롤 오류 완벽 해결)
+function initSchoolConsentCanvas() {
+    schoolCanvas = document.getElementById('schoolConsentCanvas');
+    if (!schoolCanvas) return;
+    schoolCtx = schoolCanvas.getContext('2d');
+
+    // 터치/마우스 좌표를 캔버스 해상도에 정확하게 비율 매핑
+    const getCanvasPos = (e) => {
+        const rect = schoolCanvas.getBoundingClientRect();
+        const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+        
+        return {
+            x: (clientX - rect.left) * (schoolCanvas.width / rect.width),
+            y: (clientY - rect.top) * (schoolCanvas.height / rect.height)
+        };
+    };
+
+    const startSig = (e) => {
+        const pos = getCanvasPos(e);
+        const formKey = document.getElementById('schoolFormSelect')?.value || '';
+
+        if (String(formKey).startsWith('sharedpdf:')) {
+            const hit = currentSharedPdfCheckboxRects.find((rect) => (
+                pos.x >= rect.x && pos.x <= rect.x + rect.w && pos.y >= rect.y && pos.y <= rect.y + rect.h
+            ));
+            if (hit) {
+                const current = getConsentOptionValue(formKey, hit.key);
+                setConsentOptionValue(formKey, hit.key, current === 'on' ? 'off' : 'on');
+                return;
+            }
+        }
+
+        // 본문 캔버스에는 직접 서명하지 않고, "서명하기" 버튼으로 팝업 서명창을 사용한다.
+    };
+
+    const moveSig = (e) => {
+        if (!isDrawingSchoolSig) return;
+    };
+
+    const stopSig = () => { isDrawingSchoolSig = false; };
+
+    // 마우스 이벤트
+    schoolCanvas.onmousedown = startSig;
+    schoolCanvas.onmousemove = moveSig;
+    schoolCanvas.onmouseup = stopSig;
+
+    // 태블릿 터치 이벤트 (iPad, 안드로이드 전용)
+    schoolCanvas.ontouchstart = startSig;
+    schoolCanvas.ontouchmove = moveSig;
+    schoolCanvas.ontouchend = stopSig;
+}
+
+// 서명 초기화
+function clearSchoolSignature() {
+    schoolStrokes = [];
+    schoolSignatureImageData = '';
+    renderSchoolConsentDoc();
+}
+
+// 📄 공식 서식(4종) 전문 100% 렌더링 함수
+function renderSchoolConsentDoc() {
+    if (!schoolCanvas || !schoolCtx) return;
+    const p = patients[currentPatientIndex];
+    if (!p) return;
+
+    const formKey = document.getElementById('schoolFormSelect').value;
+    const isGuardian = document.querySelector('input[name="schoolSignerType"]:checked').value === 'guardian';
+    currentSharedPdfCheckboxRects = [];
+    currentDocBottomY = 0;
+
+    const sharedPdfDoc = getSharedPdfDocByKey(formKey);
+    const sharedPdfSchema = sharedPdfDoc ? sharedPdfSchemaCache[String(sharedPdfDoc.id)] : null;
+
+    const basePageHeight = 520;
+
+    // 양식이 바뀌는 순간에는 과도하게 큰 이전 높이를 먼저 정리한다.
+    // 이후 실제 내용 끝(currentDocBottomY)에 맞춰 자동 조정된다.
+    if (lastSchoolFormKey !== formKey) {
+        schoolCanvas.height = basePageHeight;
+        lastSchoolFormKey = formKey;
+    } else if (schoolCanvas.height < basePageHeight) {
+        schoolCanvas.height = basePageHeight;
+    }
+
+    // 1. 바탕 백지화
+    schoolCtx.fillStyle = "#ffffff";
+    schoolCtx.fillRect(0, 0, schoolCanvas.width, schoolCanvas.height);
+
+    // 2. 외곽 테두리
+    if (formKey !== 'initial_nursing') {
+        schoolCtx.strokeStyle = "#0f172a";
+        schoolCtx.lineWidth = 2;
+        schoolCtx.strokeRect(15, 15, 620, schoolCanvas.height - 30);
+    }
+
+    // 3. 서식 선택별 원문 렌더링
+    if (sharedPdfDoc) {
+        renderSharedPdfConsentForm(sharedPdfDoc, sharedPdfSchema, formKey, p, isGuardian);
+    } else if (formKey === 'transfusion') {
+        renderTransfusionFormFull(p, isGuardian); // 수혈동의서 전문
+    } else if (formKey === 'anesthesia') {
+        renderAnesthesiaFormFull(p, isGuardian); // 마취동의서 전문
+    } else if (formKey === 'op_anesthesia') {
+        renderOpAnesthesiaFormFull(p, isGuardian); // 수술마취동의서 전문
+    } else if (formKey === 'initial_nursing') {
+        renderInitialNursingFormFull(p, isGuardian); // 간호정보조사지 전문
+    }
+
+    if (currentDocBottomY > 0) {
+        const targetHeight = Math.max(basePageHeight, Math.min(2600, Math.ceil(currentDocBottomY + 18)));
+        if (Math.abs(schoolCanvas.height - targetHeight) > 2) {
+            schoolCanvas.height = targetHeight;
+            renderSchoolConsentDoc();
+            return;
+        }
+    }
+
+    updateSchoolSignatureButtonPosition();
+}
+
+function renderSharedPdfConsentForm(doc, schema, formKey, p, isGuardian) {
+    const imageData = doc.preview_image_data || doc.previewImageData || null;
+    if (!imageData) {
+        schoolCtx.fillStyle = '#475569';
+        schoolCtx.font = "bold 14px '맑은 고딕'";
+        schoolCtx.textAlign = 'center';
+        schoolCtx.fillText('업로드 PDF 미리보기가 없습니다. 설정에서 다시 업로드해 주세요.', 325, 120);
+        drawSignatureZoneFull(220, isGuardian, p, '환자(보호자) 서명');
+        return;
+    }
+
+    if (!window.__sharedPdfImageCache) window.__sharedPdfImageCache = {};
+    const cacheKey = `pdf_${doc.id}`;
+    const cached = window.__sharedPdfImageCache[cacheKey];
+    if (!cached || cached.src !== imageData || !cached.image.complete) {
+        const img = new Image();
+        img.src = imageData;
+        window.__sharedPdfImageCache[cacheKey] = { src: imageData, image: img };
+        schoolCtx.fillStyle = '#475569';
+        schoolCtx.font = "bold 14px '맑은 고딕'";
+        schoolCtx.textAlign = 'center';
+        schoolCtx.fillText('PDF 양식을 불러오는 중입니다...', 325, 120);
+        return;
+    }
+
+    const img = window.__sharedPdfImageCache[cacheKey].image;
+    const maxW = 600;
+    const maxH = 1320;
+    const scale = Math.min(maxW / img.width, maxH / img.height, 1);
+    const drawW = Math.round(img.width * scale);
+    const drawH = Math.round(img.height * scale);
+    const drawX = Math.round((650 - drawW) / 2);
+    const drawY = 26;
+
+    schoolCtx.drawImage(img, drawX, drawY, drawW, drawH);
+    schoolCtx.strokeStyle = '#cbd5e1';
+    schoolCtx.lineWidth = 1;
+    schoolCtx.strokeRect(drawX, drawY, drawW, drawH);
+
+    const sourceW = (schema && schema.imageWidth) ? schema.imageWidth : img.width;
+    const sourceH = (schema && schema.imageHeight) ? schema.imageHeight : img.height;
+    const fieldScaleX = drawW / sourceW;
+    const fieldScaleY = drawH / sourceH;
+
+    const checkboxes = (schema && Array.isArray(schema.checkboxes)) ? schema.checkboxes : [];
+    checkboxes.forEach((field) => {
+        const x = Math.round(drawX + field.x * fieldScaleX);
+        const y = Math.round(drawY + field.y * fieldScaleY);
+        const w = Math.max(8, Math.round(field.w * fieldScaleX));
+        const h = Math.max(8, Math.round(field.h * fieldScaleY));
+
+        currentSharedPdfCheckboxRects.push({ key: field.key, x, y, w, h });
+        schoolCtx.strokeStyle = 'rgba(37,99,235,0.35)';
+        schoolCtx.lineWidth = 1;
+        schoolCtx.strokeRect(x, y, w, h);
+
+        if (getConsentOptionValue(formKey, field.key) === 'on') {
+            schoolCtx.strokeStyle = '#1d4ed8';
+            schoolCtx.lineWidth = 2;
+            schoolCtx.beginPath();
+            schoolCtx.moveTo(x + 2, y + Math.round(h * 0.55));
+            schoolCtx.lineTo(x + Math.round(w * 0.4), y + h - 2);
+            schoolCtx.lineTo(x + w - 2, y + 2);
+            schoolCtx.stroke();
+        }
+    });
+
+    const sig = schema && schema.signatureBox ? schema.signatureBox : { x: sourceW * 0.62, y: sourceH * 0.86, w: sourceW * 0.22, h: sourceH * 0.05, label: '환자(보호자) 서명' };
+    currentSigBox = {
+        x: Math.round(drawX + sig.x * fieldScaleX),
+        y: Math.round(drawY + sig.y * fieldScaleY),
+        w: Math.max(100, Math.round(sig.w * fieldScaleX)),
+        h: Math.max(44, Math.round(sig.h * fieldScaleY))
+    };
+    currentSigBoxY = currentSigBox.y;
+
+    schoolCtx.strokeStyle = '#0f172a';
+    schoolCtx.lineWidth = 1.5;
+    schoolCtx.strokeRect(currentSigBox.x, currentSigBox.y, currentSigBox.w, currentSigBox.h);
+    schoolCtx.fillStyle = '#0f172a';
+    schoolCtx.font = "bold 11px '맑은 고딕'";
+    schoolCtx.textAlign = 'left';
+    schoolCtx.fillText(sig.label || '환자(보호자) 서명', currentSigBox.x, currentSigBox.y - 6);
+
+    if (schoolSignatureImageData) {
+        drawEmbeddedSignatureImage(currentSigBox.x + 6, currentSigBox.y + 6, Math.max(90, currentSigBox.w - 12), Math.max(30, currentSigBox.h - 12));
+    }
+
+    currentDocBottomY = Math.max(currentDocBottomY, drawY + drawH + 20, currentSigBox.y + currentSigBox.h + 16);
+}
+
+function renderEasyCustomForm(schema, formKey, p, isGuardian) {
+    const content = String(schema?.content || '');
+    const lines = content.split(/\r?\n/);
+    let y = 52;
+    const left = 34;
+    const maxWidth = 580;
+
+    const drawWrapped = (text, font, color = '#0f172a', lineHeight = 18) => {
+        schoolCtx.font = font;
+        schoolCtx.fillStyle = color;
+        schoolCtx.textAlign = 'left';
+
+        const words = String(text || '').split(/\s+/).filter(Boolean);
+        if (!words.length) {
+            y += lineHeight;
+            return;
+        }
+
+        let line = '';
+        words.forEach((word) => {
+            const test = line ? `${line} ${word}` : word;
+            if (schoolCtx.measureText(test).width > maxWidth && line) {
+                schoolCtx.fillText(line, left, y);
+                y += lineHeight;
+                line = word;
+            } else {
+                line = test;
+            }
+        });
+        if (line) {
+            schoolCtx.fillText(line, left, y);
+            y += lineHeight;
+        }
+    };
+
+    lines.forEach((rawLine) => {
+        const line = String(rawLine || '').trim();
+        if (!line) {
+            y += 10;
+            return;
+        }
+
+        const radioMatch = line.match(/^\[RADIO\|([^|\]]+)\|([^|\]]+)\|([^\]]+)\]$/i);
+        if (radioMatch) {
+            const key = normalizeFormKey(radioMatch[1]);
+            const label = radioMatch[2].trim();
+            const options = radioMatch[3].split(',').map((s) => s.trim()).filter(Boolean);
+            const current = getConsentOptionValue(formKey, key);
+
+            drawWrapped(label, "bold 12px '맑은 고딕'", '#0f172a', 18);
+            let optionLine = '';
+            options.forEach((opt) => {
+                const val = normalizeFormKey(opt) || opt;
+                const piece = `${getOptionMark(current, val)} ${opt}`;
+                optionLine = optionLine ? `${optionLine}   ${piece}` : piece;
+            });
+            drawWrapped(optionLine, "11px '맑은 고딕'", '#0f172a', 18);
+            y += 4;
+            return;
+        }
+
+        const signMatch = line.match(/^\[SIGN\|([^\]]+)\]$/i);
+        if (signMatch) {
+            const label = signMatch[1].trim() || '환자(보호자) 서명';
+            drawSignatureZoneFull(y + 8, isGuardian, p, label);
+            y += 170;
+            return;
+        }
+
+        if (line.startsWith('# ')) {
+            drawWrapped(line.slice(2), "bold 24px '맑은 고딕'", '#0f172a', 32);
+            y += 4;
+            return;
+        }
+        if (line.startsWith('## ')) {
+            drawWrapped(line.slice(3), "bold 16px '맑은 고딕'", '#0f172a', 24);
+            y += 2;
+            return;
+        }
+
+        drawWrapped(line, "12px '맑은 고딕'", '#111827', 19);
+    });
+
+    if (!content.includes('[SIGN|')) {
+        drawSignatureZoneFull(Math.min(y + 14, schoolCanvas.height - 210), isGuardian, p, getEasyFormSignatureLabel(schema));
+    }
+}
+
+// 🩸 1) 경복대학교 병원 수혈동의서 전문 100% 렌더링
+function renderTransfusionFormFull(p, isGuardian) {
+    const reason = getConsentOptionValue('transfusion', 'reason');
+    const bloodProduct = getConsentOptionValue('transfusion', 'bloodProduct');
+    // 헤더
+    schoolCtx.fillStyle = "#1e293b";
+    schoolCtx.font = "bold 16px '맑은 고딕'";
+    schoolCtx.textAlign = "center";
+    schoolCtx.fillText("경복대학교 병원", 325, 42);
+
+    schoolCtx.font = "bold 22px '맑은 고딕'";
+    schoolCtx.fillStyle = "#1e3a8a";
+    schoolCtx.fillText("수 혈 동 의 서", 325, 72);
+
+    // 환자 인적사항 상자
+    schoolCtx.strokeStyle = "#cbd5e1";
+    schoolCtx.strokeRect(30, 85, 590, 42);
+    schoolCtx.fillStyle = "#334155";
+    schoolCtx.font = "bold 11px '맑은 고딕'";
+    schoolCtx.textAlign = "left";
+    schoolCtx.fillText(`【등록번호】 ${p.chartNo}`, 40, 103);
+    schoolCtx.fillText(`【성 명】 ${p.name}`, 220, 103);
+    schoolCtx.fillText(`【성별/나이】 ${p.gender || 'M'} / ${p.age}세`, 430, 103);
+    schoolCtx.fillText(`【혈액형/병실】 ${p.bloodType || 'A+'} / ${p.room || '701호'}`, 40, 119);
+
+    let y = 148;
+    schoolCtx.fillStyle = "#0f172a";
+    schoolCtx.font = "11px '맑은 고딕'";
+    schoolCtx.fillText("아래 설명을 듣고 이해하신 후 수혈동의서에 서명하여 주시기 바랍니다. 설명이 불충분하거나", 30, y); y += 16;
+    schoolCtx.fillText("이해가 되지 않는 점이 있으시면 설명의사에게 질문하여 주시기 바랍니다.", 30, y); y += 22;
+
+    schoolCtx.font = "bold 12px '맑은 고딕'";
+    schoolCtx.fillText("■ 환자분은 다음과 같은 이유로 수혈이 필요합니다.", 30, y); y += 18;
+    schoolCtx.font = "11px '맑은 고딕'";
+    schoolCtx.fillText(`${getOptionMark(reason, 'blood_loss')} 혈액량 부족   ${getOptionMark(reason, 'anemia')} 빈혈 교정   ${getOptionMark(reason, 'platelet')} 혈소판 보충   ${getOptionMark(reason, 'coagulation')} 응고인자 보충   ${getOptionMark(reason, 'other')} 기타`, 45, y); y += 24;
+
+    schoolCtx.font = "bold 12px '맑은 고딕'";
+    schoolCtx.fillText("■ 환자분에게 수혈되는 혈액제제 종류 및 치료효과입니다.", 30, y); y += 18;
+    schoolCtx.font = "11px '맑은 고딕'";
+    schoolCtx.fillText(`환자분은 ${getOptionMark(bloodProduct, 'rbc')} 적혈구제제  ${getOptionMark(bloodProduct, 'platelet')} 혈소판제제  ${getOptionMark(bloodProduct, 'plasma')} 혈장제제  ${getOptionMark(bloodProduct, 'other')} 기타`, 45, y); y += 16;
+    schoolCtx.fillText("가. 적혈구제제 : 혈액량 보충, 빈혈 교정, 산소운반능력 향상", 45, y); y += 16;
+    schoolCtx.fillText("나. 혈소판제제 : 혈소판 감소 혹은 기능이상에 의한 출혈 증상의 치료 및 예방", 45, y); y += 16;
+    schoolCtx.fillText("다. 혈장제제 : 혈액응고인자 보충 또는 이상 기능을 교정", 45, y); y += 16;
+    schoolCtx.fillText("라. 기타 : 혈액제제별 적절한 치료 목적에 따라 투여", 45, y); y += 24;
+
+    schoolCtx.font = "bold 12px '맑은 고딕'";
+    schoolCtx.fillStyle = "#dc2626";
+    schoolCtx.fillText("■ 수혈 전 안전성을 확인한 혈액이지만 다음과 같은 부작용이 나타날 수 있습니다.", 30, y); y += 18;
+    schoolCtx.font = "11px '맑은 고딕'";
+    schoolCtx.fillStyle = "#0f172a";
+    schoolCtx.fillText("가. 발열, 오한, 오심, 구토, 알레르기, 흉통 등 부작용을 초래할 수 있습니다.", 45, y); y += 16;
+    schoolCtx.fillText("나. 다음과 같은 부작용이 드물게 발생할 수 있습니다.", 45, y); y += 16;
+    schoolCtx.fillText("    1) 적혈구의 비정상적인 파괴(용혈반응) 등이 발생할 수 있습니다.", 45, y); y += 16;
+    schoolCtx.fillText("    2) 빠른 시간 내에 많은 양의 혈액과 수액을 투여 받았을 경우 호흡곤란 등이 발생할 수 있습니다.", 45, y); y += 16;
+    schoolCtx.fillText("    3) 면역반응에 의한 급성 폐손상(TRALI)이 발생할 수 있습니다.", 45, y); y += 16;
+    schoolCtx.fillText("    4) 간염(B형 및 C형), 후천성 면역결핍증(HIV), HTLV 등 수혈 전파성 감염을 완전히 배제할 수 없습니다.", 45, y); y += 16;
+    schoolCtx.fillText("다. 오랜 기간 다수의 수혈을 받을 경우 심장, 간 및 내분비장애 등의 합병증이 발생할 수 있습니다.", 45, y); y += 16;
+    schoolCtx.fillText("• 수혈과 관련된 부작용이 의심되는 경우 의료진에게 알려주시기 바랍니다. 정부에서는 혈액관리법에 따라", 45, y); y += 16;
+    schoolCtx.fillText("  특정한 수혈부작용 발생 시 원인조사를 실시하고 있습니다.", 45, y); y += 24;
+
+    schoolCtx.font = "bold 12px '맑은 고딕'";
+    schoolCtx.fillText("■ 수혈을 실시하지 않을 경우 발생할 수 있는 위험입니다.", 30, y); y += 18;
+    schoolCtx.font = "11px '맑은 고딕'";
+    schoolCtx.fillText("수혈이 반드시 필요한 상황임에도 하지 않을 경우, 산소부족으로 인한 뇌손상, 심근손상, 장기부전", 45, y); y += 16;
+    schoolCtx.fillText("등이 발생할 수 있으며 심한 경우 사망에 이를 수도 있습니다.", 45, y); y += 24;
+
+    schoolCtx.font = "bold 12px '맑은 고딕'";
+    schoolCtx.fillText("■ 환자분이 수혈 이외에 선택할 수 있는 치료대안입니다.", 30, y); y += 18;
+    schoolCtx.font = "11px '맑은 고딕'";
+    schoolCtx.fillText("혈액량을 보충하기 위한 수액치료나 혈액제제 생성 촉진 약제투여 등 제한적인 치료법이 있습니다.", 45, y); y += 28;
+
+    // 안내서약문
+    schoolCtx.fillStyle = "#1e3a8a";
+    schoolCtx.font = "bold 11px '맑은 고딕'";
+    schoolCtx.fillText("본 수혈동의서는 수혈에 대한 설명과 수혈부작용 등에 대한 안내를 위한 것입니다.", 35, y); y += 16;
+    schoolCtx.fillText("본인(보호자)는 수혈에 대하여 충분히 설명 듣고 이해하였으며, 수혈하는 것에 동의합니다.", 35, y); y += 25;
+
+    // 서명 구역 그리기 (Y 위치 저장)
+    drawSignatureZoneFull(y, isGuardian, p, "경복대학교 병원장 귀하");
+}
+
+// 💉 2) 경복대학교 병원 마취동의서 전문 100% 렌더링
+function renderAnesthesiaFormFull(p, isGuardian) {
+    const special = getConsentOptionValue('anesthesia', 'special');
+    const method = getConsentOptionValue('anesthesia', 'method');
+    schoolCtx.fillStyle = "#1e293b";
+    schoolCtx.font = "bold 16px '맑은 고딕'";
+    schoolCtx.textAlign = "center";
+    schoolCtx.fillText("경복대학교 병원", 325, 42);
+
+    schoolCtx.font = "bold 22px '맑은 고딕'";
+    schoolCtx.fillStyle = "#1e3a8a";
+    schoolCtx.fillText("마 취 동 의 서", 325, 72);
+
+    schoolCtx.strokeStyle = "#cbd5e1";
+    schoolCtx.strokeRect(30, 85, 590, 42);
+    schoolCtx.fillStyle = "#334155";
+    schoolCtx.font = "bold 11px '맑은 고딕'";
+    schoolCtx.textAlign = "left";
+    schoolCtx.fillText(`【등록번호】 ${p.chartNo}`, 40, 103);
+    schoolCtx.fillText(`【성 명】 ${p.name}`, 220, 103);
+    schoolCtx.fillText(`【성별/나이】 ${p.gender || 'F'} / ${p.age}세`, 430, 103);
+    schoolCtx.fillText(`【진단명】 ${p.diagnosis}`, 40, 119);
+
+    let y = 148;
+    schoolCtx.font = "bold 12px '맑은 고딕'";
+    schoolCtx.fillStyle = "#0f172a";
+    schoolCtx.fillText("■ 환자의 현재 상태 및 특이사항", 30, y); y += 18;
+    schoolCtx.font = "11px '맑은 고딕'";
+    schoolCtx.fillText(`${getOptionMark(special, 'none')} 특이사항없음   ${getOptionMark(special, 'htn')} 고혈압   ${getOptionMark(special, 'dm')} 당뇨   ${getOptionMark(special, 'heart')} 심장질환   ${getOptionMark(special, 'kidney')} 신장질환`, 45, y); y += 16;
+    schoolCtx.fillText(`${getOptionMark(special, 'tb')} 결핵   ${getOptionMark(special, 'liver')} 간질환   ${getOptionMark(special, 'allergy')} 알레르기   ${getOptionMark(special, 'resp')} 호흡기질환   ${getOptionMark(special, 'thyroid')} 갑상선질환`, 45, y); y += 16;
+    schoolCtx.fillText(`${getOptionMark(special, 'medication')} 복용중인약물   ${getOptionMark(special, 'past')} 과거 수술 및 마취경험   ${getOptionMark(special, 'other')} 기타`, 45, y); y += 24;
+
+    schoolCtx.font = "bold 12px '맑은 고딕'";
+    schoolCtx.fillText("■ 마취에 대한 설명", 30, y); y += 18;
+    
+    schoolCtx.font = "bold 11px '맑은 고딕'";
+    schoolCtx.fillText("1. 마취방법", 45, y); y += 16;
+    schoolCtx.font = "11px '맑은 고딕'";
+    schoolCtx.fillText(`${getOptionMark(method, 'general')} 전신마취   ${getOptionMark(method, 'spinal')} 척추마취   ${getOptionMark(method, 'epidural')} 경막외마취   ${getOptionMark(method, 'brachial')} 상완 신경총 차단   ${getOptionMark(method, 'other')} 기타`, 60, y); y += 20;
+
+    schoolCtx.font = "bold 11px '맑은 고딕'";
+    schoolCtx.fillText("2. 목적 및 필요성", 45, y); y += 16;
+    schoolCtx.font = "11px '맑은 고딕'";
+    schoolCtx.fillText("- 전신마취: 의식소실을 포함하여 무통각, 근육이완을 유도하여 수술이 가능한 상태로 만듦", 60, y); y += 16;
+    schoolCtx.fillText("- 부위마취: 상지/하지 수술에서 국소마취제를 이용하여 신체 일부의 감각 및 운동을 차단", 60, y); y += 20;
+
+    schoolCtx.font = "bold 11px '맑은 고딕'";
+    schoolCtx.fillText("3. 과정 및 방법", 45, y); y += 16;
+    schoolCtx.font = "11px '맑은 고딕'";
+    schoolCtx.fillText("- 전신마취: 활력징후 확인 ➔ 정맥마취제/근이완제 등 투여 ➔ 기도삽관 ➔ 마취기에 의한 기계호흡", 60, y); y += 16;
+    schoolCtx.fillText("- 척추/경막외 마취: 옆으로 눕거나 앉은 자세에서 등(척추강)에 주사바늘을 위치시킨 후 마취제 투여", 60, y); y += 16;
+    schoolCtx.fillText("- 상완 신경총 차단: 겨드랑이, 쇄골 위 신경다발 주위에 바늘을 위치시킨 후 마취제 투여", 60, y); y += 20;
+
+    schoolCtx.font = "bold 11px '맑은 고딕'";
+    schoolCtx.fillStyle = "#dc2626";
+    schoolCtx.fillText("4. 발현가능한 부작용 및 합병증", 45, y); y += 16;
+    schoolCtx.font = "11px '맑은 고딕'";
+    schoolCtx.fillStyle = "#0f172a";
+    schoolCtx.fillText("- 전신마취: 폐렴, 무기폐, 인후통, 쉰목소리, 치아손상, 심근경색, 뇌출혈, 기저질환 악화 등", 60, y); y += 16;
+    schoolCtx.fillText("- 부위마취: 시술부위의 감염, 출혈 및 혈종, 저혈압, 호흡곤란, 경막 천자 후 두통, 요저류, 감각이상 등", 60, y); y += 20;
+
+    schoolCtx.font = "bold 11px '맑은 고딕'";
+    schoolCtx.fillText("5. 마취방법의 변경 가능성", 45, y); y += 16;
+    schoolCtx.font = "11px '맑은 고딕'";
+    schoolCtx.fillText("수술 준비 중 환자의 상태에 따라 부득이하게 마취방법이 변경될 수 있습니다. 추가로 설명하여야 할", 60, y); y += 16;
+    schoolCtx.fillText("사항이 있는 경우에는 수술 시행 전에 이에 대하여 설명하고 동의를 얻습니다.", 60, y); y += 20;
+
+    schoolCtx.font = "bold 11px '맑은 고딕'";
+    schoolCtx.fillText("6. 기타사항 (치아 손상 주의)", 45, y); y += 16;
+    schoolCtx.font = "11px '맑은 고딕'";
+    schoolCtx.fillText("환자의 치아상태가 불량(풍치, 흔들림, 보철 상태)하여 전신 마취 시 기관 삽관 과정에서 흔들림이", 60, y); y += 16;
+    schoolCtx.fillText("심해지거나 발치될 수 있습니다. (흡인 가능성에 따른 인위적 발치 포함)", 60, y); y += 24;
+
+    // 서약문
+    schoolCtx.fillStyle = "#1e3a8a";
+    schoolCtx.font = "bold 11px '맑은 고딕'";
+    schoolCtx.fillText("본인은 본인(또는 상기환자)에게 행하여질 마취의 목적 및 필요성, 과정, 예상되는 합병증과 후유증, 미시행시", 35, y); y += 16;
+    schoolCtx.fillText("예상되는 결과 및 대안에 대하여 자세한 설명을 의사로부터 들었습니다. 따라서 우발적인 사고 시 의학적 처리 등", 35, y); y += 16;
+    schoolCtx.fillText("제반사항을 귀 병원에 위임하기로 하며 주치의의 지시와 판단에 협조할 것을 서약하면서 마취에 동의합니다.", 35, y); y += 25;
+
+    drawSignatureZoneFull(y, isGuardian, p, "경복대학교 병원장 귀하");
+}
+
+// 🏥 3) 경기도의료원 안성병원 수술·마취동의서 전문 100% 렌더링
+function renderOpAnesthesiaFormFull(p, isGuardian) {
+    const special = getConsentOptionValue('op_anesthesia', 'special');
+    const wardType = getConsentOptionValue('op_anesthesia', 'wardType');
+    const anesthesiaMethod = getConsentOptionValue('op_anesthesia', 'anesthesiaMethod');
+    const proxyAgreement = getConsentOptionValue('op_anesthesia', 'proxyAgreement');
+    schoolCtx.fillStyle = "#166534";
+    schoolCtx.font = "bold 16px '맑은 고딕'";
+    schoolCtx.textAlign = "center";
+    schoolCtx.fillText("경기도의료원 안성병원", 325, 42);
+
+    schoolCtx.font = "bold 22px '맑은 고딕'";
+    schoolCtx.fillStyle = "#0f172a";
+    schoolCtx.fillText("수술 및 마취 동의서", 325, 72);
+
+    schoolCtx.strokeStyle = "#cbd5e1";
+    schoolCtx.strokeRect(30, 85, 590, 42);
+    schoolCtx.fillStyle = "#334155";
+    schoolCtx.font = "bold 11px '맑은 고딕'";
+    schoolCtx.textAlign = "left";
+    schoolCtx.fillText(`병록번호 : ${p.chartNo}`, 40, 103);
+    schoolCtx.fillText(`진료과 : ${p.dept||'외과'}`, 220, 103);
+    schoolCtx.fillText(`성명(성별/나이) : ${p.name} (${p.gender||'M'}/${p.age}세)`, 380, 103);
+    schoolCtx.fillText(`${getOptionMark(wardType, 'outpatient')} 외래  ${getOptionMark(wardType, 'icu')} 중환자실  ${getOptionMark(wardType, 'ward')} 병동`, 380, 119);
+    schoolCtx.fillText(`수술/시술/검사명 : ${p.diagnosis} 수술`, 40, 119);
+
+    let y = 148;
+    schoolCtx.font = "bold 12px '맑은 고딕'";
+    schoolCtx.fillStyle = "#0f172a";
+    schoolCtx.fillText("■ 환자의 현재 상태 및 특이사항", 30, y); y += 18;
+    schoolCtx.font = "11px '맑은 고딕'";
+    schoolCtx.fillText(`${getOptionMark(special, 'none')} 특이사항 없음   ${getOptionMark(special, 'htn')} 고혈압   ${getOptionMark(special, 'dm')} 당뇨   ${getOptionMark(special, 'heart')} 심장질환   ${getOptionMark(special, 'kidney')} 신장질환`, 45, y); y += 16;
+    schoolCtx.fillText(`${getOptionMark(special, 'tb')} 결핵   ${getOptionMark(special, 'liver')} 간질환   ${getOptionMark(special, 'allergy')} 알레르기   ${getOptionMark(special, 'resp')} 호흡기질환   ${getOptionMark(special, 'thyroid')} 갑상선질환`, 45, y); y += 16;
+    schoolCtx.fillText(`${getOptionMark(special, 'medication')} 복용중인약물   ${getOptionMark(special, 'past')} 과거 수술 및 마취경험   ${getOptionMark(special, 'other')} 기타`, 45, y); y += 22;
+
+    schoolCtx.font = "bold 12px '맑은 고딕'";
+    schoolCtx.fillText("☑ 수술 및 마취에 대한 설명 (1~6항 전문)", 30, y); y += 18;
+    schoolCtx.font = "11px '맑은 고딕'";
+    schoolCtx.fillText("1. 목적 및 필요성: 수술적 치료를 통한 병변 절제 및 증상 완화", 45, y); y += 16;
+    schoolCtx.fillText("2. 과정 및 방법: 정밀 개복/내시경 시술 및 전신/부위 마취 수행", 45, y); y += 16;
+    schoolCtx.fillText(`${getOptionMark(anesthesiaMethod, 'general')} 전신 ${getOptionMark(anesthesiaMethod, 'spinal')} 척추 ${getOptionMark(anesthesiaMethod, 'epidural')} 경막외 ${getOptionMark(anesthesiaMethod, 'brachial')} 상완신경총 ${getOptionMark(anesthesiaMethod, 'other')} 기타`, 45, y); y += 16;
+    schoolCtx.fillText("3. 부작용 및 합병증: 출혈, 감염, 무기폐, 치아손상, 감각이상, 재수술 가능성 인지", 45, y); y += 16;
+    schoolCtx.fillText("4. 미시행 시 결과: 질환 악화, 장기 손상 및 응급 상황 초래 위험", 45, y); y += 16;
+    schoolCtx.fillText("5. 대안적 치료: 약물치료 및 비침습적 보존적 치료법", 45, y); y += 22;
+
+    schoolCtx.font = "bold 12px '맑은 고딕'";
+    schoolCtx.fillStyle = "#1e3a8a";
+    schoolCtx.fillText("■ 환자 이외 대리인이 서명하게 된 사유", 30, y); y += 18;
+    schoolCtx.font = "11px '맑은 고딕'";
+    schoolCtx.fillStyle = "#0f172a";
+    const gReason = isGuardian ? (document.getElementById('schoolGuardianReason').value || '환자 신체/정신적 장애 및 미성년') : '해당없음 (환자 본인 서명)';
+    schoolCtx.fillText(`☑ 사 유 : ${gReason}`, 45, y); y += 22;
+
+    schoolCtx.font = "bold 12px '맑은 고딕'";
+    schoolCtx.fillStyle = "#166534";
+    schoolCtx.fillText("■ 대리인 개인정보 수집·이용 동의", 30, y); y += 18;
+    schoolCtx.font = "11px '맑은 고딕'";
+    schoolCtx.fillStyle = "#0f172a";
+    schoolCtx.fillText("- 수집목적: 환자상태에 대한 긴급 연락   - 항목: 전화번호, 성명, 관계", 45, y); y += 16;
+    schoolCtx.fillText(`- 보유기간: 진료기록 보유기간과 동일   ${getOptionMark(proxyAgreement, 'agree')} 동의함   ${getOptionMark(proxyAgreement, 'disagree')} 동의하지 않음`, 45, y); y += 26;
+
+    // 본인 서약문
+    schoolCtx.fillStyle = "#1e3a8a";
+    schoolCtx.font = "bold 11px '맑은 고딕'";
+    schoolCtx.fillText("본인은 본인(또는 상기환자)에게 행하여질 수술 및 마취의 목적, 부작용, 대안에 대해 설명을 들었으며,", 35, y); y += 16;
+    schoolCtx.fillText("불가항력적 사고 발생 시 의학적 처리를 귀 병원에 위임하고 수술 및 마취를 서면으로 동의합니다.", 35, y); y += 25;
+
+    drawSignatureZoneFull(y, isGuardian, p, "경기도의료원 안성병원장 귀하");
+}
+
+// 📋 4) 간호정보조사지 (일반/통증사정) 전문 100% 렌더링
+function renderInitialNursingFormFull(p, isGuardian) {
+    const route = getConsentOptionValue('initial_nursing', 'admissionRoute');
+    const method = getConsentOptionValue('initial_nursing', 'admissionMethod');
+    const smoking = getConsentOptionValue('initial_nursing', 'smoking');
+    const drinking = getConsentOptionValue('initial_nursing', 'drinking');
+    const painRisk = getConsentOptionValue('initial_nursing', 'painRisk');
+    const orientation = getConsentOptionValue('initial_nursing', 'orientation');
+    const consciousness = getConsentOptionValue('initial_nursing', 'consciousness');
+
+    const admitDateTime = getConsentOptionValue('initial_nursing', 'admitDateTime') || new Date().toLocaleDateString('ko-KR');
+    const informant = getConsentOptionValue('initial_nursing', 'informant') || '본인';
+    const writer = getConsentOptionValue('initial_nursing', 'writer') || '간호사';
+    const heightText = getConsentOptionValue('initial_nursing', 'heightText') || p.height || '';
+    const weightText = getConsentOptionValue('initial_nursing', 'weightText') || p.weight || '';
+    const bloodTypeText = getConsentOptionValue('initial_nursing', 'bloodTypeText') || p.bloodType || '모름';
+    const contactHome = getConsentOptionValue('initial_nursing', 'contactHome') || '';
+    const contact1 = getConsentOptionValue('initial_nursing', 'contact1') || '';
+    const contact2 = getConsentOptionValue('initial_nursing', 'contact2') || '';
+    const onsetDate = getConsentOptionValue('initial_nursing', 'onsetDate') || '__________';
+    const symptomReason = getConsentOptionValue('initial_nursing', 'symptomReason') || p.cc || '';
+    const pastHistoryText = getConsentOptionValue('initial_nursing', 'pastHistoryText') || '고혈압/당뇨/결핵/간염/암/기타';
+    const familyHistoryText = getConsentOptionValue('initial_nursing', 'familyHistoryText') || '고혈압/당뇨/결핵/간염/암/기타';
+    const recentMedicationText = getConsentOptionValue('initial_nursing', 'recentMedicationText') || '본원/타병원';
+    const allergyText = getConsentOptionValue('initial_nursing', 'allergyText') || '약물/음식/기타';
+
+    const page = {
+        x: 20,
+        w: 610,
+        h: 860,
+        gap: 22,
+        marginTop: 18,
+        marginBottom: 20,
+        left: 36,
+        contentW: 578
+    };
+
+    let pageIndex = 0;
+    let pageTop = 20;
+    let y = 0;
+    const lineHeight = 17;
+
+    const startNewPage = (continuation = true) => {
+        pageTop = 20 + pageIndex * (page.h + page.gap);
+        schoolCtx.fillStyle = '#ffffff';
+        schoolCtx.fillRect(page.x, pageTop, page.w, page.h);
+        schoolCtx.strokeStyle = '#334155';
+        schoolCtx.lineWidth = 1;
+        schoolCtx.strokeRect(page.x, pageTop, page.w, page.h);
+
+        y = pageTop + page.marginTop;
+
+        if (continuation && pageIndex > 0) {
+            schoolCtx.fillStyle = '#f1f5f9';
+            schoolCtx.fillRect(page.x + 8, y, page.w - 16, 24);
+            schoolCtx.strokeStyle = '#cbd5e1';
+            schoolCtx.strokeRect(page.x + 8, y, page.w - 16, 24);
+            schoolCtx.fillStyle = '#334155';
+            schoolCtx.textAlign = 'left';
+            schoolCtx.font = "bold 11px '맑은 고딕'";
+            schoolCtx.fillText(`간호정보조사지 (계속) - ${pageIndex + 1}페이지`, page.x + 16, y + 16);
+            y += 34;
+        }
+    };
+
+    const pageBottomLimit = () => pageTop + page.h - page.marginBottom;
+
+    const ensureSpace = (neededHeight) => {
+        if (y + neededHeight <= pageBottomLimit()) return;
+        pageIndex += 1;
+        startNewPage(true);
+    };
+
+    const drawWrappedBlock = (prefix, value, x, width, maxLines = 3) => {
+        schoolCtx.font = "11px '맑은 고딕'";
+        schoolCtx.fillStyle = '#111827';
+        schoolCtx.textAlign = 'left';
+
+        const txt = `${prefix}${value || ''}`;
+        const chars = Array.from(txt);
+        let line = '';
+        const lines = [];
+
+        for (let i = 0; i < chars.length; i += 1) {
+            const test = `${line}${chars[i]}`;
+            if (schoolCtx.measureText(test).width <= width) {
+                line = test;
+                continue;
+            }
+            lines.push(line || chars[i]);
+            if (lines.length >= maxLines) {
+                line = '';
+                break;
+            }
+            line = chars[i];
+        }
+        if (line && lines.length < maxLines) lines.push(line);
+        if (!lines.length) lines.push('');
+
+        ensureSpace(lines.length * lineHeight);
+        let yy = y;
+        lines.forEach((ln) => {
+            schoolCtx.fillText(ln, x, yy);
+            yy += lineHeight;
+        });
+        return yy - lineHeight;
+    };
+
+    const drawHeader = (title) => {
+        ensureSpace(34);
+        schoolCtx.fillStyle = '#e5e7eb';
+        schoolCtx.fillRect(28, y, 594, 22);
+        schoolCtx.strokeStyle = '#94a3b8';
+        schoolCtx.strokeRect(28, y, 594, 22);
+        schoolCtx.fillStyle = '#111827';
+        schoolCtx.textAlign = 'left';
+        schoolCtx.font = "bold 11px '맑은 고딕'";
+        schoolCtx.fillText(title, 34, y + 15);
+        y += 32;
+    };
+
+    const drawLine = (text, x = 36, lh = 19, font = "11px '맑은 고딕'", color = '#111827') => {
+        ensureSpace(lh);
+        schoolCtx.font = font;
+        schoolCtx.fillStyle = color;
+        schoolCtx.textAlign = 'left';
+        schoolCtx.fillText(text, x, y);
+        y += lh;
+    };
+
+    startNewPage(false);
+
+    schoolCtx.textAlign = 'center';
+    schoolCtx.font = "bold 30px '맑은 고딕'";
+    schoolCtx.fillStyle = '#111827';
+    schoolCtx.fillText('경복대학교병원 간호정보조사지', 325, y + 28);
+    schoolCtx.font = "bold 16px '맑은 고딕'";
+    schoolCtx.fillStyle = '#334155';
+    schoolCtx.fillText('Kyungbok University Hospital Nursing Assessment', 325, y + 54);
+    y += 74;
+
+    schoolCtx.strokeStyle = '#94a3b8';
+    schoolCtx.strokeRect(28, y, 594, 74);
+    schoolCtx.font = "bold 11px '맑은 고딕'";
+    schoolCtx.fillStyle = '#111827';
+    schoolCtx.textAlign = 'left';
+    schoolCtx.fillText(`등록번호: ${p.chartNo || p.chart_no || ''}`, 36, y + 22);
+    schoolCtx.fillText(`성명: ${p.name || ''}`, 236, y + 22);
+    schoolCtx.fillText(`성별/나이: ${p.gender || ''} / ${p.age || ''}`, 430, y + 22);
+    schoolCtx.fillText(`병실/진료과: ${p.room || ''} / ${p.dept || ''}`, 36, y + 46);
+    schoolCtx.fillText(`진단명: ${p.diagnosis || ''}`, 236, y + 46);
+    y += 90;
+
+    schoolCtx.font = "11px '맑은 고딕'";
+
+    drawHeader('1) 일반정보 Basic Information');
+    drawLine(`입원(작성)일시: ${admitDateTime}`, 36);
+    schoolCtx.fillText(`정보제공자: ${informant}`, 262, y - 19);
+    schoolCtx.fillText(`작성자: ${writer}`, 438, y - 19);
+    drawLine(`입원경로: ${getOptionMark(route, 'outpatient')}외래 ${getOptionMark(route, 'er')}응급실 ${getOptionMark(route, 'other')}기타`, 36);
+    schoolCtx.fillText(`입원방법: ${getOptionMark(method, 'walk')}도보 ${getOptionMark(method, 'wheelchair')}휠체어 ${getOptionMark(method, 'stretcher')}눕는차`, 314, y - 19);
+    drawLine(`신장: ${heightText || '____'} cm   체중: ${weightText || '____'} kg   혈액형: ${bloodTypeText || '____'}`, 36);
+    drawLine(`연락처(집): ${contactHome || '____________'}   전화1: ${contact1 || '____________'}   전화2: ${contact2 || '____________'}`, 36, 24);
+
+    drawHeader('2) 사회/경제적 상태 Social and Economic Assessment');
+    drawLine('직업: _________   종교: □무 □기독교 □불교 □천주교 □기타', 36);
+    drawLine('교육정도: □무 □초 □중 □고 □대학(원)   결혼상태: □기혼 □미혼 □기타', 36);
+    drawLine(`흡연력: ${getOptionMark(smoking, 'none')}무 ${getOptionMark(smoking, 'yes')}유   음주: ${getOptionMark(drinking, 'none')}무 ${getOptionMark(drinking, 'yes')}유`, 36, 24);
+
+    drawHeader('3) 입원 정보 Admission Information');
+    const d1 = drawWrappedBlock('진단명: ', p.diagnosis || '', 36, 380, 3);
+    schoolCtx.fillText(`발병일: ${onsetDate}`, 430, y);
+    y = Math.max(y + 19, d1 + 6);
+    const d2 = drawWrappedBlock('주증상 및 입원동기: ', symptomReason || '', 36, page.contentW, 5);
+    y = Math.max(y + 19, d2 + 8);
+    const d3 = drawWrappedBlock('과거력: ', `□없음 □있음(${pastHistoryText})  □입원 및 수술`, 36, page.contentW, 4);
+    y = Math.max(y + 19, d3 + 6);
+    const d4 = drawWrappedBlock('가족력: ', `□없음 □있음(${familyHistoryText})`, 36, page.contentW, 4);
+    y = Math.max(y + 19, d4 + 6);
+    const d5 = drawWrappedBlock('최근투약: ', `□없음 □있음(${recentMedicationText})`, 36, 280, 3);
+    const d6 = drawWrappedBlock('알레르기: ', `□없음 □있음(${allergyText})`, 320, 292, 3);
+    y = Math.max(y + 19, d5 + 6, d6 + 6);
+    y += 12;
+
+    drawHeader('4) 신체 사정 Physical Assessment');
+    drawLine('활력징후: 혈압 ____ mmHg   맥박 ____ 회/분   호흡 ____ 회/분   체온 ____ ℃', 36);
+    drawLine('호흡기 문제: □없음 □있음(기침/가래/호흡곤란/객혈/기타)', 36);
+    drawLine('순환기 문제: □없음 □있음(흉통/심계항진/청색증/현기증/기타)', 36);
+    drawLine('소화기 문제: □없음 □있음(오심/구토/소화불량/복통/복수/기타)', 36);
+    drawLine('피부/배설/수면 상태: _______________________________________________', 36, 24);
+
+    drawHeader('5) 의식/정서/활동 상태 Consciousness, Psychological and Activity');
+    drawLine(`지남력: ${getOptionMark(orientation, 'yes')}있음  ${getOptionMark(orientation, 'no')}없음`, 36);
+    drawLine(`의식상태: ${getOptionMark(consciousness, 'clear')}명료 ${getOptionMark(consciousness, 'confused')}혼돈 ${getOptionMark(consciousness, 'semicoma')}반의식 ${getOptionMark(consciousness, 'coma')}무의식`, 36);
+    drawLine('의사소통: □원만 □곤란 □불가능   정서상태: □안정 □불안 □분노 □우울', 36);
+    drawLine('활동상태: □스스로 운동가능 □도움 필요 □절대적 도움 필요', 36, 24);
+
+    drawHeader('6) 영양 및 통증 사정 Nutrition and Pain Assessment');
+    drawLine('체중감소: □없음 □있음(__kg) □모름   영양상태: □양호 □불량 □연하곤란 □기타', 36);
+    drawLine(`통증위험: ${getOptionMark(painRisk, 'none')}무 ${getOptionMark(painRisk, 'yes')}유 ${getOptionMark(painRisk, 'unknown')}측정곤란`, 36);
+    drawLine('통증부위(P), 강도(S), 시간양상(T), 양상(Q), 중재 및 통증영향 항목 평가', 36, 24);
+
+    drawHeader('7) 입원 시 간호 및 교육');
+    drawLine('입원생활, 감염관리, 낙상예방, 금연교육, 개인정보보호, 환자권리/책임 설명 시행', 36);
+    drawLine('사생활 보호를 위한 환자 비밀 요구사항: □없음 □있음', 36);
+    drawLine('상기 내용에 대한 설명을 듣고 이해하셨습니까? □예', 36, 28);
+
+    const signatureHeight = 186;
+    if (y + signatureHeight > pageBottomLimit()) {
+        pageIndex += 1;
+        startNewPage(true);
+    }
+
+    drawSignatureZoneFull(y + 6, isGuardian, p, '경복대학교병원장 귀하');
+    currentDocBottomY = Math.max(currentDocBottomY, pageTop + page.h + 4);
+}
+
+// ✍️ 동적 서명 상자 그려주기 및 Y 좌표 추적 도우미 함수
+function drawSignatureZoneFull(startY, isGuardian, p, hospitalHeadText) {
+    let y = startY;
+
+    // 💡 [핵심] 현재 동의서 서명 박스가 위치한 Y 좌표를 전역 변수에 저장!
+    currentSigBoxY = y;
+    currentSigBox = { x: 30, y: currentSigBoxY, w: 590, h: 130 };
+
+    // 서명 상자 테두리 (높이 130px)
+    schoolCtx.fillStyle = "#f8fafc";
+    schoolCtx.fillRect(currentSigBox.x, currentSigBox.y, currentSigBox.w, currentSigBox.h);
+
+    // 날짜 및 작성자 인적사항
+    const todayStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+    schoolCtx.fillStyle = "#334155";
+    schoolCtx.font = "bold 11px '맑은 고딕'";
+    schoolCtx.fillText(`동의 일시 : ${todayStr}`, 45, currentSigBoxY + 22);
+
+    let signerPrefixText = `환자(동의자) : ${p.name}`;
+    if (isGuardian) {
+        const gName = document.getElementById('schoolGuardianName').value || "＿＿＿";
+        const gRel = document.getElementById('schoolGuardianRel').value || "＿＿";
+        signerPrefixText = `대리인(보호자) : ${gName}  (관계: ${gRel})`;
+    }
+    const signerY = currentSigBoxY + 42;
+    schoolCtx.fillText(signerPrefixText, 45, signerY);
+    schoolCtx.fillText('(자필서명)', 250, signerY);
+    schoolCtx.fillText(`설명의사 / 담당간호사 : ${p.doctor||'박지은'}  (인)`, 380, currentSigBoxY + 42);
+
+    if (schoolSignatureImageData) {
+        // '(자필서명)' 텍스트 영역 위에 투명 서명 이미지를 작게 삽입
+        drawEmbeddedSignatureImage(228, currentSigBoxY + 20, 120, 30);
+    }
+
+    // 자필 서명이 아직 없을 때만 가이드 안내 문구 출력
+    if (!schoolSignatureImageData) {
+        schoolCtx.fillStyle = "#94a3b8";
+        schoolCtx.font = "bold 13px '맑은 고딕'";
+        schoolCtx.textAlign = "center";
+        schoolCtx.fillText("\"서명하기\" 버튼을 눌러 서명 후 저장하세요", 325, currentSigBoxY + 90);
+    }
+
+    // 병원장 귀하 문구
+    schoolCtx.fillStyle = "#0f172a";
+    schoolCtx.font = "bold 13px '맑은 고딕'";
+    schoolCtx.textAlign = "center";
+    schoolCtx.fillText(hospitalHeadText, 325, currentSigBoxY + 160);
+
+    currentDocBottomY = Math.max(currentDocBottomY, currentSigBoxY + 170);
+}
+
+function drawEmbeddedSignatureImage(x, y, w, h) {
+    if (!schoolSignatureImageData) return;
+    if (!window.__schoolSignatureImageCache) window.__schoolSignatureImageCache = { src: '', image: null };
+
+    const cache = window.__schoolSignatureImageCache;
+    if (!cache.image || cache.src !== schoolSignatureImageData) {
+        const img = new Image();
+        img.onload = () => renderSchoolConsentDoc();
+        img.src = schoolSignatureImageData;
+        cache.src = schoolSignatureImageData;
+        cache.image = img;
+        return;
+    }
+
+    if (!cache.image.complete) return;
+
+    const img = cache.image;
+    const scale = Math.min(w / img.width, h / img.height);
+    const drawW = Math.max(20, Math.round(img.width * scale));
+    const drawH = Math.max(12, Math.round(img.height * scale));
+    const drawX = x + Math.round((w - drawW) / 2);
+    const drawY = y + Math.round((h - drawH) / 2);
+    schoolCtx.drawImage(img, drawX, drawY, drawW, drawH);
+}
+
+function updateSchoolSignatureButtonPosition() {
+    const btn = document.getElementById('schoolOpenSignaturePadBtn');
+    if (!btn || !schoolCanvas) return;
+
+    const modal = document.getElementById('schoolConsentModal');
+    if (!modal || modal.classList.contains('hidden')) {
+        btn.style.display = 'none';
+        return;
+    }
+
+    const canvasWidth = schoolCanvas.clientWidth || schoolCanvas.width;
+    const canvasHeight = schoolCanvas.clientHeight || schoolCanvas.height;
+    const x = 320;
+    const y = currentSigBoxY + 24;
+
+    btn.style.display = 'inline-flex';
+    btn.style.left = `${Math.round((x / schoolCanvas.width) * canvasWidth)}px`;
+    btn.style.top = `${Math.round((y / schoolCanvas.height) * canvasHeight)}px`;
+}
+
+function openSchoolSignaturePadModal() {
+    const modal = document.getElementById('schoolSignaturePadModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    setTimeout(() => initSchoolSignaturePadCanvas(), 0);
+}
+
+function closeSchoolSignaturePadModal() {
+    const modal = document.getElementById('schoolSignaturePadModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    isDrawingSignaturePad = false;
+}
+
+function initSchoolSignaturePadCanvas() {
+    signaturePadCanvas = document.getElementById('schoolSignaturePadCanvas');
+    if (!signaturePadCanvas) return;
+    signaturePadCtx = signaturePadCanvas.getContext('2d');
+
+    signaturePadCtx.fillStyle = '#ffffff';
+    signaturePadCtx.fillRect(0, 0, signaturePadCanvas.width, signaturePadCanvas.height);
+    signaturePadCtx.strokeStyle = '#0f172a';
+    signaturePadCtx.lineWidth = 2;
+    signaturePadCtx.strokeRect(1, 1, signaturePadCanvas.width - 2, signaturePadCanvas.height - 2);
+
+    const getPos = (e) => {
+        const rect = signaturePadCanvas.getBoundingClientRect();
+        const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches && e.touches.length ? e.touches[0].clientY : e.clientY;
+        return {
+            x: (clientX - rect.left) * (signaturePadCanvas.width / rect.width),
+            y: (clientY - rect.top) * (signaturePadCanvas.height / rect.height)
+        };
+    };
+
+    const drawStrokes = () => {
+        signaturePadCtx.fillStyle = '#ffffff';
+        signaturePadCtx.fillRect(0, 0, signaturePadCanvas.width, signaturePadCanvas.height);
+        signaturePadCtx.strokeStyle = '#0f172a';
+        signaturePadCtx.lineWidth = 2;
+        signaturePadCtx.strokeRect(1, 1, signaturePadCanvas.width - 2, signaturePadCanvas.height - 2);
+
+        signaturePadCtx.strokeStyle = '#0f172a';
+        signaturePadCtx.lineWidth = 2.5;
+        signaturePadCtx.lineCap = 'round';
+        signaturePadCtx.lineJoin = 'round';
+        signaturePadStrokes.forEach((stroke) => {
+            if (!stroke || stroke.length < 2) return;
+            signaturePadCtx.beginPath();
+            signaturePadCtx.moveTo(stroke[0].x, stroke[0].y);
+            for (let i = 1; i < stroke.length; i += 1) {
+                signaturePadCtx.lineTo(stroke[i].x, stroke[i].y);
+            }
+            signaturePadCtx.stroke();
+        });
+    };
+
+    const start = (e) => {
+        const pos = getPos(e);
+        isDrawingSignaturePad = true;
+        signaturePadStrokes.push([{ x: pos.x, y: pos.y }]);
+        drawStrokes();
+        if (e.touches) e.preventDefault();
+    };
+
+    const move = (e) => {
+        if (!isDrawingSignaturePad) return;
+        const pos = getPos(e);
+        const stroke = signaturePadStrokes[signaturePadStrokes.length - 1];
+        if (stroke) stroke.push({ x: pos.x, y: pos.y });
+        drawStrokes();
+        if (e.touches) e.preventDefault();
+    };
+
+    const stop = () => { isDrawingSignaturePad = false; };
+
+    signaturePadCanvas.onmousedown = start;
+    signaturePadCanvas.onmousemove = move;
+    signaturePadCanvas.onmouseup = stop;
+    signaturePadCanvas.onmouseleave = stop;
+    signaturePadCanvas.ontouchstart = start;
+    signaturePadCanvas.ontouchmove = move;
+    signaturePadCanvas.ontouchend = stop;
+
+    if (schoolSignatureImageData) {
+        const img = new Image();
+        img.onload = () => {
+            signaturePadCtx.fillStyle = '#ffffff';
+            signaturePadCtx.fillRect(0, 0, signaturePadCanvas.width, signaturePadCanvas.height);
+            signaturePadCtx.strokeStyle = '#0f172a';
+            signaturePadCtx.lineWidth = 2;
+            signaturePadCtx.strokeRect(1, 1, signaturePadCanvas.width - 2, signaturePadCanvas.height - 2);
+            signaturePadCtx.drawImage(img, 14, 18, signaturePadCanvas.width - 28, signaturePadCanvas.height - 36);
+        };
+        img.src = schoolSignatureImageData;
+    }
+}
+
+function clearSchoolSignaturePad() {
+    signaturePadStrokes = [];
+    if (!signaturePadCanvas || !signaturePadCtx) return;
+    signaturePadCtx.fillStyle = '#ffffff';
+    signaturePadCtx.fillRect(0, 0, signaturePadCanvas.width, signaturePadCanvas.height);
+    signaturePadCtx.strokeStyle = '#0f172a';
+    signaturePadCtx.lineWidth = 2;
+    signaturePadCtx.strokeRect(1, 1, signaturePadCanvas.width - 2, signaturePadCanvas.height - 2);
+}
+
+function saveSchoolSignaturePad() {
+    if (!signaturePadCanvas || !signaturePadCtx) return;
+
+    if (!signaturePadStrokes.length || !signaturePadStrokes.some((s) => s.length > 1)) {
+        alert('서명 후 저장해 주세요.');
+        return;
+    }
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    signaturePadStrokes.forEach((stroke) => {
+        stroke.forEach((pt) => {
+            if (pt.x < minX) minX = pt.x;
+            if (pt.y < minY) minY = pt.y;
+            if (pt.x > maxX) maxX = pt.x;
+            if (pt.y > maxY) maxY = pt.y;
+        });
+    });
+
+    if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) {
+        alert('서명 저장에 실패했습니다. 다시 시도해 주세요.');
+        return;
+    }
+
+    const pad = 6;
+    const sx = Math.max(0, Math.floor(minX - pad));
+    const sy = Math.max(0, Math.floor(minY - pad));
+    const sw = Math.min(signaturePadCanvas.width - sx, Math.ceil(maxX - minX + pad * 2));
+    const sh = Math.min(signaturePadCanvas.height - sy, Math.ceil(maxY - minY + pad * 2));
+
+    // 배경이 없는(투명) PNG 생성을 위해 흰 배경 캔버스 복사를 하지 않고,
+    // 획 데이터만 잘라진 좌표계로 다시 그린다.
+    const tmp = document.createElement('canvas');
+    tmp.width = Math.max(1, sw);
+    tmp.height = Math.max(1, sh);
+    const tctx = tmp.getContext('2d');
+    tctx.clearRect(0, 0, tmp.width, tmp.height);
+    tctx.strokeStyle = '#0f172a';
+    tctx.lineWidth = 2.5;
+    tctx.lineCap = 'round';
+    tctx.lineJoin = 'round';
+
+    signaturePadStrokes.forEach((stroke) => {
+        if (!stroke || stroke.length < 2) return;
+        tctx.beginPath();
+        tctx.moveTo(stroke[0].x - sx, stroke[0].y - sy);
+        for (let i = 1; i < stroke.length; i += 1) {
+            tctx.lineTo(stroke[i].x - sx, stroke[i].y - sy);
+        }
+        tctx.stroke();
+    });
+
+    schoolSignatureImageData = tmp.toDataURL('image/png');
+    closeSchoolSignaturePadModal();
+    renderSchoolConsentDoc();
+}
+
+// 💾 서식과 자필 서명이 합쳐진 고화질 전자동의서 최종 저장
+async function saveSchoolConsentDocument() {
+    const p = patients[currentPatientIndex];
+    if (!p) return;
+
+    if (!schoolSignatureImageData) {
+        alert('서명하기 버튼으로 자필서명을 완료한 뒤 저장해 주세요.');
+        return;
+    }
+
+    const isGuardian = document.querySelector('input[name="schoolSignerType"]:checked').value === 'guardian';
+    let signerText = `환자 본인 (${p.name})`;
+    if (isGuardian) {
+        const gName = document.getElementById('schoolGuardianName').value.trim();
+        const gRel = document.getElementById('schoolGuardianRel').value.trim();
+        if (!gName || !gRel) {
+            alert("보호자 성함과 관계를 입력해 주세요.");
+            return;
+        }
+        signerText = `보호자 ${gName} (${gRel})`;
+    }
+
+    const formSelect = document.getElementById('schoolFormSelect');
+    const formTitle = formSelect.options[formSelect.selectedIndex].text;
+
+    // 캔버스 전체를 고화질 PNG 이미지(DataURL)로 합성
+    const imageDataUrl = schoolCanvas.toDataURL('image/png');
+
+    if (!p.records) p.records = {};
+    if (!Array.isArray(p.records.documents)) p.records.documents = [];
+
+    // EMR 서류함에 저장
+    p.records.documents.push({
+        id: Date.now(),
+        name: `[공식동의서] ${formTitle}`,
+        type: 'pdf',
+        fileName: `${formTitle}_서명완료.png`,
+        fileData: imageDataUrl,
+        previewImageData: imageDataUrl,
+        signer: signerText,
+        createdAt: new Date().toISOString()
+    });
+
+    await savePatientToBackend(p);
+    renderDocumentsSection();
+    closeSchoolConsentModal();
+    alert(`전자동의서가 차트에 성공적으로 등록되었습니다!\n(서명자: ${signerText})`);
+}
     </script>
+    <!-- ✍️ 학교/병원 공식 서식 직접 서명 태블릿 전자동의서 모달 (원문 전문 렌더링 & 서명 오류 해결 버전) -->
+<div id="schoolConsentModal" class="fixed inset-0 bg-black bg-opacity-60 hidden flex items-center justify-center z-50">
+    <div class="bg-white p-4 rounded-xl shadow-2xl w-[96vw] max-w-[1380px] h-[94vh] flex flex-col overflow-hidden">
+        
+        <!-- 상단 헤더 -->
+        <div class="flex justify-between items-center border-b pb-2 mb-3">
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span>📋</span> 학교/병원 공식 서식 전문 직접 서명 전자동의서
+            </h3>
+            <button onclick="closeSchoolConsentModal()" class="text-gray-500 hover:text-black font-bold text-xl">&times;</button>
+        </div>
+
+        <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[440px_minmax(0,1fr)] gap-3 mb-2">
+            <div class="bg-slate-50 p-2.5 rounded border border-slate-200 text-xs overflow-y-auto">
+                <div class="grid grid-cols-1 gap-2 mb-2">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">1. 서식 선택</label>
+                        <select id="schoolFormSelect" onchange="onSchoolFormSelectChange();" class="w-full border p-1.5 rounded font-bold text-blue-900 bg-white">
+                            <option value="transfusion">[경복대학교 병원] 수혈동의서 (전문)</option>
+                            <option value="anesthesia">[경복대학교 병원] 마취동의서 (전문)</option>
+                            <option value="op_anesthesia">[경기도의료원 안성병원] 수술·마취동의서 (전문)</option>
+                            <option value="initial_nursing">간호정보조사지 (일반/통증사정 전문)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">2. 서명 주체 선택</label>
+                        <div class="flex gap-3 items-center mt-1.5">
+                            <label class="cursor-pointer font-bold"><input type="radio" name="schoolSignerType" value="patient" checked onchange="onSchoolSignerTypeChange()"> 환자 본인</label>
+                            <label class="cursor-pointer font-bold"><input type="radio" name="schoolSignerType" value="guardian" onchange="onSchoolSignerTypeChange()"> 보호자/대리인</label>
+                        </div>
+                    </div>
+                    <div id="schoolGuardianRow" class="flex gap-2 pt-1 border-t border-slate-200 mt-1" style="display:none;">
+                        <input type="text" id="schoolGuardianName" oninput="renderSchoolConsentDoc()" placeholder="보호자 성함" class="w-1/3 border p-1 rounded text-xs">
+                        <input type="text" id="schoolGuardianRel" oninput="renderSchoolConsentDoc()" placeholder="관계 (예: 자, 부, 모)" class="w-1/3 border p-1 rounded text-xs">
+                        <input type="text" id="schoolGuardianReason" oninput="renderSchoolConsentDoc()" placeholder="대리 서명 사유 (예: 미성년, 의식저하)" class="w-1/3 border p-1 rounded text-xs">
+                    </div>
+                </div>
+                <div id="schoolFormOptionPanel" class="border-t border-slate-200 pt-2"></div>
+            </div>
+
+            <div class="flex-1 flex justify-center items-start overflow-auto bg-slate-200 p-1 rounded border border-slate-300 min-h-[520px]">
+                <div style="position:relative; display:inline-block;">
+                    <canvas id="schoolConsentCanvas" width="650" height="1150" style="touch-action: none; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 0; cursor: default; display: block; margin: 0;"></canvas>
+                    <button id="schoolOpenSignaturePadBtn" onclick="openSchoolSignaturePadModal()" style="position:absolute; display:none; transform:translateY(-50%); z-index:5; padding:3px 8px; font-size:11px; font-weight:700; color:#ffffff; background:#0ea5e9; border:1px solid #0284c7; border-radius:6px; box-shadow:0 1px 3px rgba(15,23,42,0.28);">서명하기</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 하단 버튼 -->
+        <div class="flex justify-between items-center pt-3 border-t mt-3">
+            <div class="flex gap-2 items-center">
+                <button onclick="openSchoolSignaturePadModal()" class="btn-blue" style="padding:6px 12px;">✍️ 서명하기</button>
+                <button onclick="clearSchoolSignature()" class="btn-slate" style="padding:6px 12px;">🔄 서명 초기화</button>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="closeSchoolConsentModal()" class="btn-slate" style="padding:6px 12px;">취소</button>
+                <button onclick="saveSchoolConsentDocument()" class="btn-green" style="padding:6px 16px;">✅ 전자동의서 최종 등록</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div id="schoolSignaturePadModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-[60]">
+    <div class="bg-white rounded-xl shadow-2xl w-[92vw] max-w-[760px] p-4">
+        <div class="flex items-center justify-between mb-2">
+            <h4 class="text-sm font-bold text-slate-900">자필서명</h4>
+            <button onclick="closeSchoolSignaturePadModal()" class="text-slate-500 hover:text-slate-800 text-lg font-bold">&times;</button>
+        </div>
+        <p class="text-xs text-slate-600 mb-2">아래 상자에 서명 후 저장하면 동의서의 (자필서명) 위치에 작게 삽입됩니다.</p>
+        <canvas id="schoolSignaturePadCanvas" width="700" height="220" style="width:100%; height:220px; background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; touch-action:none;"></canvas>
+        <div class="flex justify-between items-center mt-3">
+            <button onclick="clearSchoolSignaturePad()" class="btn-slate" style="padding:6px 12px;">초기화</button>
+            <div class="flex gap-2">
+                <button onclick="closeSchoolSignaturePadModal()" class="btn-slate" style="padding:6px 12px;">취소</button>
+                <button onclick="saveSchoolSignaturePad()" class="btn-green" style="padding:6px 14px;">저장하기</button>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
