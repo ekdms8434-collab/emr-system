@@ -1959,7 +1959,7 @@
                         { value: 'on', label: '선택' }
                     ]);
                 });
-                panel.innerHTML = `<div style="font-size:11px; color:#475569; font-weight:700; margin-bottom:4px;">업로드 양식 체크 항목(라디오)</div>${html}`;
+                panel.innerHTML = `<div style="font-size:11px; color:#475569; font-weight:700; margin-bottom:4px;">업로드 양식 체크 항목</div>${html}`;
                 return;
             }
 
@@ -2086,7 +2086,7 @@
             }
 
             panel.innerHTML = html
-                ? `<div style="font-size:11px; color:#475569; font-weight:800; margin-bottom:6px;">선택형 항목(라디오 버튼)</div><div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px;">${html}</div>`
+                ? `<div style="font-size:11px; color:#475569; font-weight:800; margin-bottom:6px;">선택형 항목</div><div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px;">${html}</div>`
                 : '<div style="font-size:11px; color:#475569; font-weight:700;">양식을 선택해 주세요.</div>';
         }
 
@@ -7255,6 +7255,9 @@ let schoolCtx = null;
 let isDrawingSchoolSig = false;
 let schoolStrokes = []; // 자필 서명 획 저장 배열
 let schoolSignatureImageData = '';
+let schoolDoctorSignatureImageData = '';
+let schoolNurseSignatureImageData = '';
+let currentSchoolSignatureTarget = 'patient';
 let currentDocBottomY = 0;
 let currentSigBoxY = 850; // 서명 박스 시작 Y 좌표 (본문 길이에 따라 동적 계산됨)
 let currentSigBox = { x: 30, y: 850, w: 590, h: 130 };
@@ -7285,6 +7288,9 @@ async function openSchoolConsentModal() {
 
     schoolStrokes = [];
     schoolSignatureImageData = '';
+    schoolDoctorSignatureImageData = '';
+    schoolNurseSignatureImageData = '';
+    currentSchoolSignatureTarget = 'patient';
     renderSchoolFormOptionPanel();
     
     setTimeout(() => {
@@ -7300,6 +7306,9 @@ function closeSchoolConsentModal() {
     closeSchoolSignaturePadModal();
     schoolStrokes = [];
     schoolSignatureImageData = '';
+    schoolDoctorSignatureImageData = '';
+    schoolNurseSignatureImageData = '';
+    currentSchoolSignatureTarget = 'patient';
 }
 
 // 대리인 입력란 토글
@@ -7365,9 +7374,11 @@ function initSchoolConsentCanvas() {
 }
 
 // 서명 초기화
-function clearSchoolSignature() {
+function clearSchoolSignature(target = currentSchoolSignatureTarget || 'patient') {
     schoolStrokes = [];
-    schoolSignatureImageData = '';
+    if (target === 'doctor') schoolDoctorSignatureImageData = '';
+    else if (target === 'nurse') schoolNurseSignatureImageData = '';
+    else schoolSignatureImageData = '';
     renderSchoolConsentDoc();
 }
 
@@ -7885,7 +7896,7 @@ function renderInitialNursingFormFull(p, isGuardian) {
     let pageIndex = 0;
     let pageTop = 20;
     let y = 0;
-    const lineHeight = 17;
+    const lineHeight = 22;
 
     const startNewPage = (continuation = true) => {
         pageTop = 20 + pageIndex * (page.h + page.gap);
@@ -7954,19 +7965,19 @@ function renderInitialNursingFormFull(p, isGuardian) {
     };
 
     const drawHeader = (title) => {
-        ensureSpace(34);
+        ensureSpace(40);
         schoolCtx.fillStyle = '#e5e7eb';
-        schoolCtx.fillRect(28, y, 594, 22);
+        schoolCtx.fillRect(28, y, 594, 24);
         schoolCtx.strokeStyle = '#94a3b8';
-        schoolCtx.strokeRect(28, y, 594, 22);
+        schoolCtx.strokeRect(28, y, 594, 24);
         schoolCtx.fillStyle = '#111827';
         schoolCtx.textAlign = 'left';
         schoolCtx.font = "bold 11px '맑은 고딕'";
-        schoolCtx.fillText(title, 34, y + 15);
-        y += 32;
+        schoolCtx.fillText(title, 34, y + 16);
+        y += 40;
     };
 
-    const drawLine = (text, x = 36, lh = 19, font = "11px '맑은 고딕'", color = '#111827') => {
+    const drawLine = (text, x = 36, lh = 24, font = "11px '맑은 고딕'", color = '#111827') => {
         ensureSpace(lh);
         schoolCtx.font = font;
         schoolCtx.fillStyle = color;
@@ -8036,6 +8047,11 @@ function renderInitialNursingFormFull(p, isGuardian) {
     drawLine('소화기 문제: □없음 □있음(오심/구토/소화불량/복통/복수/기타)', 36);
     drawLine('피부/배설/수면 상태: _______________________________________________', 36, 24);
 
+    if (y + 140 > pageBottomLimit()) {
+        pageIndex += 1;
+        startNewPage(true);
+    }
+
     drawHeader('5) 의식/정서/활동 상태 Consciousness, Psychological and Activity');
     drawLine(`지남력: ${getOptionMark(orientation, 'yes')}있음  ${getOptionMark(orientation, 'no')}없음`, 36);
     drawLine(`의식상태: ${getOptionMark(consciousness, 'clear')}명료 ${getOptionMark(consciousness, 'confused')}혼돈 ${getOptionMark(consciousness, 'semicoma')}반의식 ${getOptionMark(consciousness, 'coma')}무의식`, 36);
@@ -8065,77 +8081,84 @@ function renderInitialNursingFormFull(p, isGuardian) {
 // ✍️ 동적 서명 상자 그려주기 및 Y 좌표 추적 도우미 함수
 function drawSignatureZoneFull(startY, isGuardian, p, hospitalHeadText) {
     let y = startY;
-
-    // 💡 [핵심] 현재 동의서 서명 박스가 위치한 Y 좌표를 전역 변수에 저장!
     currentSigBoxY = y;
     currentSigBox = { x: 30, y: currentSigBoxY, w: 590, h: 130 };
 
-    // 서명 상자 테두리 (높이 130px)
-    schoolCtx.fillStyle = "#f8fafc";
+    schoolCtx.fillStyle = '#f8fafc';
     schoolCtx.fillRect(currentSigBox.x, currentSigBox.y, currentSigBox.w, currentSigBox.h);
 
-    // 날짜 및 작성자 인적사항
     const todayStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-    schoolCtx.fillStyle = "#334155";
+    const dateY = currentSigBoxY + 20;
+    const rowBaseY = currentSigBoxY + 48;
+    const rowGap = 26;
+    const signerY = rowBaseY;
+    const doctorY = rowBaseY + rowGap;
+    const nurseY = rowBaseY + rowGap * 2;
+
+    schoolCtx.fillStyle = '#334155';
     schoolCtx.font = "bold 11px '맑은 고딕'";
-    schoolCtx.fillText(`동의 일시 : ${todayStr}`, 45, currentSigBoxY + 22);
+    schoolCtx.textAlign = 'start';
+    schoolCtx.fillText(`동의 일시 : ${todayStr}`, 45, dateY);
 
     let signerPrefixText = `환자(동의자) : ${p.name}`;
     if (isGuardian) {
-        const gName = document.getElementById('schoolGuardianName').value || "＿＿＿";
-        const gRel = document.getElementById('schoolGuardianRel').value || "＿＿";
+        const gName = document.getElementById('schoolGuardianName').value || '＿＿＿';
+        const gRel = document.getElementById('schoolGuardianRel').value || '＿＿';
         signerPrefixText = `대리인(보호자) : ${gName}  (관계: ${gRel})`;
     }
-    const signerY = currentSigBoxY + 42;
-    schoolCtx.fillText(signerPrefixText, 45, signerY);
-    schoolCtx.fillText('(자필서명)', 250, signerY);
-    schoolCtx.fillText(`설명의사 / 담당간호사 : ${p.doctor||'박지은'}  (인)`, 380, currentSigBoxY + 42);
+
+    const doctorName = (p.doctor || '신은영').trim() || '신은영';
+    const nurseNameValue = (document.getElementById('schoolNurseNameInput')?.value || p.nurse || '000').trim();
+    const nurseName = nurseNameValue || '000';
+
+    const labelX = 60;
+    const valueX = 195;
+    const markerX = 330;
+    const sigX = 255;
+
+    schoolCtx.fillStyle = '#0f172a';
+    schoolCtx.font = "bold 11px '맑은 고딕'";
+    schoolCtx.fillText('환자(동의자)', labelX, signerY);
+    schoolCtx.fillText(p.name, valueX, signerY);
+    schoolCtx.fillText('(서명)', markerX, signerY);
+    schoolCtx.fillText('설명의사', labelX, doctorY);
+    schoolCtx.fillText(doctorName, valueX, doctorY);
+    schoolCtx.fillText('(인)', markerX, doctorY);
+    schoolCtx.fillText('담당간호사', labelX, nurseY);
+    schoolCtx.fillText(nurseName, valueX, nurseY);
+    schoolCtx.fillText('(인)', markerX, nurseY);
 
     if (schoolSignatureImageData) {
-        // '(자필서명)' 텍스트 영역 위에 투명 서명 이미지를 작게 삽입
-        drawEmbeddedSignatureImage(228, currentSigBoxY + 20, 120, 30);
+        drawEmbeddedSignatureImage(sigX, signerY - 17, 120, 28, schoolSignatureImageData);
+    }
+    if (schoolDoctorSignatureImageData) {
+        drawEmbeddedSignatureImage(sigX, doctorY - 13, 120, 18, schoolDoctorSignatureImageData);
+    }
+    if (schoolNurseSignatureImageData) {
+        drawEmbeddedSignatureImage(sigX, nurseY - 13, 120, 18, schoolNurseSignatureImageData);
     }
 
-    // 자필 서명이 아직 없을 때만 가이드 안내 문구 출력
-    if (!schoolSignatureImageData) {
-        schoolCtx.fillStyle = "#94a3b8";
-        schoolCtx.font = "bold 13px '맑은 고딕'";
-        schoolCtx.textAlign = "center";
-        schoolCtx.fillText("\"서명하기\" 버튼을 눌러 서명 후 저장하세요", 325, currentSigBoxY + 90);
-    }
-
-    // 병원장 귀하 문구
-    schoolCtx.fillStyle = "#0f172a";
+    schoolCtx.fillStyle = '#0f172a';
     schoolCtx.font = "bold 13px '맑은 고딕'";
-    schoolCtx.textAlign = "center";
+    schoolCtx.textAlign = 'center';
     schoolCtx.fillText(hospitalHeadText, 325, currentSigBoxY + 160);
 
     currentDocBottomY = Math.max(currentDocBottomY, currentSigBoxY + 170);
 }
 
-function drawEmbeddedSignatureImage(x, y, w, h) {
-    if (!schoolSignatureImageData) return;
-    if (!window.__schoolSignatureImageCache) window.__schoolSignatureImageCache = { src: '', image: null };
+function drawEmbeddedSignatureImage(x, y, w, h, sigData = schoolSignatureImageData) {
+    if (!sigData) return;
 
-    const cache = window.__schoolSignatureImageCache;
-    if (!cache.image || cache.src !== schoolSignatureImageData) {
-        const img = new Image();
-        img.onload = () => renderSchoolConsentDoc();
-        img.src = schoolSignatureImageData;
-        cache.src = schoolSignatureImageData;
-        cache.image = img;
-        return;
-    }
-
-    if (!cache.image.complete) return;
-
-    const img = cache.image;
-    const scale = Math.min(w / img.width, h / img.height);
-    const drawW = Math.max(20, Math.round(img.width * scale));
-    const drawH = Math.max(12, Math.round(img.height * scale));
-    const drawX = x + Math.round((w - drawW) / 2);
-    const drawY = y + Math.round((h - drawH) / 2);
-    schoolCtx.drawImage(img, drawX, drawY, drawW, drawH);
+    const img = new Image();
+    img.onload = () => {
+        const scale = Math.min(w / img.width, h / img.height);
+        const drawW = Math.max(20, Math.round(img.width * scale));
+        const drawH = Math.max(12, Math.round(img.height * scale));
+        const drawX = x + Math.round((w - drawW) / 2);
+        const drawY = y + Math.round((h - drawH) / 2);
+        schoolCtx.drawImage(img, drawX, drawY, drawW, drawH);
+    };
+    img.src = sigData;
 }
 
 function updateSchoolSignatureButtonPosition() {
@@ -8148,18 +8171,40 @@ function updateSchoolSignatureButtonPosition() {
         return;
     }
 
-    const canvasWidth = schoolCanvas.clientWidth || schoolCanvas.width;
-    const canvasHeight = schoolCanvas.clientHeight || schoolCanvas.height;
-    const x = 320;
-    const y = currentSigBoxY + 24;
+    const target = currentSchoolSignatureTarget || 'patient';
+    const hasCurrentSignature = target === 'patient'
+        ? !!schoolSignatureImageData
+        : target === 'doctor'
+            ? !!schoolDoctorSignatureImageData
+            : !!schoolNurseSignatureImageData;
 
+    if (hasCurrentSignature) {
+        btn.style.display = 'none';
+        return;
+    }
+
+    const xMap = { patient: 258, doctor: 440, nurse: 440 };
+    const yMap = { patient: currentSigBoxY + 18, doctor: currentSigBoxY + 58, nurse: currentSigBoxY + 82 };
+    const x = xMap[target] || 258;
+    const y = yMap[target] || currentSigBoxY + 18;
+
+    btn.textContent = target === 'patient' ? '여기에서 서명하기' : target === 'doctor' ? '설명의사 서명하기' : '담당간호사 서명하기';
     btn.style.display = 'inline-flex';
-    btn.style.left = `${Math.round((x / schoolCanvas.width) * canvasWidth)}px`;
-    btn.style.top = `${Math.round((y / schoolCanvas.height) * canvasHeight)}px`;
+    btn.style.color = '#ffffff';
+    btn.style.fontWeight = '700';
+    btn.style.left = `${Math.round((x / schoolCanvas.width) * (schoolCanvas.clientWidth || schoolCanvas.width))}px`;
+    btn.style.top = `${Math.round((y / schoolCanvas.height) * (schoolCanvas.clientHeight || schoolCanvas.height))}px`;
 }
 
-function openSchoolSignaturePadModal() {
+function openSchoolSignaturePadModal(target = currentSchoolSignatureTarget || 'patient') {
+    currentSchoolSignatureTarget = target;
+    signaturePadStrokes = [];
     const modal = document.getElementById('schoolSignaturePadModal');
+    const title = document.getElementById('schoolSignaturePadTitle');
+    if (title) {
+        const label = target === 'doctor' ? '설명의사 서명' : target === 'nurse' ? '담당간호사 서명' : '환자(보호자) 서명';
+        title.textContent = label;
+    }
     if (!modal) return;
     modal.classList.remove('hidden');
     setTimeout(() => initSchoolSignaturePadCanvas(), 0);
@@ -8177,11 +8222,30 @@ function initSchoolSignaturePadCanvas() {
     if (!signaturePadCanvas) return;
     signaturePadCtx = signaturePadCanvas.getContext('2d');
 
+    const currentTargetData = currentSchoolSignatureTarget === 'doctor'
+        ? schoolDoctorSignatureImageData
+        : currentSchoolSignatureTarget === 'nurse'
+            ? schoolNurseSignatureImageData
+            : schoolSignatureImageData;
+
     signaturePadCtx.fillStyle = '#ffffff';
     signaturePadCtx.fillRect(0, 0, signaturePadCanvas.width, signaturePadCanvas.height);
     signaturePadCtx.strokeStyle = '#0f172a';
     signaturePadCtx.lineWidth = 2;
     signaturePadCtx.strokeRect(1, 1, signaturePadCanvas.width - 2, signaturePadCanvas.height - 2);
+
+    if (currentTargetData) {
+        const img = new Image();
+        img.onload = () => {
+            signaturePadCtx.fillStyle = '#ffffff';
+            signaturePadCtx.fillRect(0, 0, signaturePadCanvas.width, signaturePadCanvas.height);
+            signaturePadCtx.strokeStyle = '#0f172a';
+            signaturePadCtx.lineWidth = 2;
+            signaturePadCtx.strokeRect(1, 1, signaturePadCanvas.width - 2, signaturePadCanvas.height - 2);
+            signaturePadCtx.drawImage(img, 14, 18, signaturePadCanvas.width - 28, signaturePadCanvas.height - 36);
+        };
+        img.src = currentTargetData;
+    }
 
     const getPos = (e) => {
         const rect = signaturePadCanvas.getBoundingClientRect();
@@ -8242,7 +8306,13 @@ function initSchoolSignaturePadCanvas() {
     signaturePadCanvas.ontouchmove = move;
     signaturePadCanvas.ontouchend = stop;
 
-    if (schoolSignatureImageData) {
+    const padTargetData = currentSchoolSignatureTarget === 'doctor'
+        ? schoolDoctorSignatureImageData
+        : currentSchoolSignatureTarget === 'nurse'
+            ? schoolNurseSignatureImageData
+            : schoolSignatureImageData;
+
+    if (padTargetData) {
         const img = new Image();
         img.onload = () => {
             signaturePadCtx.fillStyle = '#ffffff';
@@ -8252,7 +8322,7 @@ function initSchoolSignaturePadCanvas() {
             signaturePadCtx.strokeRect(1, 1, signaturePadCanvas.width - 2, signaturePadCanvas.height - 2);
             signaturePadCtx.drawImage(img, 14, 18, signaturePadCanvas.width - 28, signaturePadCanvas.height - 36);
         };
-        img.src = schoolSignatureImageData;
+        img.src = padTargetData;
     }
 }
 
@@ -8298,8 +8368,6 @@ function saveSchoolSignaturePad() {
     const sw = Math.min(signaturePadCanvas.width - sx, Math.ceil(maxX - minX + pad * 2));
     const sh = Math.min(signaturePadCanvas.height - sy, Math.ceil(maxY - minY + pad * 2));
 
-    // 배경이 없는(투명) PNG 생성을 위해 흰 배경 캔버스 복사를 하지 않고,
-    // 획 데이터만 잘라진 좌표계로 다시 그린다.
     const tmp = document.createElement('canvas');
     tmp.width = Math.max(1, sw);
     tmp.height = Math.max(1, sh);
@@ -8320,7 +8388,15 @@ function saveSchoolSignaturePad() {
         tctx.stroke();
     });
 
-    schoolSignatureImageData = tmp.toDataURL('image/png');
+    const imageData = tmp.toDataURL('image/png');
+    if (currentSchoolSignatureTarget === 'doctor') {
+        schoolDoctorSignatureImageData = imageData;
+    } else if (currentSchoolSignatureTarget === 'nurse') {
+        schoolNurseSignatureImageData = imageData;
+    } else {
+        schoolSignatureImageData = imageData;
+    }
+
     closeSchoolSignaturePadModal();
     renderSchoolConsentDoc();
 }
@@ -8381,7 +8457,7 @@ async function saveSchoolConsentDocument() {
         <!-- 상단 헤더 -->
         <div class="flex justify-between items-center border-b pb-2 mb-3">
             <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                <span>📋</span> 학교/병원 공식 서식 전문 직접 서명 전자동의서
+                <span>📋</span> 경복대학교병원 전자동의서
             </h3>
             <button onclick="closeSchoolConsentModal()" class="text-gray-500 hover:text-black font-bold text-xl">&times;</button>
         </div>
@@ -8390,8 +8466,8 @@ async function saveSchoolConsentDocument() {
             <div class="bg-slate-50 p-2.5 rounded border border-slate-200 text-xs overflow-y-auto">
                 <div class="grid grid-cols-1 gap-2 mb-2">
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">1. 서식 선택</label>
-                        <select id="schoolFormSelect" onchange="onSchoolFormSelectChange();" class="w-full border p-1.5 rounded font-bold text-blue-900 bg-white">
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1">1. 서식 선택</label>
+                        <select id="schoolFormSelect" onchange="onSchoolFormSelectChange();" class="w-full border p-1.5 rounded font-bold text-blue-900 bg-white text-[11px]">
                             <option value="transfusion">[경복대학교 병원] 수혈동의서 (전문)</option>
                             <option value="anesthesia">[경복대학교 병원] 마취동의서 (전문)</option>
                             <option value="op_anesthesia">[경기도의료원 안성병원] 수술·마취동의서 (전문)</option>
@@ -8399,8 +8475,8 @@ async function saveSchoolConsentDocument() {
                         </select>
                     </div>
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">2. 서명 주체 선택</label>
-                        <div class="flex gap-3 items-center mt-1.5">
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1">2. 서명 주체 선택</label>
+                        <div class="flex gap-3 items-center mt-1.5 text-[11px]">
                             <label class="cursor-pointer font-bold"><input type="radio" name="schoolSignerType" value="patient" checked onchange="onSchoolSignerTypeChange()"> 환자 본인</label>
                             <label class="cursor-pointer font-bold"><input type="radio" name="schoolSignerType" value="guardian" onchange="onSchoolSignerTypeChange()"> 보호자/대리인</label>
                         </div>
@@ -8412,21 +8488,26 @@ async function saveSchoolConsentDocument() {
                     </div>
                 </div>
                 <div id="schoolFormOptionPanel" class="border-t border-slate-200 pt-2"></div>
+                <div class="mt-2 pt-2 border-t border-slate-200 flex gap-2 items-center">
+                    <label class="text-[11px] font-bold text-slate-700 whitespace-nowrap">담당간호사 이름</label>
+                    <input id="schoolNurseNameInput" type="text" oninput="renderSchoolConsentDoc()" placeholder="담당간호사 이름 입력" class="w-full border border-slate-300 rounded px-2 py-1 text-[11px] focus:outline-none focus:ring-1 focus:ring-sky-500" value="">
+                </div>
             </div>
 
             <div class="flex-1 flex justify-center items-start overflow-auto bg-slate-200 p-1 rounded border border-slate-300 min-h-[520px]">
                 <div style="position:relative; display:inline-block;">
                     <canvas id="schoolConsentCanvas" width="650" height="1150" style="touch-action: none; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 0; cursor: default; display: block; margin: 0;"></canvas>
-                    <button id="schoolOpenSignaturePadBtn" onclick="openSchoolSignaturePadModal()" style="position:absolute; display:none; transform:translateY(-50%); z-index:5; padding:3px 8px; font-size:11px; font-weight:700; color:#ffffff; background:#0ea5e9; border:1px solid #0284c7; border-radius:6px; box-shadow:0 1px 3px rgba(15,23,42,0.28);">서명하기</button>
                 </div>
             </div>
         </div>
 
         <!-- 하단 버튼 -->
         <div class="flex justify-between items-center pt-3 border-t mt-3">
-            <div class="flex gap-2 items-center">
-                <button onclick="openSchoolSignaturePadModal()" class="btn-blue" style="padding:6px 12px;">✍️ 서명하기</button>
-                <button onclick="clearSchoolSignature()" class="btn-slate" style="padding:6px 12px;">🔄 서명 초기화</button>
+            <div class="flex gap-2 items-center flex-wrap">
+                <button onclick="openSchoolSignaturePadModal('patient')" class="btn-blue" style="padding:6px 12px; color:#fff !important; font-weight:700;">✍️ 환자서명</button>
+                <button onclick="openSchoolSignaturePadModal('doctor')" class="btn-blue" style="padding:6px 12px; color:#fff !important; font-weight:700;">🩺 설명의사 서명</button>
+                <button onclick="openSchoolSignaturePadModal('nurse')" class="btn-blue" style="padding:6px 12px; color:#fff !important; font-weight:700;">👩‍⚕️ 담당간호사 서명</button>
+                <button onclick="clearSchoolSignature()" class="btn-slate" style="padding:6px 12px; color:#fff !important; font-weight:700;">🔄 서명 초기화</button>
             </div>
             <div class="flex gap-2">
                 <button onclick="closeSchoolConsentModal()" class="btn-slate" style="padding:6px 12px;">취소</button>
@@ -8440,10 +8521,10 @@ async function saveSchoolConsentDocument() {
 <div id="schoolSignaturePadModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-[60]">
     <div class="bg-white rounded-xl shadow-2xl w-[92vw] max-w-[760px] p-4">
         <div class="flex items-center justify-between mb-2">
-            <h4 class="text-sm font-bold text-slate-900">자필서명</h4>
+            <h4 id="schoolSignaturePadTitle" class="text-sm font-bold text-slate-900">환자(보호자) 서명</h4>
             <button onclick="closeSchoolSignaturePadModal()" class="text-slate-500 hover:text-slate-800 text-lg font-bold">&times;</button>
         </div>
-        <p class="text-xs text-slate-600 mb-2">아래 상자에 서명 후 저장하면 동의서의 (자필서명) 위치에 작게 삽입됩니다.</p>
+        <p class="text-xs text-slate-600 mb-2">아래 상자에 서명 후 저장하면 동의서에 지정된 서명 위치에 작게 삽입됩니다.</p>
         <canvas id="schoolSignaturePadCanvas" width="700" height="220" style="width:100%; height:220px; background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; touch-action:none;"></canvas>
         <div class="flex justify-between items-center mt-3">
             <button onclick="clearSchoolSignaturePad()" class="btn-slate" style="padding:6px 12px;">초기화</button>
