@@ -263,11 +263,14 @@
         /* 처방전 테이블 전용 디자인 (네이비색 헤더) 입니다. */
         .prescription-table-theme th { background-color: var(--panel-header-bg) !important; color: #ffffff; font-weight: bold; padding: 4px 6px; border-bottom: 1px solid #334155; font-size: 11px; }
         .prescription-table-theme td { padding: 3px 5px; font-size: 10.5px; line-height: 1.3; white-space: pre-wrap; word-break: break-word; }
+        .transfusion-table-compact td { padding: 2px 4px; line-height: 1.2; }
+        .transfusion-table-compact td.transfusion-note-cell { text-align: left !important; white-space: normal; }
 
         /* 활력징후(V/S)와 섭취배설(I/O) 차트를 위한 피벗 테이블(행과 열이 크로스되는 표) 디자인입니다. */
         .vs-pivot-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; background: white; }
         .vs-pivot-table th.vs-header-title { background-color: #e2e8f0; color: #0f172a; width: 120px; text-align: center; font-weight: bold; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; position: sticky; left: 0; top: 0; z-index: 20; }
         .vs-pivot-table th.vs-header-time { background-color: #1e293b; color: white; padding: 5px 12px; font-weight: bold; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; white-space: nowrap; position: sticky; top: 0; z-index: 10; }
+        .vs-pivot-table th.vs-header-time.vs-header-time-auto { color: #fbbf24; background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%); }
         .vs-pivot-table td.vs-label { background-color: #f1f5f9; color: #1e293b; font-weight: bold; text-align: center; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; position: sticky; left: 0; z-index: 15; white-space: nowrap; writing-mode: horizontal-tb !important; transform: none !important; text-orientation: mixed !important; }
         .vs-pivot-table td.vs-label label,
         .vs-pivot-table td.vs-label * {
@@ -1385,6 +1388,8 @@
                                     <div class="main-tab-bar" style="flex:1; padding:0; border:none; background:transparent; gap:3px; justify-content:flex-start;">
                                         <button class="main-tab-btn active" onclick="openTopTab('prescriptionTab', this)">📋 처방내역</button>
                                         <button class="main-tab-btn" onclick="openTopTab('nurseTab', this)">📝 간호기록</button>
+                                        <button class="main-tab-btn" onclick="openTopTab('surgeryTab', this)">🩺 수술 기록</button>
+                                        <button class="main-tab-btn" onclick="openTopTab('transfusionTab', this)">🩸 수혈 기록</button>
                                         <button class="main-tab-btn" onclick="openTopTab('labTab', this)">🧪 검사 결과</button>
                                         <button class="main-tab-btn" onclick="openTopTab('documentTab', this)">📄 서류 및 동의서</button>
                                     </div>
@@ -1433,7 +1438,7 @@
                                 <!-- 1. 처방내역 탭 화면 -->
                                 <div id="prescriptionTab" class="tab-content active">
                                     <div class="table-scroll-area">
-                                        <table class="prescription-table-theme">
+                                        <table class="prescription-table-theme transfusion-table-compact">
                                        <thead>
     <tr>
         <th>일시</th>
@@ -1505,6 +1510,258 @@
                                         <input type="text" id="nurseName" placeholder="간호사 이름" style="width:80px;" value="이다은">
                                         <button class="btn-blue" id="btnNurseSave" onclick="addRecord('nurse')">입력</button>
                                         <button class="btn-slate" id="btnNurseCancel" onclick="cancelNurseEdit()" style="display:none;">취소</button>
+                                    </div>
+                                </div>
+
+                                <!-- 2. 수술 기록 탭 화면 -->
+                                <div id="surgeryTab" class="tab-content">
+                                    <div class="table-scroll-area">
+                                        <table class="prescription-table-theme">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:120px;">일시</th>
+                                                    <th style="width:90px;">수술유형</th>
+                                                    <th style="width:140px;">수술명</th>
+                                                    <th>수술 내용/소견</th>
+                                                    <th style="width:90px;">수술자</th>
+                                                    <th style="width:60px;">관리</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="surgeryTable"></tbody>
+                                        </table>
+                                    </div>
+
+                                    <div style="margin-top:12px; border:1px solid #dfe7f1; border-radius:10px; background:#f8fafc; padding:12px;">
+                                        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
+                                            <div style="font-size:12px; font-weight:800; color:#0f172a;">수술안전체크리스트</div>
+                                            <button type="button" class="btn-slate" onclick="openSurgeryChecklistPopup()" style="padding:6px 10px; font-size:10px; font-weight:700;">작성</button>
+                                        </div>
+                                        <div style="display:none;">
+                                            <input type="checkbox" id="surgeryChecklistSignIn">
+                                            <input type="checkbox" id="surgeryChecklistTimeOut">
+                                            <input type="checkbox" id="surgeryChecklistSignOut">
+                                        </div>
+                                    </div>
+
+                                    <div id="surgeryDetailCard" style="display:none; margin-top:12px; border:1px solid #dfe7f1; border-radius:10px; background:#f8fafc; padding:12px; min-height:18px;"></div>
+
+                                    <div style="margin-top:12px; border:1px solid #dfe7f1; border-radius:10px; background:#fff; padding:12px; display:none;">
+                                        <div style="font-size:12px; font-weight:800; color:#0f172a; margin-bottom:10px;">수술 기본 정보</div>
+                                        <div style="display:grid; grid-template-columns:repeat(3, minmax(150px, 1fr)); gap:8px; align-items:end;">
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">수술전 진단명</div>
+                                                <input id="surgeryPreDiagnosis" type="text" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">수술후 진단명</div>
+                                                <input id="surgeryPostDiagnosis" type="text" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">마취종류</div>
+                                                <select id="surgeryAnesthesia" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                                    <option value="전신">전신</option>
+                                                    <option value="척수">척수</option>
+                                                    <option value="부위">부위</option>
+                                                    <option value="국소">국소</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">집도의</div>
+                                                <input id="surgerySurgeon" type="text" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">제1보조의</div>
+                                                <input id="surgeryAssistant" type="text" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">소독간호사</div>
+                                                <input id="surgeryScrubNurse" type="text" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">순환간호사</div>
+                                                <input id="surgeryCirculator" type="text" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">시작 시각</div>
+                                                <input id="surgeryStartTime" type="datetime-local" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">종료 시각</div>
+                                                <input id="surgeryEndTime" type="datetime-local" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">예상 출혈량</div>
+                                                <input id="surgeryEstEbl" type="text" placeholder="mL" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">실제 출혈량</div>
+                                                <input id="surgeryActualEbl" type="text" placeholder="mL" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style="margin-top:12px; border:1px solid #dfe7f1; border-radius:10px; background:#fff; padding:12px; display:none;">
+                                        <div style="font-size:12px; font-weight:800; color:#0f172a; margin-bottom:8px;">거즈 및 기구 카운트</div>
+                                        <table style="width:100%; border-collapse:collapse; font-size:11px; background:white;">
+                                            <thead>
+                                                <tr>
+                                                    <th style="border:1px solid #cbd5e1; padding:6px; background:#f8fafc;">단계</th>
+                                                    <th style="border:1px solid #cbd5e1; padding:6px; background:#f8fafc;">Match</th>
+                                                    <th style="border:1px solid #cbd5e1; padding:6px; background:#f8fafc;">Mismatch</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td style="border:1px solid #cbd5e1; padding:6px; font-weight:700;">수술 전</td>
+                                                    <td style="border:1px solid #cbd5e1; text-align:center; padding:6px;"><input type="radio" name="surgeryCountPre" value="Match"></td>
+                                                    <td style="border:1px solid #cbd5e1; text-align:center; padding:6px;"><input type="radio" name="surgeryCountPre" value="Mismatch"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="border:1px solid #cbd5e1; padding:6px; font-weight:700;">폐쇄 전</td>
+                                                    <td style="border:1px solid #cbd5e1; text-align:center; padding:6px;"><input type="radio" name="surgeryCountBeforeClosure" value="Match"></td>
+                                                    <td style="border:1px solid #cbd5e1; text-align:center; padding:6px;"><input type="radio" name="surgeryCountBeforeClosure" value="Mismatch"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="border:1px solid #cbd5e1; padding:6px; font-weight:700;">폐쇄 후</td>
+                                                    <td style="border:1px solid #cbd5e1; text-align:center; padding:6px;"><input type="radio" name="surgeryCountAfterClosure" value="Match"></td>
+                                                    <td style="border:1px solid #cbd5e1; text-align:center; padding:6px;"><input type="radio" name="surgeryCountAfterClosure" value="Mismatch"></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="input-bar-bottom" style="margin-top:12px; display:none;">
+                                        <input type="datetime-local" id="surgeryTime" style="width:140px;">
+                                        <select id="surgeryType" style="width:100px;">
+                                            <option value="일반">일반</option>
+                                            <option value="지역">지역</option>
+                                            <option value="마취">마취</option>
+                                            <option value="시술">시술</option>
+                                            <option value="기타">기타</option>
+                                        </select>
+                                        <input type="text" id="surgeryName" placeholder="수술명" style="width:120px;">
+                                        <input type="text" id="surgeryDoctor" placeholder="수술자" style="width:80px;">
+                                        <textarea id="surgeryNote" class="auto-expand-textarea" placeholder="수술 내용, 소견, 결과를 입력하세요" rows="1" style="flex:1; min-width:220px;" oninput="autoExpandTextarea(this)"></textarea>
+                                        <button id="btnSurgerySave" class="btn-blue" onclick="addRecord('surgery')">수술 기록 저장</button>
+                                        <button class="btn-slate" id="btnSurgeryCancel" onclick="cancelSurgeryEdit()" style="display:none;">취소</button>
+                                    </div>
+                                </div>
+
+                                <!-- 3. 수혈 기록 탭 화면 -->
+                                <div id="transfusionTab" class="tab-content">
+                                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; padding:8px 12px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc;">
+                                        <div style="font-size:12px; font-weight:800; color:#0f172a;">WHO 수혈안전 체크리스트</div>
+                                        <button type="button" class="btn-slate" onclick="openTransfusionChecklistPopup()" style="padding:6px 10px; font-size:10px; font-weight:700;">작성 / 조회</button>
+                                    </div>
+                                    <div class="table-scroll-area">
+                                        <table class="prescription-table-theme">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:120px;">일시</th>
+                                                    <th style="width:90px;">혈액형</th>
+                                                    <th style="width:120px;">제제</th>
+                                                    <th style="width:110px;">혈액 바코드</th>
+                                                    <th style="width:100px;">용량</th>
+                                                    <th>반응/소견</th>
+                                                    <th style="width:90px;">담당</th>
+                                                    <th style="width:70px;">관리</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="transfusionTable"></tbody>
+                                        </table>
+                                    </div>
+
+                                    <div style="display:none; margin-top:12px; border:1px solid #fca5a5; border-radius:10px; background:#fff5f5; padding:12px;">
+                                        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;">
+                                            <div style="font-size:12px; font-weight:800; color:#7f1d1d;">2인 교차확인(Co-sign)</div>
+                                            <button type="button" class="btn-red" onclick="triggerTransfusionEmergencyStop()" style="padding:8px 12px; font-size:11px; font-weight:800;">🚨 수혈 즉시 중단</button>
+                                        </div>
+                                        <div style="display:grid; grid-template-columns:repeat(3, minmax(140px, 1fr)); gap:8px;">
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">혈액제제 식별번호</div>
+                                                <input id="transfusionBagId" type="text" style="width:100%; border:1px solid #fecaca; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">혈액형(ABO/Rh)</div>
+                                                <input id="transfusionAboRh" type="text" style="width:100%; border:1px solid #fecaca; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">교차시험 적합</div>
+                                                <select id="transfusionCrossmatch" style="width:100%; border:1px solid #fecaca; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                                    <option value="적합">적합</option>
+                                                    <option value="미적합">미적합</option>
+                                                    <option value="검토중">검토중</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">승인 간호사 1</div>
+                                                <input id="transfusionNurse1" type="text" style="width:100%; border:1px solid #fecaca; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">승인 간호사 2</div>
+                                                <input id="transfusionNurse2" type="text" style="width:100%; border:1px solid #fecaca; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                            <div style="display:flex; align-items:end;">
+                                                <button type="button" class="btn-blue" onclick="confirmTransfusionCoSign()" style="width:100%; padding:8px 10px; font-size:11px; font-weight:800;">2인 동시 승인</button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div style="display:none; margin-top:12px; border:1px solid #dfe7f1; border-radius:10px; background:#f8fafc; padding:12px;">
+                                        <div style="font-size:12px; font-weight:800; color:#0f172a; margin-bottom:8px;">수혈 V/S 타임라인</div>
+                                        <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+                                            <button type="button" class="btn-slate stage-btn active" data-stage="수혈 전 (1시간 이내)" style="padding:6px 10px; font-size:10px; font-weight:700;">수혈 전</button>
+                                            <button type="button" class="btn-slate stage-btn" data-stage="수혈 시작 15분 후" style="padding:6px 10px; font-size:10px; font-weight:700;">15분 후</button>
+                                            <button type="button" class="btn-slate stage-btn" data-stage="수혈 중" style="padding:6px 10px; font-size:10px; font-weight:700;">수혈 중</button>
+                                            <button type="button" class="btn-slate stage-btn" data-stage="수혈 완료" style="padding:6px 10px; font-size:10px; font-weight:700;">수혈 완료</button>
+                                        </div>
+                                        <div style="display:grid; grid-template-columns:repeat(3, minmax(110px, 1fr)); gap:8px; align-items:end;">
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">BP</div>
+                                                <input id="transfusionVsBp" type="text" placeholder="120/80" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">HR</div>
+                                                <input id="transfusionVsHr" type="number" step="0.1" placeholder="/min" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">RR</div>
+                                                <input id="transfusionVsRr" type="number" step="0.1" placeholder="/min" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">BT</div>
+                                                <input id="transfusionVsBt" type="number" step="0.1" placeholder="℃" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">SpO2</div>
+                                                <input id="transfusionVsSpo2" type="number" step="0.1" placeholder="%" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                            <div>
+                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">속도</div>
+                                                <input id="transfusionVsRate" type="text" placeholder="gtt/min" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                            </div>
+                                        </div>
+                                        <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+                                            <button type="button" class="btn-blue" onclick="saveTransfusionVsStage()" style="padding:8px 12px; font-size:11px; font-weight:800;">현재 단계 V/S 저장</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="input-bar-bottom" style="display:none; margin-top:12px;">
+                                        <input type="datetime-local" id="transfusionTime" style="width:140px;">
+                                        <select id="transfusionType" style="width:100px;">
+                                            <option value="A">A형</option>
+                                            <option value="B">B형</option>
+                                            <option value="AB">AB형</option>
+                                            <option value="O">O형</option>
+                                            <option value="미기재">미기재</option>
+                                        </select>
+                                        <input type="text" id="transfusionProduct" placeholder="제제" style="width:120px;">
+                                        <input type="text" id="transfusionBarcode" placeholder="혈액 바코드" style="width:130px;">
+                                        <input type="text" id="transfusionVolume" placeholder="용량" style="width:80px;">
+                                        <textarea id="transfusionNote" class="auto-expand-textarea" placeholder="반응, 소견, 주의사항을 입력하세요" rows="1" style="flex:1;" oninput="autoExpandTextarea(this)"></textarea>
+                                        <input type="text" id="transfusionStaff" placeholder="담당" style="width:80px;">
+                                        <button id="btnTransfusionSave" class="btn-blue" onclick="addRecord('transfusion')">수혈 기록 저장</button>
+                                        <button class="btn-slate" id="btnTransfusionCancel" onclick="cancelTransfusionEdit()" style="display:none;">취소</button>
                                     </div>
                                 </div>
 
@@ -1812,6 +2069,9 @@
         let editingOriginalChartNo = null; // 수정 시작 시점의 원래 등록번호
         let editingPrescIndex = null;   // 수정 중인 처방전 기록 기억
         let editingNurseIndex = null;   // 수정 중인 간호기록 기억
+        let editingSurgeryIndex = null; // 수정 중인 수술기록 기억
+        let surgeryChecklistDetailsDraft = null; // 수술 체크리스트 상세 항목 임시 상태
+        let editingTransfusionIndex = null; // 수정 중인 수혈기록 기억
         let activeIoEditSlot = null;     // I/O 탭에서 현재 수정 중인 시간대 컬럼
         let targetPrescModalIndex = null;
         let currentBodySide = 'front';  // 마네킹이 앞모습인지 뒷모습인지 기억
@@ -5177,13 +5437,162 @@ function openPatientDetail(index) {
             if(!p.records) p.records = {};
             if(!p.records.prescriptions) p.records.prescriptions = [];
             if(!p.records.nurse) p.records.nurse = [];
+            if(!p.records.surgeries && !p.records.surgery) p.records.surgeries = [];
+            if(!p.records.transfusions && !p.records.transfusion) p.records.transfusions = [];
+            if(p.records.surgery && !p.records.surgeries) p.records.surgeries = p.records.surgery;
+            if(p.records.transfusion && !p.records.transfusions) p.records.transfusions = p.records.transfusion;
+            if(!p.records.surgery && p.records.surgeries) p.records.surgery = p.records.surgeries;
+            if(!p.records.transfusion && p.records.transfusions) p.records.transfusion = p.records.transfusions;
             if(!p.records.lab) p.records.lab = [];
             if(!p.records.vs) p.records.vs = [];
             if(!p.records.io) p.records.io = [];
 
             // 넘겨받은 type에 따라 각기 다른 탭의 입력 데이터를 처리합니다.
             
-            if (type === 'vs') {
+            if (type === 'surgery') {
+                const time = document.getElementById('surgeryTime').value.replace('T', ' ');
+                const typeValue = document.getElementById('surgeryType').value || '기타';
+                const name = (
+                    document.getElementById('surgeryName')?.value.trim() ||
+                    document.getElementById('surgeryPreDiagnosis')?.value.trim() ||
+                    document.getElementById('surgerySurgeon')?.value.trim() ||
+                    '수술'
+                );
+                const note = document.getElementById('surgeryNote').value.trim();
+                const doctor = document.getElementById('surgeryDoctor').value.trim() || '미기재';
+                const preDiagnosis = document.getElementById('surgeryPreDiagnosis')?.value.trim() || '';
+                const postDiagnosis = document.getElementById('surgeryPostDiagnosis')?.value.trim() || '';
+                const surgeon = document.getElementById('surgerySurgeon')?.value.trim() || doctor;
+                const assistant = document.getElementById('surgeryAssistant')?.value.trim() || '';
+                const scrubNurse = document.getElementById('surgeryScrubNurse')?.value.trim() || '';
+                const circulator = document.getElementById('surgeryCirculator')?.value.trim() || '';
+                const anesthesia = document.getElementById('surgeryAnesthesia')?.value || '전신';
+                const startTime = document.getElementById('surgeryStartTime')?.value.replace('T', ' ') || '';
+                const endTime = document.getElementById('surgeryEndTime')?.value.replace('T', ' ') || '';
+                const estEbl = document.getElementById('surgeryEstEbl')?.value.trim() || '';
+                const actualEbl = document.getElementById('surgeryActualEbl')?.value.trim() || '';
+                const checklistDetails = normalizeSurgeryChecklistDetails(surgeryChecklistDetailsDraft, {
+                    signIn: document.getElementById('surgeryChecklistSignIn')?.checked || false,
+                    signOut: document.getElementById('surgeryChecklistSignOut')?.checked || false
+                });
+                const checklist = {
+                    signIn: isSurgeryChecklistSectionComplete(checklistDetails, 'signIn'),
+                    timeOut: false,
+                    signOut: isSurgeryChecklistSectionComplete(checklistDetails, 'signOut')
+                };
+                const count = {
+                    pre: document.querySelector('input[name="surgeryCountPre"]:checked')?.value || '미기록',
+                    beforeClosure: document.querySelector('input[name="surgeryCountBeforeClosure"]:checked')?.value || '미기록',
+                    afterClosure: document.querySelector('input[name="surgeryCountAfterClosure"]:checked')?.value || '미기록'
+                };
+
+                if(!time) return alert('수술 일시를 입력하세요.');
+
+                const newSurgeryRecord = {
+                    time,
+                    type: typeValue,
+                    name,
+                    note,
+                    doctor,
+                    preDiagnosis,
+                    postDiagnosis,
+                    surgeon,
+                    assistant,
+                    scrubNurse,
+                    circulator,
+                    anesthesia,
+                    startTime,
+                    endTime,
+                    estEbl,
+                    actualEbl,
+                    checklist,
+                    checklistDetails,
+                    count,
+                    opName: name,
+                    preDiag: preDiagnosis,
+                    postDiag: postDiagnosis,
+                    whoChecklist: {
+                        signIn: checklist.signIn,
+                        timeOut: checklist.timeOut,
+                        signOut: checklist.signOut
+                    },
+                    whoChecklistDetails: checklistDetails,
+                    countMatch: (count.pre === 'Match' || count.beforeClosure === 'Match' || count.afterClosure === 'Match')
+                };
+                const surgeryList = p.records.surgeries || p.records.surgery || [];
+                if (editingSurgeryIndex !== null) {
+                    surgeryList[editingSurgeryIndex] = { ...surgeryList[editingSurgeryIndex], ...newSurgeryRecord };
+                    editingSurgeryIndex = null;
+                } else {
+                    surgeryList.push(newSurgeryRecord);
+                }
+                p.records.surgeries = surgeryList;
+                p.records.surgery = surgeryList;
+                sortRecordsByTime(surgeryList);
+                cancelSurgeryEdit();
+                alert('수술안전체크리스트가 저장되었습니다.');
+
+            } else if (type === 'transfusion') {
+                const time = document.getElementById('transfusionTime').value.replace('T', ' ');
+                const bloodType = document.getElementById('transfusionType').value || '미기재';
+                const product = document.getElementById('transfusionProduct').value.trim();
+                const barcode = document.getElementById('transfusionBarcode').value.trim();
+                const volume = document.getElementById('transfusionVolume').value.trim();
+                const note = document.getElementById('transfusionNote').value.trim();
+                const staff = document.getElementById('transfusionStaff').value.trim() || '미기재';
+                const bagId = document.getElementById('transfusionBagId')?.value.trim() || '';
+                const aboRh = document.getElementById('transfusionAboRh')?.value.trim() || '';
+                const crossmatch = document.getElementById('transfusionCrossmatch')?.value || '적합';
+                const nurse1 = document.getElementById('transfusionNurse1')?.value.trim() || '';
+                const nurse2 = document.getElementById('transfusionNurse2')?.value.trim() || '';
+                const transfusionList = p.records.transfusions || p.records.transfusion || [];
+                const existingLinkId = editingTransfusionIndex !== null ? (transfusionList[editingTransfusionIndex]?.linkId || '') : '';
+
+                if(!time || !product || !barcode || !note) return alert('일시, 제제, 혈액 바코드, 반응/소견은 필수입니다.');
+
+                const newTransfusionRecord = {
+                    time,
+                    type: bloodType,
+                    product,
+                    barcode,
+                    volume,
+                    note,
+                    staff,
+                    bagId,
+                    aboRh,
+                    crossmatch,
+                    coSign: { nurse1, nurse2, approved: !!(nurse1 && nurse2) },
+                    vsTimeline: window.transfusionTimeline || {},
+                    bloodBagId: bagId,
+                    bloodType: aboRh || bloodType,
+                    productType: product,
+                    nurse1,
+                    nurse2,
+                    cosignTime: nurse1 && nurse2 ? new Date().toISOString().slice(0, 19).replace('T', ' ') : '',
+                    status: '완료',
+                    timeline: {
+                        preVS: window.transfusionTimeline?.['수혈 전 (1시간 이내)'] || '',
+                        min15VS: window.transfusionTimeline?.['수혈 시작 15분 후'] || '',
+                        duringVS: window.transfusionTimeline?.['수혈 중'] ? [window.transfusionTimeline['수혈 중']] : [],
+                        postVS: window.transfusionTimeline?.['수혈 완료'] || ''
+                    },
+                    reactionOccurred: /반응|알레르기|발열|호흡곤란|부작용/i.test(note),
+                    reactionNote: note,
+                    linkId: buildTransfusionVsLinkId(existingLinkId)
+                };
+                if (editingTransfusionIndex !== null) {
+                    transfusionList[editingTransfusionIndex] = { ...transfusionList[editingTransfusionIndex], ...newTransfusionRecord };
+                    editingTransfusionIndex = null;
+                } else {
+                    transfusionList.push(newTransfusionRecord);
+                }
+                p.records.transfusions = transfusionList;
+                p.records.transfusion = transfusionList;
+                sortRecordsByTime(transfusionList);
+                upsertTransfusionTimelineToVsRecords(p, newTransfusionRecord);
+                cancelTransfusionEdit();
+
+            } else if (type === 'vs') {
                 // [활력징후 기록 처리]
                 const time = document.getElementById('vsTime').value.replace('T', ' '); // 시간 포맷 변경
                 const bp = document.getElementById('vsBp').value.trim();
@@ -5420,6 +5829,123 @@ if (!note) return alert("처방 내역을 입력하세요.");
             renderAllRecords();
         }
 
+        function confirmTransfusionCoSign() {
+            const bagId = document.getElementById('transfusionBagId')?.value.trim();
+            const nurse1 = document.getElementById('transfusionNurse1')?.value.trim();
+            const nurse2 = document.getElementById('transfusionNurse2')?.value.trim();
+            if (!bagId || !nurse1 || !nurse2) {
+                alert('혈액제제 식별번호와 승인 간호사 1, 2는 모두 입력해야 합니다.');
+                return;
+            }
+            alert('2인 동시 승인 완료되었습니다.');
+        }
+
+        function saveTransfusionVsStage() {
+            const p = patients[currentPatientIndex];
+            if (!p) return;
+            if (!window.transfusionTimeline) window.transfusionTimeline = {};
+            const stage = window.currentTransfusionStage || '수혈 전 (1시간 이내)';
+            const payload = {
+                bp: document.getElementById('transfusionVsBp')?.value.trim() || '',
+                hr: document.getElementById('transfusionVsHr')?.value || '',
+                rr: document.getElementById('transfusionVsRr')?.value || '',
+                bt: document.getElementById('transfusionVsBt')?.value || '',
+                spo2: document.getElementById('transfusionVsSpo2')?.value || '',
+                rate: document.getElementById('transfusionVsRate')?.value.trim() || '',
+                savedAt: new Date().toISOString()
+            };
+            window.transfusionTimeline[stage] = payload;
+            if (!p.records) p.records = {};
+            if (!p.records.transfusion) p.records.transfusion = [];
+            const noteText = document.getElementById('transfusionNote');
+            if (noteText && !noteText.value.trim()) {
+                noteText.value = `${stage} V/S 기록 저장 완료`;
+            }
+            alert(`${stage} 단계 V/S가 저장되었습니다.`);
+        }
+
+        function openTransfusionAdverseEventPopup() {
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0'; overlay.style.left = '0';
+            overlay.style.width = '100vw'; overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(15, 23, 42, 0.45)';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center'; overlay.style.justifyContent = 'center';
+            overlay.style.zIndex = '2000';
+
+            const modal = document.createElement('div');
+            modal.style.width = '460px';
+            modal.style.maxWidth = '90vw';
+            modal.style.background = '#fff';
+            modal.style.borderRadius = '12px';
+            modal.style.boxShadow = '0 18px 45px rgba(15, 23, 42, 0.2)';
+            modal.style.padding = '18px';
+            modal.style.boxSizing = 'border-box';
+            modal.innerHTML = `
+                <div style="font-size:16px; font-weight:800; color:#7f1d1d; margin-bottom:12px;">수혈 부작용 보고</div>
+                <div style="display:grid; gap:12px;">
+                    <div>
+                        <div style="font-size:11px; color:#64748b; font-weight:700; margin-bottom:4px;">유형</div>
+                        <select id="adverseType" style="width:100%; border:1px solid #fecaca; border-radius:8px; padding:8px 10px; font-size:12px; box-sizing:border-box;">
+                            <option value="알레르기 반응">알레르기 반응</option>
+                            <option value="발열 반응">발열 반응</option>
+                            <option value="순환 과부하">순환 과부하</option>
+                            <option value="호흡곤란">호흡곤란</option>
+                            <option value="기타">기타</option>
+                        </select>
+                    </div>
+                    <div>
+                        <div style="font-size:11px; color:#64748b; font-weight:700; margin-bottom:4px;">세부 내용</div>
+                        <textarea id="adverseNote" rows="5" style="width:100%; border:1px solid #fecaca; border-radius:8px; padding:10px; font-size:12px; resize:vertical; box-sizing:border-box;">수혈 즉시 중단 및 N/S 유지. 부작용 관찰 중.</textarea>
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+                    <button type="button" id="adverseCancel" style="padding:8px 12px; border-radius:8px; border:none; background:#e2e8f0; color:#0f172a; font-weight:700; cursor:pointer;">닫기</button>
+                    <button type="button" id="adverseSave" style="padding:8px 12px; border-radius:8px; border:none; background:#dc2626; color:white; font-weight:700; cursor:pointer;">보고 저장</button>
+                </div>
+            `;
+
+            const closeModal = () => overlay.remove();
+            modal.querySelector('#adverseCancel').addEventListener('click', closeModal);
+            modal.querySelector('#adverseSave').addEventListener('click', async () => {
+                const p = patients[currentPatientIndex];
+                if (!p) return;
+                if (!p.records) p.records = {};
+                if (!p.records.nurse) p.records.nurse = [];
+                const note = `${modal.querySelector('#adverseType').value}: ${modal.querySelector('#adverseNote').value.trim() || '부작용 보고'}`;
+                p.records.nurse.push({
+                    time: new Date().toISOString().replace('T', ' ').slice(0, 19),
+                    note,
+                    nurse: '간호팀'
+                });
+                await savePatientToBackend(p);
+                renderAllRecords();
+                closeModal();
+                alert('부작용 보고가 저장되었습니다.');
+            });
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+        }
+
+        function triggerTransfusionEmergencyStop() {
+            if (!confirm('수혈을 즉시 중단하고 N/S 유지로 전환하시겠습니까?')) return;
+            const p = patients[currentPatientIndex];
+            if (p) {
+                if (!p.records) p.records = {};
+                if (!p.records.nurse) p.records.nurse = [];
+                p.records.nurse.push({
+                    time: new Date().toISOString().replace('T', ' ').slice(0, 19),
+                    note: '수혈 즉시 중단 및 N/S 유지. 부작용 보고 필요.',
+                    nurse: '간호팀'
+                });
+                savePatientToBackend(p);
+                renderAllRecords();
+            }
+            openTransfusionAdverseEventPopup();
+        }
+
         // 기록(처방, 간호, 수술 등)을 삭제하는 공통 비동기 함수입니다.
         async function deleteRecord(type, idx) {
             if (currentPatientIndex === null) return;
@@ -5427,20 +5953,28 @@ if (!note) return alert("처방 내역을 입력하세요.");
                 alert('학생용 계정에서는 간호기록 외의 삭제 기능이 비활성화됩니다.');
                 return;
             }
-            // 정말 삭제할 것인지 사용자에게 한 번 더 물어봅니다. '취소'를 누르면 함수가 종료됩니다.
             if (!confirm("해당 기록을 삭제하시겠습니까?")) return;
 
             const p = patients[currentPatientIndex];
-            
-            // 넘어온 type(종류)에 따라 환자의 어떤 기록 배열에서 데이터를 지울지 결정합니다.
-            // splice(idx, 1)은 배열에서 idx 위치에 있는 데이터 1개를 지우라는 명령어입니다.
+            const surgeryList = p.records?.surgeries || p.records?.surgery || [];
+            const transfusionList = p.records?.transfusions || p.records?.transfusion || [];
+
             if (type === 'presc') p.records.prescriptions.splice(idx, 1);
             else if (type === 'nurse') p.records.nurse.splice(idx, 1);
+            else if (type === 'surgery') {
+                surgeryList.splice(idx, 1);
+                p.records.surgeries = surgeryList;
+                p.records.surgery = surgeryList;
+            }
+            else if (type === 'transfusion') {
+                transfusionList.splice(idx, 1);
+                p.records.transfusions = transfusionList;
+                p.records.transfusion = transfusionList;
+            }
             else if (type === 'lab_img') p.records.lab.splice(idx, 1);
             else if (type === 'vs') p.records.vs.splice(idx, 1);
             else if (type === 'io') p.records.io.splice(idx, 1);
 
-            // 삭제가 완료된 환자 데이터를 서버에 다시 저장하고 화면을 새로고침합니다.
             await savePatientToBackend(p);
             renderAllRecords();
         }
@@ -5474,9 +6008,12 @@ if (!note) return alert("처방 내역을 입력하세요.");
             renderPrescriptionTable();
             renderLabTable();
             renderNurseTable();
+            renderSurgeryTable();
+            renderTransfusionTable();
             renderVsSection();
             renderIoSection();
             renderDocumentsSection();
+            renderSurgeryDetailCard();
             applyStudentButtonDisable();
         }
 
@@ -6113,6 +6650,67 @@ if (!note) return alert("처방 내역을 입력하세요.");
             });
         }
 
+        function buildTransfusionVsLinkId(existingId = '') {
+            if (existingId) return existingId;
+            return `tr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        }
+
+        function normalizeRecordDateTime(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return '';
+            return raw.replace('T', ' ').slice(0, 19);
+        }
+
+        function toNullableNumber(value) {
+            if (value === null || value === undefined || String(value).trim() === '') return null;
+            const parsed = Number(value);
+            return Number.isNaN(parsed) ? null : parsed;
+        }
+
+        function upsertTransfusionTimelineToVsRecords(patient, transfusionRecord) {
+            if (!patient || !transfusionRecord) return;
+            if (!patient.records) patient.records = {};
+            if (!Array.isArray(patient.records.vs)) patient.records.vs = [];
+
+            const linkId = buildTransfusionVsLinkId(transfusionRecord.linkId);
+            transfusionRecord.linkId = linkId;
+
+            patient.records.vs = patient.records.vs.filter((row) => !(row?.autoFromTransfusion && row?.sourceTransfusionId === linkId));
+
+            const timeline = transfusionRecord.vsTimeline || {};
+            const stageConfig = [
+                { key: '수혈 전 (1시간 이내)', label: '수혈 전' },
+                { key: '수혈 시작 15분 후', label: '15분 후' },
+                { key: '수혈 중', label: '수혈 중' },
+                { key: '수혈 완료', label: '수혈 완료' }
+            ];
+
+            stageConfig.forEach(({ key, label }) => {
+                const snapshot = timeline[key];
+                if (!snapshot || typeof snapshot !== 'object') return;
+
+                const recordTime = normalizeRecordDateTime(snapshot.savedAt || transfusionRecord.time);
+                if (!recordTime) return;
+
+                patient.records.vs.push({
+                    time: recordTime,
+                    bp: (snapshot.bp || '').trim(),
+                    hr: toNullableNumber(snapshot.hr),
+                    rr: toNullableNumber(snapshot.rr),
+                    bt: toNullableNumber(snapshot.bt),
+                    spo2: toNullableNumber(snapshot.spo2),
+                    autoFromTransfusion: true,
+                    sourceTransfusionId: linkId,
+                    sourceStage: key,
+                    sourceLabel: `수혈 자동(${label})`,
+                    sourceType: 'transfusion',
+                    rate: (snapshot.rate || '').trim()
+                });
+            });
+
+            sortRecordsByTime(patient.records.vs);
+        }
+
         /* --- 활력징후(V/S) 표를 만들고 차트를 그리는 함수 --- */
         function renderVsSection() {
             if (currentPatientIndex === null) return;
@@ -6166,7 +6764,9 @@ if (!note) return alert("처방 내역을 입력하세요.");
                 // 기록된 데이터 개수만큼 반복하면서 오른쪽으로 칸(td)을 덧붙여 나갑니다.
                 vsRecords.forEach((r) => {
                     const actualIndex = p.records.vs.findIndex(item => item === r);
-                    headerRow += `<th class="vs-header-time">${formatDisplayTime(r.time)}</th>`;
+                    const timeClass = r.autoFromTransfusion ? 'vs-header-time vs-header-time-auto' : 'vs-header-time';
+                    const timeTitle = r.autoFromTransfusion ? ` title="${escapeHtml(r.sourceLabel || '수혈 자동 기록')}"` : '';
+                    headerRow += `<th class="${timeClass}"${timeTitle}>${formatDisplayTime(r.time)}</th>`;
                     bpRow += `<td class="vs-val">${r.bp || '-'}</td>`;
                     hrRow += `<td class="vs-val">${r.hr || '-'}</td>`;
                     rrRow += `<td class="vs-val">${r.rr || '-'}</td>`;
@@ -6968,7 +7568,7 @@ function editPresc(index) {
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             const defaultTime = now.toISOString().slice(11, 16);
-            const inputIds = ['prescTime', 'labTime', 'nurseTime', 'vsTime'];
+            const inputIds = ['prescTime', 'surgeryTime', 'transfusionTime', 'labTime', 'nurseTime', 'vsTime'];
 
             inputIds.forEach((id) => {
                 const input = document.getElementById(id);
@@ -7004,6 +7604,8 @@ function editPresc(index) {
             renderPrescriptionTable();
             renderLabTable();
             renderNurseTable();
+            renderSurgeryTable();
+            renderTransfusionTable();
             renderVsSection();
             renderIoSection();
         }
@@ -7097,6 +7699,8 @@ function editPresc(index) {
                     renderPrescriptionTable();
                     renderLabTable();
                     renderNurseTable();
+                    renderSurgeryTable();
+                    renderTransfusionTable();
                     renderVsSection();
                     renderIoSection();
                 });
@@ -7112,6 +7716,17 @@ function editPresc(index) {
             if (nextBtn) {
                 nextBtn.addEventListener('click', () => shiftPrescriptionDate(1));
             }
+
+            document.querySelectorAll('.stage-btn').forEach((button) => {
+                button.addEventListener('click', () => {
+                    const stage = button.dataset.stage;
+                    if (!stage) return;
+                    document.querySelectorAll('.stage-btn').forEach((btn) => btn.classList.toggle('active', btn === button));
+                    window.currentTransfusionStage = stage;
+                });
+            });
+            window.transfusionTimeline = {};
+            window.currentTransfusionStage = '수혈 전 (1시간 이내)';
         });
         // [간호 기록 표 그리기]
         function renderNurseTable() {
@@ -7140,6 +7755,1201 @@ function editPresc(index) {
                     </tr>
                 `;
             }).join('');
+        }
+
+        function renderSurgeryTable() {
+            const p = patients[currentPatientIndex];
+            const tbody = document.getElementById('surgeryTable');
+            if (!tbody || !p) return;
+            const surgeryList = p.records?.surgeries || p.records?.surgery || [];
+            const records = getDateFilteredRecords(surgeryList);
+            renderSurgeryDetailCard();
+
+            if (records.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#94a3b8;">등록된 수술 기록이 없습니다.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = records.map((r) => {
+                const actualIndex = surgeryList.findIndex(item => item === r);
+                return `
+                    <tr>
+                        <td style="padding:1px 4px !important; line-height:1.05 !important;">${formatDisplayTime(r.time)}</td>
+                        <td style="padding:1px 4px !important; line-height:1.05 !important;">${r.type || '기타'}</td>
+                        <td style="padding:1px 4px !important; line-height:1.05 !important;">${r.name || r.opName || r.preDiagnosis || r.preDiag || '-'}</td>
+                        <td style="text-align:left; padding:1px 4px !important; line-height:1.05 !important; vertical-align:middle;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
+                                <span style="flex:1; min-width:0; line-height:1.05 !important; white-space:pre-line; word-break:break-word; overflow-wrap:anywhere;">${r.note || r.surgeryNote || '-'}</span>
+                                <button class="btn-slate" style="padding:1px 4px; font-size:10px; line-height:1.1; white-space:nowrap;" onclick="openSurgeryChecklistViewPopup(${actualIndex})">상세보기</button>
+                            </div>
+                        </td>
+                        <td style="padding:1px 4px !important; line-height:1.05 !important;">${r.doctor || r.surgeon || '-'}</td>
+                        <td style="padding:1px 4px !important; line-height:1.05 !important; white-space:nowrap;">
+                            <button class="btn-slate" style="padding:1px 4px; font-size:10px; margin-right:3px;" onclick="editSurgeryRecord(${actualIndex})">수정</button>
+                            <button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('surgery', ${actualIndex})">삭제</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        const SURGERY_CHECKLIST_ITEM_MAP = {
+            signIn: [
+                ['consentPatient', '수술동의서 환자 서명 확인'],
+                ['consentGuardian', '수술동의서 보호자 서명 확인'],
+                ['transfusionConsent', '수혈동의서 서명 확인'],
+                ['siteMarking', '수술부위 표시 확인'],
+                ['skinPreparation', '피부 준비 확인'],
+                ['enemaDone', '관장 시행 여부 확인'],
+                ['tubeCheck', '관 삽입 여부 확인 (Tube/F-cath/C-line)'],
+                ['pacemakerCheck', '인공심박동기 유무 확인 (Rt./Lt.)'],
+                ['premedGiven', '수술 전 투약 여부 확인'],
+                ['dentureCheck', '의치 제거 확인'],
+                ['hearingAidCheck', '보청기 제거 확인'],
+                ['contactLensCheck', '콘택트렌즈 제거 확인'],
+                ['fallRiskCheck', '낙상 고위험 여부 확인'],
+                ['preopExamIssue', '수술 전 검사 장애 여부 확인'],
+                ['specialNoteCheck', '수술 전 특이사항 확인']
+            ],
+            signOut: [
+                ['nameProcedureConfirm', '수술명/시술명 최종 확인'],
+                ['specimenLabeling', '검체 라벨/의뢰 확인'],
+                ['specimenLabeling', '수술 후 처방 확인'],
+                ['recoveryPlan', '회복 계획 및 인계사항 확인']
+            ]
+        };
+
+        function normalizeSurgeryChecklistDetails(rawDetails, checklistSummary = {}) {
+            const details = rawDetails && typeof rawDetails === 'object' ? rawDetails : {};
+            const normalized = {};
+            const normalizeRoundValue = (value) => {
+                if (value === 'yes' || value === 'no' || value === 'na') return value;
+                return '';
+            };
+            Object.entries(SURGERY_CHECKLIST_ITEM_MAP).forEach(([sectionKey, itemDefs]) => {
+                const sectionRaw = details[sectionKey] && typeof details[sectionKey] === 'object' ? details[sectionKey] : null;
+                const hasExplicitItem = !!sectionRaw && itemDefs.some(([itemKey]) => typeof sectionRaw[itemKey] === 'boolean');
+                const hasSignInRounds = sectionKey === 'signIn' && !!sectionRaw && itemDefs.some(([itemKey]) => sectionRaw[itemKey] && typeof sectionRaw[itemKey] === 'object');
+                normalized[sectionKey] = {};
+                itemDefs.forEach(([itemKey]) => {
+                    if (sectionKey === 'signIn') {
+                        if (hasSignInRounds) {
+                            const saved = sectionRaw[itemKey] || {};
+                            normalized[sectionKey][itemKey] = {
+                                round1: normalizeRoundValue(saved.round1),
+                                round2: normalizeRoundValue(saved.round2)
+                            };
+                        } else if (hasExplicitItem) {
+                            normalized[sectionKey][itemKey] = {
+                                round1: sectionRaw[itemKey] ? 'yes' : '',
+                                round2: ''
+                            };
+                        } else {
+                            normalized[sectionKey][itemKey] = {
+                                round1: checklistSummary[sectionKey] ? 'yes' : '',
+                                round2: ''
+                            };
+                        }
+                    } else {
+                        normalized[sectionKey][itemKey] = hasExplicitItem
+                            ? !!sectionRaw[itemKey]
+                            : !!checklistSummary[sectionKey];
+                    }
+                });
+            });
+            return normalized;
+        }
+
+        function isSurgeryChecklistSectionComplete(details, sectionKey) {
+            const itemDefs = SURGERY_CHECKLIST_ITEM_MAP[sectionKey] || [];
+            if (sectionKey === 'signIn') {
+                return itemDefs.every(([itemKey]) => {
+                    const round1 = details?.[sectionKey]?.[itemKey]?.round1;
+                    return round1 === 'yes' || round1 === 'no' || round1 === 'na';
+                });
+            }
+            return itemDefs.every(([itemKey]) => !!details?.[sectionKey]?.[itemKey]);
+        }
+
+        function collectPopupSurgeryChecklistDetails(modalEl) {
+            const details = {};
+            Object.entries(SURGERY_CHECKLIST_ITEM_MAP).forEach(([sectionKey, itemDefs]) => {
+                details[sectionKey] = {};
+                itemDefs.forEach(([itemKey]) => {
+                    if (sectionKey === 'signIn') {
+                        const r1 = modalEl.querySelector(`input[name="popupChecklist_signIn_${itemKey}_r1"]:checked`)?.value || '';
+                        const r2 = modalEl.querySelector(`input[name="popupChecklist_signIn_${itemKey}_r2"]:checked`)?.value || '';
+                        details[sectionKey][itemKey] = { round1: r1, round2: r2 };
+                    } else {
+                        const id = `popupChecklist_${sectionKey}_${itemKey}`;
+                        details[sectionKey][itemKey] = !!modalEl.querySelector(`#${id}`)?.checked;
+                    }
+                });
+            });
+            return details;
+        }
+
+        function syncSurgeryChecklistSummary() {
+            const signIn = document.getElementById('surgeryChecklistSignIn')?.checked;
+            const signOut = document.getElementById('surgeryChecklistSignOut')?.checked;
+            const summary = document.getElementById('surgeryChecklistSummary');
+            if (!summary) return;
+            const items = [];
+            if (signIn) items.push('Sign In');
+            if (signOut) items.push('Sign Out');
+            summary.textContent = items.length ? items.join(' / ') + ' 완료' : '미작성';
+        }
+
+        function openSurgeryChecklistViewPopup(index) {
+            const p = patients[currentPatientIndex];
+            if (!p) return;
+            const surgeryList = p.records?.surgeries || p.records?.surgery || [];
+            const item = surgeryList[index];
+            if (!item) return;
+
+            const checklist = item.whoChecklist || item.checklist || {};
+            const checklistDetails = normalizeSurgeryChecklistDetails(item.whoChecklistDetails || item.checklistDetails, checklist);
+            const count = item.count || {};
+            const safe = (value) => escapeHtml(String(value ?? '-'));
+            const statusText = (ok) => ok ? '완료' : '미완료';
+            const renderChecklistItems = (sectionKey) => {
+                if (sectionKey === 'signIn') {
+                    const mark = (value, target) => value === target ? '●' : '';
+                    const rows = SURGERY_CHECKLIST_ITEM_MAP.signIn.map(([itemKey, label]) => {
+                        const item = checklistDetails?.signIn?.[itemKey] || { round1: '', round2: '' };
+                        return `
+                            <tr>
+                                <td style="border:1px solid #cbd5e1; padding:4px 6px; text-align:left;">${label}</td>
+                                <td style="border:1px solid #cbd5e1; padding:3px; text-align:center;">${mark(item.round1, 'yes')}</td>
+                                <td style="border:1px solid #cbd5e1; padding:3px; text-align:center;">${mark(item.round1, 'no')}</td>
+                                <td style="border:1px solid #cbd5e1; padding:3px; text-align:center;">${mark(item.round1, 'na')}</td>
+                                <td style="border:1px solid #cbd5e1; padding:3px; text-align:center;">${mark(item.round2, 'yes')}</td>
+                                <td style="border:1px solid #cbd5e1; padding:3px; text-align:center;">${mark(item.round2, 'no')}</td>
+                                <td style="border:1px solid #cbd5e1; padding:3px; text-align:center;">${mark(item.round2, 'na')}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                    return `
+                        <table style="width:100%; border-collapse:collapse; font-size:10.5px; background:#fff;">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2" style="border:1px solid #cbd5e1; padding:4px 6px; background:#f8fafc;">항목</th>
+                                    <th colspan="3" style="border:1px solid #cbd5e1; padding:4px; background:#f8fafc;">1차</th>
+                                    <th colspan="3" style="border:1px solid #cbd5e1; padding:4px; background:#f8fafc;">2차</th>
+                                </tr>
+                                <tr>
+                                    <th style="border:1px solid #cbd5e1; padding:3px; background:#f8fafc;">예</th>
+                                    <th style="border:1px solid #cbd5e1; padding:3px; background:#f8fafc;">아니오</th>
+                                    <th style="border:1px solid #cbd5e1; padding:3px; background:#f8fafc;">해당</th>
+                                    <th style="border:1px solid #cbd5e1; padding:3px; background:#f8fafc;">예</th>
+                                    <th style="border:1px solid #cbd5e1; padding:3px; background:#f8fafc;">아니오</th>
+                                    <th style="border:1px solid #cbd5e1; padding:3px; background:#f8fafc;">해당</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    `;
+                }
+                return SURGERY_CHECKLIST_ITEM_MAP[sectionKey].map(([itemKey, label]) => {
+                    const checked = !!checklistDetails?.[sectionKey]?.[itemKey];
+                    return `
+                        <div style="display:flex; align-items:center; gap:8px; font-size:11px; color:#334155; line-height:1.2;">
+                            <span style="display:inline-block; width:14px; text-align:center; color:${checked ? '#166534' : '#94a3b8'}; font-weight:900;">${checked ? '✓' : '○'}</span>
+                            <span>${label}</span>
+                        </div>
+                    `;
+                }).join('');
+            };
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.inset = '0';
+            overlay.style.background = 'rgba(15, 23, 42, 0.45)';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.zIndex = '9999';
+            overlay.style.padding = '8px';
+
+            const modal = document.createElement('div');
+            modal.style.width = '1320px';
+            modal.style.maxWidth = '99vw';
+            modal.style.maxHeight = '90vh';
+            modal.style.overflowY = 'auto';
+            modal.style.background = '#fff';
+            modal.style.borderRadius = '14px';
+            modal.style.boxShadow = '0 18px 45px rgba(15, 23, 42, 0.22)';
+            modal.style.padding = '18px';
+            modal.style.boxSizing = 'border-box';
+
+            modal.innerHTML = `
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                    <div style="font-size:16px; font-weight:800; color:#0f172a;">수술 기록 상세보기</div>
+                    <button type="button" id="surgeryViewClose" style="border:none; background:none; font-size:22px; color:#64748b; cursor:pointer;">×</button>
+                </div>
+
+                <div style="margin-bottom:18px; border:1px solid #dbeafe; border-radius:10px; background:#f8fafc; padding:12px;">
+                    <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">WHO 수술안전 체크리스트</div>
+                    <div style="display:grid; grid-template-columns:1fr; gap:8px;">
+                        <div style="border:1px solid #dbeafe; border-radius:8px; padding:10px 12px; background:#fff;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; font-size:12px; font-weight:800; color:#1e293b; margin-bottom:6px;">
+                                <span>수술 전 체크리스트</span>
+                                <span style="color:${checklist.signIn ? '#166534' : '#991b1b'};">${statusText(!!checklist.signIn)}</span>
+                            </div>
+                            <div style="display:grid; gap:4px;">${renderChecklistItems('signIn')}</div>
+                        </div>
+                        <div style="border:1px solid #dbeafe; border-radius:8px; padding:10px 12px; background:#fff;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; font-size:12px; font-weight:800; color:#1e293b; margin-bottom:6px;">
+                                <span>수술 후 체크리스트</span>
+                                <span style="color:${checklist.signOut ? '#166534' : '#991b1b'};">${statusText(!!checklist.signOut)}</span>
+                            </div>
+                            <div style="display:grid; gap:4px;">${renderChecklistItems('signOut')}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:18px; border:1px solid #dfe7f1; border-radius:10px; background:#fff; padding:12px;">
+                    <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">수술 기본 정보</div>
+                    <div style="display:grid; grid-template-columns:repeat(3, minmax(150px, 1fr)); gap:10px;">
+                        <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">수술 일시</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(formatDisplayTime(item.time))}</div></div>
+                        <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">수술유형</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.type || '-')}</div></div>
+                        <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">수술명</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.name || item.opName || '-')}</div></div>
+                        <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">수술자</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.doctor || item.surgeon || '-')}</div></div>
+                        <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">수술전 진단명</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.preDiagnosis || item.preDiag || '-')}</div></div>
+                        <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">수술후 진단명</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.postDiagnosis || item.postDiag || '-')}</div></div>
+                        <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">집도의</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.surgeon || item.doctor || '-')}</div></div>
+                        <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">제1보조의</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.assistant || '-')}</div></div>
+                        <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">소독간호사</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.scrubNurse || '-')}</div></div>
+                        <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">순환간호사</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.circulator || '-')}</div></div>
+                        <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">마취종류</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.anesthesia || '-')}</div></div>
+                        <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">시작 시각</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(formatDisplayTime(item.startTime || '-'))}</div></div>
+                        <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">종료 시각</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(formatDisplayTime(item.endTime || '-'))}</div></div>
+                        <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">예상 출혈량</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.estEbl || '-')}</div></div>
+                        <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">실제 출혈량</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.actualEbl || '-')}</div></div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:18px; border:1px solid #dfe7f1; border-radius:10px; background:#fff; padding:12px;">
+                    <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:8px;">거즈 및 기구 카운트</div>
+                    <table style="width:100%; border-collapse:collapse; font-size:11px; background:white;">
+                        <thead>
+                            <tr>
+                                <th style="border:1px solid #cbd5e1; padding:6px; background:#f8fafc;">단계</th>
+                                <th style="border:1px solid #cbd5e1; padding:6px; background:#f8fafc;">상태</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="border:1px solid #cbd5e1; padding:6px; font-weight:700;">수술 전</td>
+                                <td style="border:1px solid #cbd5e1; text-align:center; padding:6px;">${safe(count.pre || '미기록')}</td>
+                            </tr>
+                            <tr>
+                                <td style="border:1px solid #cbd5e1; padding:6px; font-weight:700;">폐쇄 전</td>
+                                <td style="border:1px solid #cbd5e1; text-align:center; padding:6px;">${safe(count.beforeClosure || '미기록')}</td>
+                            </tr>
+                            <tr>
+                                <td style="border:1px solid #cbd5e1; padding:6px; font-weight:700;">폐쇄 후</td>
+                                <td style="border:1px solid #cbd5e1; text-align:center; padding:6px;">${safe(count.afterClosure || '미기록')}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="margin-bottom:8px; border:1px solid #dfe7f1; border-radius:10px; background:#fff; padding:12px;">
+                    <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:8px;">수술 내용/소견/결과</div>
+                    <div style="border:1px solid #cbd5e1; border-radius:8px; min-height:92px; padding:10px; font-size:12px; color:#0f172a; background:#f8fafc; white-space:pre-wrap;">${safe(item.note || item.surgeryNote || '-')}</div>
+                </div>
+            `;
+
+            const close = () => overlay.remove();
+            modal.querySelector('#surgeryViewClose').addEventListener('click', close);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+        }
+
+        function openSurgeryRecordPopup() {
+            const p = patients[currentPatientIndex];
+            if (!p) return;
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.inset = '0';
+            overlay.style.background = 'rgba(15, 23, 42, 0.45)';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.zIndex = '9999';
+            overlay.style.padding = '8px';
+
+            const modal = document.createElement('div');
+            modal.style.width = '1320px';
+            modal.style.maxWidth = '99vw';
+            modal.style.maxHeight = '90vh';
+            modal.style.overflowY = 'auto';
+            modal.style.background = '#fff';
+            modal.style.borderRadius = '14px';
+            modal.style.boxShadow = '0 18px 45px rgba(15, 23, 42, 0.22)';
+            modal.style.padding = '18px';
+            modal.style.boxSizing = 'border-box';
+
+            const currentChecklist = {
+                signIn: document.getElementById('surgeryChecklistSignIn')?.checked || false,
+                signOut: document.getElementById('surgeryChecklistSignOut')?.checked || false
+            };
+
+            const currentValues = {
+                time: document.getElementById('surgeryTime')?.value || '',
+                type: document.getElementById('surgeryType')?.value || '일반',
+                name: document.getElementById('surgeryName')?.value || '',
+                doctor: document.getElementById('surgeryDoctor')?.value || '',
+                note: document.getElementById('surgeryNote')?.value || '',
+                preDiagnosis: document.getElementById('surgeryPreDiagnosis')?.value || '',
+                postDiagnosis: document.getElementById('surgeryPostDiagnosis')?.value || '',
+                surgeon: document.getElementById('surgerySurgeon')?.value || '',
+                assistant: document.getElementById('surgeryAssistant')?.value || '',
+                scrubNurse: document.getElementById('surgeryScrubNurse')?.value || '',
+                circulator: document.getElementById('surgeryCirculator')?.value || '',
+                anesthesia: document.getElementById('surgeryAnesthesia')?.value || '전신',
+                startTime: document.getElementById('surgeryStartTime')?.value || '',
+                endTime: document.getElementById('surgeryEndTime')?.value || '',
+                estEbl: document.getElementById('surgeryEstEbl')?.value || '',
+                actualEbl: document.getElementById('surgeryActualEbl')?.value || ''
+            };
+
+            const surgeryList = p.records?.surgeries || p.records?.surgery || [];
+            const editingRecord = (editingSurgeryIndex !== null && surgeryList[editingSurgeryIndex]) ? surgeryList[editingSurgeryIndex] : null;
+            const currentChecklistDetails = normalizeSurgeryChecklistDetails(
+                editingRecord?.whoChecklistDetails || editingRecord?.checklistDetails || surgeryChecklistDetailsDraft,
+                currentChecklist
+            );
+
+            const radioValue = (name, fallback='') => {
+                const checked = document.querySelector(`input[name="${name}"]:checked`);
+                return checked ? checked.value : fallback;
+            };
+
+            const renderChecklistSection = (sectionKey, title) => {
+                if (sectionKey === 'signIn') {
+                    const options = [
+                        ['yes', '예'],
+                        ['no', '아니오'],
+                        ['na', '해당']
+                    ];
+                    const radioCell = (itemKey, roundKey, targetValue, currentValue) => {
+                        const name = `popupChecklist_signIn_${itemKey}_${roundKey}`;
+                        const checked = currentValue === targetValue ? 'checked' : '';
+                        return `<td style="border:1px solid #cbd5e1; text-align:center; padding:3px;"><input type="radio" name="${name}" value="${targetValue}" ${checked}></td>`;
+                    };
+                    const rows = SURGERY_CHECKLIST_ITEM_MAP.signIn.map(([itemKey, label]) => {
+                        const item = currentChecklistDetails?.signIn?.[itemKey] || { round1: '', round2: '' };
+                        return `
+                            <tr>
+                                <td style="border:1px solid #cbd5e1; padding:4px 6px; text-align:left; font-size:10.5px;">${label}</td>
+                                ${options.map(([value]) => radioCell(itemKey, 'r1', value, item.round1)).join('')}
+                                ${options.map(([value]) => radioCell(itemKey, 'r2', value, item.round2)).join('')}
+                            </tr>
+                        `;
+                    }).join('');
+                    return `
+                        <div style="border:1px solid #dbeafe; border-radius:8px; padding:10px 12px; background:#fff;">
+                            <div style="font-size:12px; font-weight:800; color:#1e293b; margin-bottom:8px;">${title}</div>
+                            <table style="width:100%; border-collapse:collapse; font-size:10.5px; background:#fff;">
+                                <thead>
+                                    <tr>
+                                        <th rowspan="2" style="border:1px solid #cbd5e1; padding:4px 6px; background:#f8fafc;">항목</th>
+                                        <th colspan="3" style="border:1px solid #cbd5e1; padding:4px; background:#f8fafc;">1차</th>
+                                        <th colspan="3" style="border:1px solid #cbd5e1; padding:4px; background:#f8fafc;">2차</th>
+                                    </tr>
+                                    <tr>
+                                        <th style="border:1px solid #cbd5e1; padding:3px; background:#f8fafc;">예</th>
+                                        <th style="border:1px solid #cbd5e1; padding:3px; background:#f8fafc;">아니오</th>
+                                        <th style="border:1px solid #cbd5e1; padding:3px; background:#f8fafc;">해당</th>
+                                        <th style="border:1px solid #cbd5e1; padding:3px; background:#f8fafc;">예</th>
+                                        <th style="border:1px solid #cbd5e1; padding:3px; background:#f8fafc;">아니오</th>
+                                        <th style="border:1px solid #cbd5e1; padding:3px; background:#f8fafc;">해당</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+                const itemsHtml = SURGERY_CHECKLIST_ITEM_MAP[sectionKey].map(([itemKey, label]) => {
+                    const id = `popupChecklist_${sectionKey}_${itemKey}`;
+                    const checked = currentChecklistDetails?.[sectionKey]?.[itemKey] ? 'checked' : '';
+                    return `
+                        <label style="display:flex; align-items:center; gap:8px; font-size:11px; color:#334155; line-height:1.2;">
+                            <input type="checkbox" id="${id}" ${checked}> ${label}
+                        </label>
+                    `;
+                }).join('');
+                return `
+                    <div style="border:1px solid #dbeafe; border-radius:8px; padding:10px 12px; background:#fff;">
+                        <div style="font-size:12px; font-weight:800; color:#1e293b; margin-bottom:8px;">${title}</div>
+                        <div style="display:grid; gap:6px;">${itemsHtml}</div>
+                    </div>
+                `;
+            };
+
+            modal.innerHTML = `
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                    <div style="font-size:16px; font-weight:800; color:#0f172a;">수술 기록 팝업</div>
+                    <button type="button" id="surgeryChecklistClose" style="border:none; background:none; font-size:22px; color:#64748b; cursor:pointer;">×</button>
+                </div>
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:12px; align-items:start; margin-bottom:12px;">
+                    <div style="border:1px solid #dbeafe; border-radius:10px; background:#f8fafc; padding:12px;">
+                        <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">KUMC 수술안전 체크리스트</div>
+                        <div style="display:grid; grid-template-columns:1fr; gap:8px;">
+                            ${renderChecklistSection('signIn', '수술 전 체크리스트')}
+                            ${renderChecklistSection('signOut', '수술 후 체크리스트')}
+                        </div>
+                    </div>
+
+                    <div>
+                <div style="margin-bottom:10px; border:1px solid #dfe7f1; border-radius:10px; background:#fff; padding:12px;">
+                    <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">수술 기본 정보</div>
+                    <div style="display:grid; grid-template-columns:repeat(3, minmax(150px, 1fr)); gap:10px; align-items:end;">
+                        <div>
+                            <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">수술 일시</div>
+                            <input id="popupSurgeryTime" type="datetime-local" value="${currentValues.time ? currentValues.time.replace(' ', 'T') : ''}" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">수술유형</div>
+                            <select id="popupSurgeryType" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                <option value="일반" ${currentValues.type === '일반' ? 'selected' : ''}>일반</option>
+                                <option value="마취" ${currentValues.type === '마취' ? 'selected' : ''}>마취</option>
+                                <option value="시술" ${currentValues.type === '시술' ? 'selected' : ''}>시술</option>
+                                <option value="기타" ${currentValues.type === '기타' ? 'selected' : ''}>기타</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">수술명</div>
+                            <input id="popupSurgeryName" type="text" value="${currentValues.name}" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">수술자</div>
+                            <input id="popupSurgeryDoctor" type="text" value="${currentValues.doctor}" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">수술전 진단명</div>
+                            <input id="popupSurgeryPreDiagnosis" type="text" value="${currentValues.preDiagnosis}" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">수술후 진단명</div>
+                            <input id="popupSurgeryPostDiagnosis" type="text" value="${currentValues.postDiagnosis}" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">집도의</div>
+                            <input id="popupSurgerySurgeon" type="text" value="${currentValues.surgeon}" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">제1보조의</div>
+                            <input id="popupSurgeryAssistant" type="text" value="${currentValues.assistant}" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">소독간호사</div>
+                            <input id="popupSurgeryScrubNurse" type="text" value="${currentValues.scrubNurse}" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">순환간호사</div>
+                            <input id="popupSurgeryCirculator" type="text" value="${currentValues.circulator}" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">마취종류</div>
+                            <select id="popupSurgeryAnesthesia" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                <option value="전신" ${currentValues.anesthesia === '전신' ? 'selected' : ''}>전신</option>
+                                <option value="척수" ${currentValues.anesthesia === '척수' ? 'selected' : ''}>척수</option>
+                                <option value="부위" ${currentValues.anesthesia === '부위' ? 'selected' : ''}>부위</option>
+                                <option value="국소" ${currentValues.anesthesia === '국소' ? 'selected' : ''}>국소</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">시작 시각</div>
+                            <input id="popupSurgeryStartTime" type="datetime-local" value="${currentValues.startTime ? currentValues.startTime.replace(' ', 'T') : ''}" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">종료 시각</div>
+                            <input id="popupSurgeryEndTime" type="datetime-local" value="${currentValues.endTime ? currentValues.endTime.replace(' ', 'T') : ''}" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">예상 출혈량</div>
+                            <input id="popupSurgeryEstEbl" type="text" value="${currentValues.estEbl}" placeholder="mL" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">실제 출혈량</div>
+                            <input id="popupSurgeryActualEbl" type="text" value="${currentValues.actualEbl}" placeholder="mL" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:10px; border:1px solid #dfe7f1; border-radius:10px; background:#fff; padding:12px;">
+                    <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:8px;">거즈 및 기구 카운트</div>
+                    <table style="width:100%; border-collapse:collapse; font-size:11px; background:white;">
+                        <thead>
+                            <tr>
+                                <th style="border:1px solid #cbd5e1; padding:6px; background:#f8fafc;">단계</th>
+                                <th style="border:1px solid #cbd5e1; padding:6px; background:#f8fafc;">Match</th>
+                                <th style="border:1px solid #cbd5e1; padding:6px; background:#f8fafc;">Mismatch</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="border:1px solid #cbd5e1; padding:6px; font-weight:700;">수술 전</td>
+                                <td style="border:1px solid #cbd5e1; text-align:center; padding:6px;"><input type="radio" name="popupSurgeryCountPre" value="Match" ${radioValue('surgeryCountPre') === 'Match' ? 'checked' : ''}></td>
+                                <td style="border:1px solid #cbd5e1; text-align:center; padding:6px;"><input type="radio" name="popupSurgeryCountPre" value="Mismatch" ${radioValue('surgeryCountPre') === 'Mismatch' ? 'checked' : ''}></td>
+                            </tr>
+                            <tr>
+                                <td style="border:1px solid #cbd5e1; padding:6px; font-weight:700;">폐쇄 전</td>
+                                <td style="border:1px solid #cbd5e1; text-align:center; padding:6px;"><input type="radio" name="popupSurgeryCountBeforeClosure" value="Match" ${radioValue('surgeryCountBeforeClosure') === 'Match' ? 'checked' : ''}></td>
+                                <td style="border:1px solid #cbd5e1; text-align:center; padding:6px;"><input type="radio" name="popupSurgeryCountBeforeClosure" value="Mismatch" ${radioValue('surgeryCountBeforeClosure') === 'Mismatch' ? 'checked' : ''}></td>
+                            </tr>
+                            <tr>
+                                <td style="border:1px solid #cbd5e1; padding:6px; font-weight:700;">폐쇄 후</td>
+                                <td style="border:1px solid #cbd5e1; text-align:center; padding:6px;"><input type="radio" name="popupSurgeryCountAfterClosure" value="Match" ${radioValue('surgeryCountAfterClosure') === 'Match' ? 'checked' : ''}></td>
+                                <td style="border:1px solid #cbd5e1; text-align:center; padding:6px;"><input type="radio" name="popupSurgeryCountAfterClosure" value="Mismatch" ${radioValue('surgeryCountAfterClosure') === 'Mismatch' ? 'checked' : ''}></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="margin-bottom:18px; border:1px solid #dfe7f1; border-radius:10px; background:#fff; padding:12px;">
+                    <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:8px;">수술 내용/소견/결과</div>
+                    <textarea id="popupSurgeryNote" rows="4" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:10px; resize:vertical; font-size:12px; box-sizing:border-box;">${currentValues.note}</textarea>
+                </div>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:8px;">
+                    <button type="button" id="surgeryChecklistCancel" class="btn-slate" style="padding:8px 12px; font-size:11px; font-weight:700;">취소</button>
+                    <button type="button" id="surgeryChecklistSave" class="btn-blue" style="padding:8px 12px; font-size:11px; font-weight:700;">저장</button>
+                </div>
+            `;
+
+            const setFormValue = (id, value) => { const el = document.getElementById(id); if (el) el.value = value ?? ''; };
+            const setRadioValue = (name, value) => {
+                document.querySelectorAll(`input[name="${name}"]`).forEach(input => {
+                    input.checked = (input.value === value);
+                });
+            };
+
+            const close = () => overlay.remove();
+            modal.querySelector('#surgeryChecklistClose').addEventListener('click', close);
+            modal.querySelector('#surgeryChecklistCancel').addEventListener('click', close);
+            modal.querySelector('#surgeryChecklistSave').addEventListener('click', () => {
+                setFormValue('surgeryTime', modal.querySelector('#popupSurgeryTime').value);
+                setFormValue('surgeryType', modal.querySelector('#popupSurgeryType').value);
+                setFormValue('surgeryName', modal.querySelector('#popupSurgeryName').value);
+                setFormValue('surgeryDoctor', modal.querySelector('#popupSurgeryDoctor').value);
+                setFormValue('surgeryNote', modal.querySelector('#popupSurgeryNote').value);
+                setFormValue('surgeryPreDiagnosis', modal.querySelector('#popupSurgeryPreDiagnosis').value);
+                setFormValue('surgeryPostDiagnosis', modal.querySelector('#popupSurgeryPostDiagnosis').value);
+                setFormValue('surgerySurgeon', modal.querySelector('#popupSurgerySurgeon').value);
+                setFormValue('surgeryAssistant', modal.querySelector('#popupSurgeryAssistant').value);
+                setFormValue('surgeryScrubNurse', modal.querySelector('#popupSurgeryScrubNurse').value);
+                setFormValue('surgeryCirculator', modal.querySelector('#popupSurgeryCirculator').value);
+                setFormValue('surgeryAnesthesia', modal.querySelector('#popupSurgeryAnesthesia').value);
+                setFormValue('surgeryStartTime', modal.querySelector('#popupSurgeryStartTime').value);
+                setFormValue('surgeryEndTime', modal.querySelector('#popupSurgeryEndTime').value);
+                setFormValue('surgeryEstEbl', modal.querySelector('#popupSurgeryEstEbl').value);
+                setFormValue('surgeryActualEbl', modal.querySelector('#popupSurgeryActualEbl').value);
+
+                const checklistDetails = collectPopupSurgeryChecklistDetails(modal);
+                surgeryChecklistDetailsDraft = checklistDetails;
+                document.getElementById('surgeryChecklistSignIn').checked = isSurgeryChecklistSectionComplete(checklistDetails, 'signIn');
+                document.getElementById('surgeryChecklistSignOut').checked = isSurgeryChecklistSectionComplete(checklistDetails, 'signOut');
+                setRadioValue('surgeryCountPre', modal.querySelector('input[name="popupSurgeryCountPre"]:checked')?.value || '');
+                setRadioValue('surgeryCountBeforeClosure', modal.querySelector('input[name="popupSurgeryCountBeforeClosure"]:checked')?.value || '');
+                setRadioValue('surgeryCountAfterClosure', modal.querySelector('input[name="popupSurgeryCountAfterClosure"]:checked')?.value || '');
+                syncSurgeryChecklistSummary();
+                close();
+                addRecord('surgery');
+            });
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+        }
+
+        function openSurgeryChecklistPopup() {
+            openSurgeryRecordPopup();
+        }
+
+        function openTransfusionChecklistPopup() {
+            const p = patients[currentPatientIndex];
+            if (!p) return;
+
+            const transfusionList = p.records?.transfusions || p.records?.transfusion || [];
+            const latestTransfusion = (editingTransfusionIndex !== null && transfusionList[editingTransfusionIndex])
+                ? transfusionList[editingTransfusionIndex]
+                : [...transfusionList].sort((a, b) => (b.time || '').localeCompare(a.time || ''))[0];
+            const savedChecklist = (latestTransfusion && (latestTransfusion.whoChecklist || latestTransfusion.checklist)) || p.records?.transfusionChecklist || {};
+            const savedTimeline = (latestTransfusion && (latestTransfusion.vsTimeline || latestTransfusion.timeline)) || window.transfusionTimeline || {};
+            const currentValues = {
+                time: document.getElementById('transfusionTime')?.value || '',
+                type: document.getElementById('transfusionType')?.value || 'A',
+                product: document.getElementById('transfusionProduct')?.value || '',
+                barcode: document.getElementById('transfusionBarcode')?.value || '',
+                volume: document.getElementById('transfusionVolume')?.value || '',
+                note: document.getElementById('transfusionNote')?.value || '',
+                staff: document.getElementById('transfusionStaff')?.value || '',
+                bagId: document.getElementById('transfusionBagId')?.value || '',
+                aboRh: document.getElementById('transfusionAboRh')?.value || '',
+                crossmatch: document.getElementById('transfusionCrossmatch')?.value || '적합',
+                nurse1: document.getElementById('transfusionNurse1')?.value || '',
+                nurse2: document.getElementById('transfusionNurse2')?.value || '',
+                vsBp: document.getElementById('transfusionVsBp')?.value || '',
+                vsHr: document.getElementById('transfusionVsHr')?.value || '',
+                vsRr: document.getElementById('transfusionVsRr')?.value || '',
+                vsBt: document.getElementById('transfusionVsBt')?.value || '',
+                vsSpo2: document.getElementById('transfusionVsSpo2')?.value || '',
+                vsRate: document.getElementById('transfusionVsRate')?.value || ''
+            };
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.inset = '0';
+            overlay.style.background = 'rgba(15, 23, 42, 0.45)';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.zIndex = '9999';
+            overlay.style.padding = '8px';
+
+            const modal = document.createElement('div');
+            modal.style.width = '1320px';
+            modal.style.maxWidth = '99vw';
+            modal.style.maxHeight = '90vh';
+            modal.style.overflowY = 'auto';
+            modal.style.background = '#fff';
+            modal.style.borderRadius = '14px';
+            modal.style.boxShadow = '0 18px 45px rgba(15, 23, 42, 0.22)';
+            modal.style.padding = '18px';
+            modal.style.boxSizing = 'border-box';
+
+            modal.innerHTML = `
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px;">
+                    <div style="font-size:16px; font-weight:800; color:#0f172a;">수혈 기록 팝업</div>
+                    <button type="button" id="transfusionChecklistClose" style="border:none; background:none; font-size:22px; color:#64748b; cursor:pointer;">×</button>
+                </div>
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:12px; align-items:start; margin-bottom:12px;">
+                    <div style="border:1px solid #dbeafe; border-radius:10px; background:#f8fafc; padding:12px;">
+                        <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">WHO 수혈안전 체크리스트</div>
+                        <div style="border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; margin-bottom:10px;">
+                            <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+                                <div style="padding:10px; font-size:12px; font-weight:800; color:#475569; border-right:1px solid #e2e8f0;">단계</div>
+                                <div style="padding:10px; font-size:12px; font-weight:800; color:#475569; border-right:1px solid #e2e8f0; text-align:center;">Match(확인)</div>
+                                <div style="padding:10px; font-size:12px; font-weight:800; color:#475569; text-align:center;">Mismatch(미확인)</div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr));">
+                                <div style="padding:12px; border-right:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0; font-size:12px; font-weight:700; color:#1e293b;">혈액제제 확인</div>
+                                <div style="padding:12px; border-right:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0; text-align:center;"><input type="checkbox" id="transfusionChecklistBeforeMatch" ${savedChecklist.beforeMatch ? 'checked' : ''}></div>
+                                <div style="padding:12px; border-bottom:1px solid #e2e8f0; text-align:center;"><input type="checkbox" id="transfusionChecklistBeforeMismatch" ${savedChecklist.beforeMismatch ? 'checked' : ''}></div>
+
+                                <div style="padding:12px; border-right:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0; font-size:12px; font-weight:700; color:#1e293b;">혈액형 확인</div>
+                                <div style="padding:12px; border-right:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0; text-align:center;"><input type="checkbox" id="transfusionChecklistTypeMatch" ${savedChecklist.typeMatch ? 'checked' : ''}></div>
+                                <div style="padding:12px; border-bottom:1px solid #e2e8f0; text-align:center;"><input type="checkbox" id="transfusionChecklistTypeMismatch" ${savedChecklist.typeMismatch ? 'checked' : ''}></div>
+
+                                <div style="padding:12px; border-right:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0; font-size:12px; font-weight:700; color:#1e293b;">환자 확인</div>
+                                <div style="padding:12px; border-right:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0; text-align:center;"><input type="checkbox" id="transfusionChecklistPatientMatch" ${savedChecklist.patientMatch ? 'checked' : ''}></div>
+                                <div style="padding:12px; border-bottom:1px solid #e2e8f0; text-align:center;"><input type="checkbox" id="transfusionChecklistPatientMismatch" ${savedChecklist.patientMismatch ? 'checked' : ''}></div>
+                         </div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:repeat(2, minmax(160px, 1fr)); gap:8px;">
+                            <div>
+                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">V/S 단계</div>
+                                <select id="popupTransfusionVsStage" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
+                                    <option value="수혈 전 (1시간 이내)">수혈 전</option>
+                                    <option value="수혈 시작 15분 후">15분 후</option>
+                                    <option value="수혈 중">수혈 중</option>
+                                    <option value="수혈 완료">수혈 완료</option>
+                                </select>
+                            </div>
+                            <div style="display:flex; align-items:end;">
+                                <button type="button" id="popupTransfusionSaveVs" class="btn-blue" style="width:100%; padding:8px 10px; font-size:11px; color:#ffffff; font-weight:800;">현재 단계 V/S 저장</button>
+                            </div>
+                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">BP</div><input id="popupTransfusionVsBp" type="text" value="${currentValues.vsBp}" placeholder="120/80" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
+                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">HR</div><input id="popupTransfusionVsHr" type="number" step="0.1" value="${currentValues.vsHr}" placeholder="/min" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
+                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">RR</div><input id="popupTransfusionVsRr" type="number" step="0.1" value="${currentValues.vsRr}" placeholder="/min" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
+                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">BT</div><input id="popupTransfusionVsBt" type="number" step="0.1" value="${currentValues.vsBt}" placeholder="℃" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
+                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">SpO2</div><input id="popupTransfusionVsSpo2" type="number" step="0.1" value="${currentValues.vsSpo2}" placeholder="%" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
+                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">속도</div><input id="popupTransfusionVsRate" type="text" value="${currentValues.vsRate}" placeholder="gtt/min" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style="margin-bottom:10px; border:1px solid #dfe7f1; border-radius:10px; background:#fff; padding:12px;">
+                            <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">수혈 기본 정보</div>
+                            <div style="display:grid; grid-template-columns:repeat(3, minmax(140px, 1fr)); gap:10px; align-items:end;">
+                                <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">수혈 일시</div><input id="popupTransfusionTime" type="datetime-local" value="${currentValues.time ? currentValues.time.replace(' ', 'T') : ''}" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
+                                <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">혈액형</div><select id="popupTransfusionType" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"><option value="A" ${currentValues.type === 'A' ? 'selected' : ''}>A형</option><option value="B" ${currentValues.type === 'B' ? 'selected' : ''}>B형</option><option value="AB" ${currentValues.type === 'AB' ? 'selected' : ''}>AB형</option><option value="O" ${currentValues.type === 'O' ? 'selected' : ''}>O형</option><option value="미기재" ${currentValues.type === '미기재' ? 'selected' : ''}>미기재</option></select></div>
+                                <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">제제</div><input id="popupTransfusionProduct" type="text" value="${currentValues.product}" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
+                                <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">혈액 바코드</div><input id="popupTransfusionBarcode" type="text" value="${currentValues.barcode}" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
+                                <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">용량</div><input id="popupTransfusionVolume" type="text" value="${currentValues.volume}" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
+                                <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">담당</div><input id="popupTransfusionStaff" type="text" value="${currentValues.staff}" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom:10px; border:1px solid #fca5a5; border-radius:10px; background:#fff5f5; padding:12px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;">
+                                <div style="font-size:12px; font-weight:800; color:#7f1d1d;">2인 교차확인(Co-sign)</div>
+                                <button type="button" class="btn-red" id="popupTransfusionEmergency" style="padding:8px 12px; font-size:11px; font-weight:800;">수혈 즉시 중단</button>
+                            </div>
+                            <div style="display:grid; grid-template-columns:repeat(3, minmax(140px, 1fr)); gap:8px;">
+                                <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">혈액제제 식별번호</div><input id="popupTransfusionBagId" type="text" value="${currentValues.bagId}" style="width:100%; border:1px solid #fecaca; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
+                                <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">혈액형(ABO/Rh)</div><input id="popupTransfusionAboRh" type="text" value="${currentValues.aboRh}" style="width:100%; border:1px solid #fecaca; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
+                                <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">교차시험 적합</div><select id="popupTransfusionCrossmatch" style="width:100%; border:1px solid #fecaca; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"><option value="적합" ${currentValues.crossmatch === '적합' ? 'selected' : ''}>적합</option><option value="미적합" ${currentValues.crossmatch === '미적합' ? 'selected' : ''}>미적합</option><option value="검토중" ${currentValues.crossmatch === '검토중' ? 'selected' : ''}>검토중</option></select></div>
+                                <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">승인 간호사 1</div><input id="popupTransfusionNurse1" type="text" value="${currentValues.nurse1}" style="width:100%; border:1px solid #fecaca; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
+                                <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">승인 간호사 2</div><input id="popupTransfusionNurse2" type="text" value="${currentValues.nurse2}" style="width:100%; border:1px solid #fecaca; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
+                                <div style="display:flex; align-items:end;"><button type="button" class="btn-blue" id="popupTransfusionCosign" style="width:100%; padding:8px 10px; font-size:11px; color:#ffffff; font-weight:800;">2인 동시 승인</button></div>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom:12px; border:1px solid #dfe7f1; border-radius:10px; background:#fff; padding:12px;">
+                            <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:8px;">수혈 반응/소견</div>
+                            <textarea id="popupTransfusionNote" rows="4" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:10px; resize:vertical; font-size:12px; box-sizing:border-box;">${currentValues.note}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:8px;">
+                    <button type="button" id="transfusionChecklistCancel" class="btn-slate" style="padding:8px 12px; font-size:11px; font-weight:700;">취소</button>
+                    <button type="button" id="transfusionChecklistSave" class="btn-blue" style="padding:8px 12px; font-size:11px; color:#ffffff; font-weight:800;">저장</button>
+                </div>
+            `;
+
+            const close = () => overlay.remove();
+            modal.querySelector('#transfusionChecklistClose').addEventListener('click', close);
+            modal.querySelector('#transfusionChecklistCancel').addEventListener('click', close);
+            modal.querySelector('#popupTransfusionEmergency').addEventListener('click', () => {
+                triggerTransfusionEmergencyStop();
+            });
+            modal.querySelector('#popupTransfusionCosign').addEventListener('click', () => {
+                const n1 = modal.querySelector('#popupTransfusionNurse1').value.trim();
+                const n2 = modal.querySelector('#popupTransfusionNurse2').value.trim();
+                if (!n1 || !n2) {
+                    alert('승인 간호사 2명 이름을 입력해 주세요.');
+                    return;
+                }
+                alert(`2인 승인 완료: ${n1} / ${n2}`);
+            });
+            modal.querySelector('#popupTransfusionSaveVs').addEventListener('click', () => {
+                const stage = modal.querySelector('#popupTransfusionVsStage').value;
+                const snapshot = {
+                    bp: modal.querySelector('#popupTransfusionVsBp').value.trim(),
+                    hr: modal.querySelector('#popupTransfusionVsHr').value.trim(),
+                    rr: modal.querySelector('#popupTransfusionVsRr').value.trim(),
+                    bt: modal.querySelector('#popupTransfusionVsBt').value.trim(),
+                    spo2: modal.querySelector('#popupTransfusionVsSpo2').value.trim(),
+                    rate: modal.querySelector('#popupTransfusionVsRate').value.trim(),
+                    savedAt: new Date().toISOString().slice(0, 19).replace('T', ' ')
+                };
+                if (!window.transfusionTimeline) window.transfusionTimeline = {};
+                window.transfusionTimeline[stage] = snapshot;
+                alert(`${stage} V/S가 저장되었습니다.`);
+            });
+            modal.querySelector('#transfusionChecklistSave').addEventListener('click', async () => {
+                const popupTime = modal.querySelector('#popupTransfusionTime').value;
+                const popupProduct = modal.querySelector('#popupTransfusionProduct').value.trim();
+                const popupBarcode = modal.querySelector('#popupTransfusionBarcode').value.trim();
+                const popupNote = modal.querySelector('#popupTransfusionNote').value.trim();
+                if (!popupTime || !popupProduct || !popupBarcode || !popupNote) {
+                    alert('일시, 제제, 혈액 바코드, 반응/소견은 필수입니다.');
+                    return;
+                }
+
+                const checklist = {
+                    beforeMatch: !!modal.querySelector('#transfusionChecklistBeforeMatch')?.checked,
+                    beforeMismatch: !!modal.querySelector('#transfusionChecklistBeforeMismatch')?.checked,
+                    typeMatch: !!modal.querySelector('#transfusionChecklistTypeMatch')?.checked,
+                    typeMismatch: !!modal.querySelector('#transfusionChecklistTypeMismatch')?.checked,
+                    patientMatch: !!modal.querySelector('#transfusionChecklistPatientMatch')?.checked,
+                    patientMismatch: !!modal.querySelector('#transfusionChecklistPatientMismatch')?.checked,
+                    duringMatch: !!modal.querySelector('#transfusionChecklistDuringMatch')?.checked,
+                    duringMismatch: !!modal.querySelector('#transfusionChecklistDuringMismatch')?.checked,
+                    afterMatch: !!modal.querySelector('#transfusionChecklistAfterMatch')?.checked,
+                    afterMismatch: !!modal.querySelector('#transfusionChecklistAfterMismatch')?.checked,
+                    updatedAt: new Date().toISOString()
+                };
+
+                try {
+                    if (!p.records) p.records = {};
+                    if (!p.records.transfusions && !p.records.transfusion) p.records.transfusions = [];
+                    if (p.records.transfusion && !p.records.transfusions) p.records.transfusions = p.records.transfusion;
+                    if (!p.records.transfusion && p.records.transfusions) p.records.transfusion = p.records.transfusions;
+
+                    const transfusionList = p.records.transfusions || p.records.transfusion || [];
+                    const existingLinkId = editingTransfusionIndex !== null ? (transfusionList[editingTransfusionIndex]?.linkId || '') : '';
+                    const bloodType = modal.querySelector('#popupTransfusionType').value || '미기재';
+                    const volume = modal.querySelector('#popupTransfusionVolume').value.trim();
+                    const staff = modal.querySelector('#popupTransfusionStaff').value.trim() || '미기재';
+                    const bagId = modal.querySelector('#popupTransfusionBagId').value.trim();
+                    const aboRh = modal.querySelector('#popupTransfusionAboRh').value.trim();
+                    const crossmatch = modal.querySelector('#popupTransfusionCrossmatch').value || '적합';
+                    const nurse1 = modal.querySelector('#popupTransfusionNurse1').value.trim();
+                    const nurse2 = modal.querySelector('#popupTransfusionNurse2').value.trim();
+
+                    const timeline = window.transfusionTimeline || savedTimeline || {};
+                    const newTransfusionRecord = {
+                        time: popupTime.replace('T', ' '),
+                        type: bloodType,
+                        product: popupProduct,
+                        barcode: popupBarcode,
+                        volume,
+                        note: popupNote,
+                        staff,
+                        bagId,
+                        aboRh,
+                        crossmatch,
+                        coSign: { nurse1, nurse2, approved: !!(nurse1 && nurse2) },
+                        vsTimeline: timeline,
+                        bloodBagId: bagId,
+                        bloodType: aboRh || bloodType,
+                        productType: popupProduct,
+                        nurse1,
+                        nurse2,
+                        cosignTime: nurse1 && nurse2 ? new Date().toISOString().slice(0, 19).replace('T', ' ') : '',
+                        status: '완료',
+                        timeline: {
+                            preVS: timeline['수혈 전 (1시간 이내)'] || '',
+                            min15VS: timeline['수혈 시작 15분 후'] || '',
+                            duringVS: timeline['수혈 중'] ? [timeline['수혈 중']] : [],
+                            postVS: timeline['수혈 완료'] || ''
+                        },
+                        reactionOccurred: /반응|알레르기|발열|호흡곤란|부작용/i.test(popupNote),
+                        reactionNote: popupNote,
+                        whoChecklist: checklist,
+                        checklist,
+                        linkId: buildTransfusionVsLinkId(existingLinkId)
+                    };
+
+                    if (editingTransfusionIndex !== null) {
+                        transfusionList[editingTransfusionIndex] = { ...transfusionList[editingTransfusionIndex], ...newTransfusionRecord };
+                        editingTransfusionIndex = null;
+                    } else {
+                        transfusionList.push(newTransfusionRecord);
+                    }
+
+                    p.records.transfusions = transfusionList;
+                    p.records.transfusion = transfusionList;
+                    p.records.transfusionChecklist = checklist;
+                    sortRecordsByTime(transfusionList);
+                    upsertTransfusionTimelineToVsRecords(p, newTransfusionRecord);
+
+                    await savePatientToBackend(p);
+                    renderAllRecords();
+                    cancelTransfusionEdit();
+                } catch (error) {
+                    console.error('수혈 기록 저장 오류:', error);
+                    alert('수혈 기록 저장 중 오류가 발생했습니다. 입력값을 확인해 주세요.');
+                    return;
+                }
+
+                alert('수혈 기록이 저장되었습니다.');
+                close();
+            });
+
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+        }
+
+        function renderSurgeryDetailCard() {
+            const card = document.getElementById('surgeryDetailCard');
+            if (!card) return;
+            card.innerHTML = '';
+            card.style.display = 'none';
+        }
+
+        function renderTransfusionTable() {
+            const p = patients[currentPatientIndex];
+            const tbody = document.getElementById('transfusionTable');
+            if (!tbody || !p) return;
+            const transfusionList = p.records?.transfusions || p.records?.transfusion || [];
+            const records = getDateFilteredRecords(transfusionList);
+
+            if (records.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#94a3b8;">등록된 수혈 기록이 없습니다.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = records.map((r) => {
+                const actualIndex = transfusionList.findIndex(item => item === r);
+                const coSignText = r.coSign && r.coSign.nurse1 && r.coSign.nurse2 ? `${r.coSign.nurse1}/${r.coSign.nurse2}` : (r.nurse1 && r.nurse2 ? `${r.nurse1}/${r.nurse2}` : '미승인');
+                const timelineText = r.vsTimeline ? Object.keys(r.vsTimeline).join(', ') : (r.timeline ? Object.keys(r.timeline).filter(k => r.timeline[k]).join(', ') : '-');
+                return `
+                    <tr>
+                        <td>${formatDisplayTime(r.time)}</td>
+                        <td>${r.type || r.bloodType || '미기재'}</td>
+                        <td>${r.product || r.productType || '-'}</td>
+                        <td>${r.barcode || r.bloodBagId || '-'}</td>
+                        <td>${r.volume || '-'}</td>
+                        <td class="transfusion-note-cell">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                                <div style="flex:1; min-width:0; text-align:left; line-height:1.2; white-space:normal;">
+                                    <div style="text-align:left; margin:0;">${r.note || r.reactionNote || '-'}</div>
+                                    <div style="text-align:left; margin-top:2px; color:#64748b;">[Bag: ${r.bagId || r.bloodBagId || '-'} / ${r.aboRh || r.bloodType || '-'} / ${r.crossmatch || '-'} / ${coSignText}]</div>
+                                    <div style="text-align:left; margin-top:1px; color:#475569;">V/S: ${timelineText}</div>
+                                </div>
+                                <div style="display:flex; align-items:center; justify-content:center;">
+                                    <button class="btn-slate" style="padding:1px 6px; font-size:10px;" onclick="openTransfusionDetailPopup(${actualIndex})">상세보기</button>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${r.staff || r.nurse1 || '-'}</td>
+                        <td>
+                            <button class="btn-slate" style="padding:1px 4px; font-size:10px; margin-right:3px;" onclick="editTransfusionRecord(${actualIndex})">수정</button>
+                            <button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('transfusion', ${actualIndex})">삭제</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openTransfusionDetailPopup(index) {
+            const p = patients[currentPatientIndex];
+            if (!p) return;
+            const transfusionList = p.records?.transfusions || p.records?.transfusion || [];
+            const item = transfusionList[index];
+            if (!item) return;
+
+            const checklist = item.whoChecklist || item.checklist || {};
+            const safe = (value) => escapeHtml(String(value ?? '-'));
+            const singleChecklistStatus = (matchValue, mismatchValue) => {
+                if (matchValue) return '확인';
+                if (mismatchValue) return '미확인';
+                return '미작성';
+            };
+            const timeline = item.vsTimeline || item.timeline || {};
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.inset = '0';
+            overlay.style.background = 'rgba(15, 23, 42, 0.45)';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.zIndex = '9999';
+            overlay.style.padding = '8px';
+
+            const modal = document.createElement('div');
+            modal.style.width = '1320px';
+            modal.style.maxWidth = '99vw';
+            modal.style.maxHeight = '90vh';
+            modal.style.overflowY = 'auto';
+            modal.style.background = '#fff';
+            modal.style.borderRadius = '14px';
+            modal.style.boxShadow = '0 18px 45px rgba(15, 23, 42, 0.22)';
+            modal.style.padding = '18px';
+            modal.style.boxSizing = 'border-box';
+
+            modal.innerHTML = `
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                    <div style="font-size:16px; font-weight:800; color:#0f172a;">수혈 기록 상세보기</div>
+                    <button type="button" id="transfusionViewClose" style="border:none; background:none; font-size:22px; color:#64748b; cursor:pointer;">×</button>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:12px; align-items:start; margin-bottom:12px;">
+                    <div style="border:1px solid #dbeafe; border-radius:10px; background:#f8fafc; padding:12px;">
+                        <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">WHO 수혈안전 체크리스트</div>
+                        <div style="display:grid; gap:6px; font-size:12px;">
+                            <div><b>혈액제제 확인:</b> ${singleChecklistStatus(!!checklist.beforeMatch, !!checklist.beforeMismatch)}</div>
+                            <div><b>혈액형 확인:</b> ${singleChecklistStatus(!!checklist.typeMatch, !!checklist.typeMismatch)}</div>
+                            <div><b>환자 확인:</b> ${singleChecklistStatus(!!checklist.patientMatch, !!checklist.patientMismatch)}</div>
+                            <div><b>수혈 시:</b> ${singleChecklistStatus(!!checklist.duringMatch, !!checklist.duringMismatch)}</div>
+                            <div><b>수혈 후:</b> ${singleChecklistStatus(!!checklist.afterMatch, !!checklist.afterMismatch)}</div>
+                        </div>
+                    </div>
+                    <div style="border:1px solid #dfe7f1; border-radius:10px; background:#fff; padding:12px;">
+                        <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">수혈 기본 정보</div>
+                        <div style="display:grid; grid-template-columns:repeat(3, minmax(140px, 1fr)); gap:10px;">
+                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">수혈 일시</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(formatDisplayTime(item.time || '-'))}</div></div>
+                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">혈액형</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.type || item.bloodType || '-')}</div></div>
+                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">제제</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.product || item.productType || '-')}</div></div>
+                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">혈액 바코드</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.barcode || item.bloodBagId || '-')}</div></div>
+                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">용량</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.volume || '-')}</div></div>
+                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">담당</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.staff || item.nurse1 || '-')}</div></div>
+                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">혈액제제 식별번호</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.bagId || item.bloodBagId || '-')}</div></div>
+                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">혈액형(ABO/Rh)</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.aboRh || item.bloodType || '-')}</div></div>
+                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">교차시험 적합</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.crossmatch || '-')}</div></div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-bottom:10px; border:1px solid #dfe7f1; border-radius:10px; background:#fff; padding:12px;">
+                    <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:8px;">수혈 V/S 타임라인</div>
+                    <div style="border:1px solid #cbd5e1; border-radius:8px; padding:10px; font-size:11px; color:#334155; white-space:pre-wrap; background:#f8fafc;">${safe(JSON.stringify(timeline, null, 2))}</div>
+                </div>
+                <div style="margin-bottom:8px; border:1px solid #dfe7f1; border-radius:10px; background:#fff; padding:12px;">
+                    <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:8px;">수혈 반응/소견</div>
+                    <div style="border:1px solid #cbd5e1; border-radius:8px; min-height:92px; padding:10px; font-size:12px; color:#0f172a; background:#f8fafc; white-space:pre-wrap;">${safe(item.note || item.reactionNote || '-')}</div>
+                </div>
+            `;
+
+            const close = () => overlay.remove();
+            modal.querySelector('#transfusionViewClose').addEventListener('click', close);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+        }
+
+        function cancelSurgeryEdit() {
+            editingSurgeryIndex = null;
+            const surgeryTime = document.getElementById('surgeryTime');
+            const surgeryType = document.getElementById('surgeryType');
+            const surgeryName = document.getElementById('surgeryName');
+            const surgeryNote = document.getElementById('surgeryNote');
+            const surgeryDoctor = document.getElementById('surgeryDoctor');
+            const surgeryPreDiagnosis = document.getElementById('surgeryPreDiagnosis');
+            const surgeryPostDiagnosis = document.getElementById('surgeryPostDiagnosis');
+            const surgerySurgeon = document.getElementById('surgerySurgeon');
+            const surgeryAssistant = document.getElementById('surgeryAssistant');
+            const surgeryScrubNurse = document.getElementById('surgeryScrubNurse');
+            const surgeryCirculator = document.getElementById('surgeryCirculator');
+            const surgeryAnesthesia = document.getElementById('surgeryAnesthesia');
+            const surgeryStartTime = document.getElementById('surgeryStartTime');
+            const surgeryEndTime = document.getElementById('surgeryEndTime');
+            const surgeryEstEbl = document.getElementById('surgeryEstEbl');
+            const surgeryActualEbl = document.getElementById('surgeryActualEbl');
+            const btnSave = document.getElementById('btnSurgerySave');
+            const btnCancel = document.getElementById('btnSurgeryCancel');
+
+            if (surgeryTime) surgeryTime.value = '';
+            if (surgeryType) surgeryType.value = '일반';
+            if (surgeryName) surgeryName.value = '';
+            if (surgeryNote) {
+                surgeryNote.value = '';
+                autoExpandTextarea(surgeryNote);
+            }
+            if (surgeryDoctor) surgeryDoctor.value = '';
+            if (surgeryPreDiagnosis) surgeryPreDiagnosis.value = '';
+            if (surgeryPostDiagnosis) surgeryPostDiagnosis.value = '';
+            if (surgerySurgeon) surgerySurgeon.value = '';
+            if (surgeryAssistant) surgeryAssistant.value = '';
+            if (surgeryScrubNurse) surgeryScrubNurse.value = '';
+            if (surgeryCirculator) surgeryCirculator.value = '';
+            if (surgeryAnesthesia) surgeryAnesthesia.value = '전신';
+            if (surgeryStartTime) surgeryStartTime.value = '';
+            if (surgeryEndTime) surgeryEndTime.value = '';
+            if (surgeryEstEbl) surgeryEstEbl.value = '';
+            if (surgeryActualEbl) surgeryActualEbl.value = '';
+            surgeryChecklistDetailsDraft = null;
+            ['surgeryChecklistSignIn','surgeryChecklistTimeOut','surgeryChecklistSignOut'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.checked = false;
+            });
+            const summary = document.getElementById('surgeryChecklistSummary');
+            if (summary) summary.textContent = '미작성';
+            document.querySelectorAll('input[name="surgeryCountPre"], input[name="surgeryCountBeforeClosure"], input[name="surgeryCountAfterClosure"]').forEach(input => input.checked = false);
+            syncSurgeryChecklistSummary();
+            if (btnSave) btnSave.innerText = '수술 기록 저장';
+            if (btnCancel) btnCancel.style.display = 'none';
+        }
+
+        function editSurgeryRecord(idx) {
+            const p = patients[currentPatientIndex];
+            const surgeryList = p.records?.surgeries || p.records?.surgery || [];
+            if (!p || !surgeryList.length) return;
+            const item = surgeryList[idx];
+            if (!item) return;
+
+            editingSurgeryIndex = idx;
+            document.getElementById('surgeryTime').value = item.time ? item.time.replace(' ', 'T') : '';
+            document.getElementById('surgeryType').value = item.type || '일반';
+            const surgeryNameField = document.getElementById('surgeryName');
+            if (surgeryNameField) surgeryNameField.value = item.name || item.opName || '';
+            document.getElementById('surgeryDoctor').value = item.doctor || item.surgeon || '';
+            document.getElementById('surgeryPreDiagnosis').value = item.preDiagnosis || item.preDiag || '';
+            document.getElementById('surgeryPostDiagnosis').value = item.postDiagnosis || item.postDiag || '';
+            document.getElementById('surgerySurgeon').value = item.surgeon || item.doctor || '';
+            document.getElementById('surgeryAssistant').value = item.assistant || item.assistants || '';
+            document.getElementById('surgeryScrubNurse').value = item.scrubNurse || '';
+            document.getElementById('surgeryCirculator').value = item.circulator || item.circulatingNurse || '';
+            document.getElementById('surgeryAnesthesia').value = item.anesthesia || '전신';
+            document.getElementById('surgeryStartTime').value = item.startTime ? item.startTime.replace(' ', 'T') : '';
+            document.getElementById('surgeryEndTime').value = item.endTime ? item.endTime.replace(' ', 'T') : '';
+            document.getElementById('surgeryEstEbl').value = item.estEbl || item.ebl || '';
+            document.getElementById('surgeryActualEbl').value = item.actualEbl || '';
+            const note = document.getElementById('surgeryNote');
+            if (note) {
+                note.value = item.note || '';
+                autoExpandTextarea(note);
+            }
+            const checklist = item.whoChecklist || item.checklist || {};
+            surgeryChecklistDetailsDraft = normalizeSurgeryChecklistDetails(item.whoChecklistDetails || item.checklistDetails, checklist);
+            document.getElementById('surgeryChecklistSignIn').checked = !!checklist.signIn;
+            document.getElementById('surgeryChecklistTimeOut').checked = false;
+            document.getElementById('surgeryChecklistSignOut').checked = !!checklist.signOut;
+            const count = item.count || {};
+            document.querySelectorAll('input[name="surgeryCountPre"]').forEach(el => { el.checked = el.value === (count.pre || ''); });
+            document.querySelectorAll('input[name="surgeryCountBeforeClosure"]').forEach(el => { el.checked = el.value === (count.beforeClosure || ''); });
+            document.querySelectorAll('input[name="surgeryCountAfterClosure"]').forEach(el => { el.checked = el.value === (count.afterClosure || ''); });
+            syncSurgeryChecklistSummary();
+            openSurgeryRecordPopup();
+        }
+
+        function cancelTransfusionEdit() {
+            editingTransfusionIndex = null;
+            const transfusionTime = document.getElementById('transfusionTime');
+            const transfusionType = document.getElementById('transfusionType');
+            const transfusionProduct = document.getElementById('transfusionProduct');
+            const transfusionBarcode = document.getElementById('transfusionBarcode');
+            const transfusionVolume = document.getElementById('transfusionVolume');
+            const transfusionNote = document.getElementById('transfusionNote');
+            const transfusionStaff = document.getElementById('transfusionStaff');
+            const transfusionBagId = document.getElementById('transfusionBagId');
+            const transfusionAboRh = document.getElementById('transfusionAboRh');
+            const transfusionCrossmatch = document.getElementById('transfusionCrossmatch');
+            const transfusionNurse1 = document.getElementById('transfusionNurse1');
+            const transfusionNurse2 = document.getElementById('transfusionNurse2');
+            const btnSave = document.getElementById('btnTransfusionSave');
+            const btnCancel = document.getElementById('btnTransfusionCancel');
+
+            if (transfusionTime) transfusionTime.value = '';
+            if (transfusionType) transfusionType.value = 'A';
+            if (transfusionProduct) transfusionProduct.value = '';
+            if (transfusionBarcode) transfusionBarcode.value = '';
+            if (transfusionVolume) transfusionVolume.value = '';
+            if (transfusionNote) {
+                transfusionNote.value = '';
+                autoExpandTextarea(transfusionNote);
+            }
+            if (transfusionStaff) transfusionStaff.value = '';
+            if (transfusionBagId) transfusionBagId.value = '';
+            if (transfusionAboRh) transfusionAboRh.value = '';
+            if (transfusionCrossmatch) transfusionCrossmatch.value = '적합';
+            if (transfusionNurse1) transfusionNurse1.value = '';
+            if (transfusionNurse2) transfusionNurse2.value = '';
+            if (btnSave) btnSave.innerText = '수혈 기록 저장';
+            if (btnCancel) btnCancel.style.display = 'none';
+            window.transfusionTimeline = {};
+            document.querySelectorAll('.stage-btn').forEach(btn => btn.classList.remove('active'));
+            const firstStage = document.querySelector('.stage-btn');
+            if (firstStage) firstStage.classList.add('active');
+        }
+
+        function editTransfusionRecord(idx) {
+            const p = patients[currentPatientIndex];
+            if (!p || !p.records?.transfusion) return;
+            const item = p.records.transfusion[idx];
+            if (!item) return;
+
+            editingTransfusionIndex = idx;
+            document.getElementById('transfusionTime').value = item.time ? item.time.replace(' ', 'T') : '';
+            document.getElementById('transfusionType').value = item.type || 'A';
+            document.getElementById('transfusionProduct').value = item.product || '';
+            document.getElementById('transfusionBarcode').value = item.barcode || '';
+            document.getElementById('transfusionVolume').value = item.volume || '';
+            document.getElementById('transfusionStaff').value = item.staff || '';
+            document.getElementById('transfusionBagId').value = item.bagId || '';
+            document.getElementById('transfusionAboRh').value = item.aboRh || '';
+            document.getElementById('transfusionCrossmatch').value = item.crossmatch || '적합';
+            document.getElementById('transfusionNurse1').value = item.coSign?.nurse1 || '';
+            document.getElementById('transfusionNurse2').value = item.coSign?.nurse2 || '';
+            const note = document.getElementById('transfusionNote');
+            note.value = item.note || '';
+            autoExpandTextarea(note);
+            document.getElementById('btnTransfusionSave').innerText = '수정 완료';
+            document.getElementById('btnTransfusionCancel').style.display = 'inline-block';
+            openTransfusionChecklistPopup();
         }
 
         function getLabRangeStatus(result, refRange) {
