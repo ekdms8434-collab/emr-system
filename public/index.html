@@ -646,7 +646,7 @@
                 position: relative;
                 overflow: hidden;
                 background:
-                    linear-gradient(120deg, #041521 0%, #082945 20%, #0d3357 42%, #10416f 68%, #0d4f85 100%);
+                    linear-gradient(120deg, #ffffff 0%, #f8fbff 20%, #eef6ff 46%, #f5f9ff 72%, #ffffff 100%);
             }
 
             #view-login::before {
@@ -689,13 +689,14 @@
 
             .login-brand {
                 position: relative;
-                background: linear-gradient(135deg, rgba(3, 17, 30, 0.98), rgba(7, 39, 66, 0.97) 30%, rgba(11, 59, 94, 0.96) 60%, rgba(15, 86, 130, 0.93));
-                color: #ecfeff;
+                background: linear-gradient(135deg, #ffffff 0%, #f3f8ff 26%, #edf5ff 52%, #f9fbff 100%);
+                color: #0f172a;
                 padding: 42px 34px 32px;
                 display: flex;
                 flex-direction: column;
                 justify-content: space-between;
                 min-height: 100%;
+                border-right: 1px solid rgba(30, 58, 138, 0.10);
             }
 
             .login-brand::before {
@@ -732,7 +733,8 @@
                 font-size: 11px;
                 letter-spacing: 0.18em;
                 text-transform: uppercase;
-                opacity: 0.8;
+                opacity: 0.9;
+                color: #1e3a8a;
             }
 
             .brand-title {
@@ -741,13 +743,14 @@
                 line-height: 1.06;
                 font-weight: 800;
                 letter-spacing: -0.05em;
+                color: #0f172a;
             }
 
             .brand-copy {
                 margin: 18px 0 0;
                 font-size: 15px;
                 line-height: 1.75;
-                color: rgba(236, 254, 255, 0.82);
+                color: rgba(15, 23, 42, 0.82);
                 max-width: 30ch;
                 word-break: keep-all;
                 white-space: normal;
@@ -809,15 +812,16 @@
                 gap: 8px;
                 padding: 7px 12px;
                 border-radius: 999px;
-                background: rgba(147, 197, 253, 0.10);
-                border: 1px solid rgba(191, 219, 254, 0.18);
-                color: #dbeafe;
+                background: rgba(30, 58, 138, 0.9);
+                border: 1px solid rgba(30, 64, 175, 0.25);
+                color: #f8fbff;
                 font-size: 11px;
                 font-weight: 700;
                 letter-spacing: 0.08em;
                 text-transform: uppercase;
                 margin-top: 18px;
                 margin-bottom: 14px;
+                box-shadow: 0 8px 18px rgba(30, 58, 138, 0.18);
             }
 
             .brand-status-bar::before {
@@ -1062,16 +1066,15 @@
         <div id="loginView">
             <div class="login-brand">
                 <div>
-                    <div class="brand-badge">KBU NEC</div>
-                    <p class="brand-kicker">경복대학교 간호교육센터</p>
-                    <div class="brand-status-bar">System Online</div>
+                    <img src="./Logo.png" alt="KBU NEC 로고" style="display:block; width: 260px; height: auto; max-height: 260px; object-fit: contain; margin-bottom: 18px; filter: drop-shadow(0 0 12px rgba(37,99,235,0.10));">
+                                <div class="brand-status-bar">System Online</div>
                     <h1 class="brand-title">Smart EMR</h1>
-                    <p class="brand-copy">
-                        <span class="line">환자 안전 중심의</span>
-                        <span class="line">임상 기록, 간호 기록,</span>
-                        <span class="line">처방 관리가 통합된</span>
-                        <span class="line">교육용 스마트 의료정보</span>
-                        <span class="line">시스템입니다.</span>
+                    <p style="margin: 14px 0 10px; font-size: 14px; line-height: 1.8; color: #334155; font-weight: 600; letter-spacing: -0.02em;">
+                        환자 안전 중심의<br>
+                        임상 기록, 간호 기록,<br>
+                        처방 관리가 통합된<br>
+                        교육용 스마트 의료정보<br>
+                        시스템입니다.
                     </p>
                 </div>
 
@@ -1115,7 +1118,7 @@
     <header id="main-header" class="hidden bg-white shadow-sm border-b px-6 py-2.5 flex justify-between items-center w-full">
         <!-- 왼쪽 로고/제목 영역. 클릭하면 환자 목록 화면으로 이동합니다. -->
         <div class="flex items-center space-x-3 cursor-pointer" onclick="showView('patients')">
-            <span class="text-xl">🏥</span>
+            <img src="./Logo.png" alt="KBU NEC 로고" style="display:block; width: 42px; height: 42px; object-fit: contain;">
             <h1 class="text-lg font-bold text-slate-900">환자 관리 및 EMR 시스템</h1>
         </div>
         <!-- 오른쪽 설정 및 로그아웃 영역입니다. -->
