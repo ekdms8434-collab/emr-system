@@ -268,7 +268,14 @@
         .vs-pivot-table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; background: white; }
         .vs-pivot-table th.vs-header-title { background-color: #e2e8f0; color: #0f172a; width: 120px; text-align: center; font-weight: bold; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; position: sticky; left: 0; top: 0; z-index: 20; }
         .vs-pivot-table th.vs-header-time { background-color: #1e293b; color: white; padding: 5px 12px; font-weight: bold; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; white-space: nowrap; position: sticky; top: 0; z-index: 10; }
-        .vs-pivot-table td.vs-label { background-color: #f1f5f9; color: #1e293b; font-weight: bold; text-align: center; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; position: sticky; left: 0; z-index: 15; white-space: nowrap; }
+        .vs-pivot-table td.vs-label { background-color: #f1f5f9; color: #1e293b; font-weight: bold; text-align: center; border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; position: sticky; left: 0; z-index: 15; white-space: nowrap; writing-mode: horizontal-tb !important; transform: none !important; text-orientation: mixed !important; }
+        .vs-pivot-table td.vs-label label,
+        .vs-pivot-table td.vs-label * {
+            writing-mode: horizontal-tb !important;
+            transform: none !important;
+            text-orientation: mixed !important;
+            letter-spacing: normal !important;
+        }
         .vs-pivot-table td.vs-val { border-right: 1px solid #cbd5e0; border-bottom: 1px solid #cbd5e0; text-align: center; padding: 4px 10px; font-weight: bold; white-space: nowrap; }
 
         .io-summary-table { width: 100%; min-width: 820px; border-collapse: collapse; background: white; table-layout: fixed; }
@@ -6121,7 +6128,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
             if (vsRecords.length === 0) {
                 vsTableBody.innerHTML = `
                     <tr>
-                        <th class="vs-header-title">구분 \\ 시간</th>
+                        <th class="vs-header-title">구분</th>
                         <td class="vs-val" style="color:#94a3b8;">기록 없음</td>
                     </tr>
                     <tr>
@@ -6147,7 +6154,7 @@ if (!note) return alert("처방 내역을 입력하세요.");
                 `;
             } else {
                 // 기록이 있다면 각 행(가로줄)을 담을 글자(문자열) 바구니를 준비합니다.
-                let headerRow = `<tr><th class="vs-header-title">구분 \\ 시간</th>`;
+                let headerRow = `<tr><th class="vs-header-title">구분</th>`;
                 let bpRow = `<tr><td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.bp ? 'checked' : ''} onchange="toggleVsMetric('bp')"> 혈압 (BP)</label></td>`;
                 let hrRow = `<tr><td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.hr ? 'checked' : ''} onchange="toggleVsMetric('hr')"> 맥박 (HR)</label></td>`;
                 let rrRow = `<tr><td class="vs-label"><label class="cursor-pointer flex items-center justify-center gap-1"><input type="checkbox" ${vsVisibility.rr ? 'checked' : ''} onchange="toggleVsMetric('rr')"> 호흡 (RR)</label></td>`;
@@ -6285,6 +6292,13 @@ if (!note) return alert("처방 내역을 입력하세요.");
                 vsChartInstance.destroy();
             }
 
+            const customVsAxisTitlesPlugin = {
+                id: 'customVsAxisTitles',
+                afterDraw(chart) {
+                    return;
+                }
+            };
+
             // 차트의 맨 아래(X축)에 들어갈 시간 데이터들만 뽑아냅니다.
             const labels = vsRecords.map(r => formatDisplayTime(r.time));
 
@@ -6309,6 +6323,24 @@ if (!note) return alert("처방 내역을 입력하세요.");
             // 차트에 그려질 각 선(데이터셋)의 설정값입니다. 색상, 두께, 숨김 여부 등을 지정합니다.
             const datasets = [
                 {
+                    label: '체온 (°C)',
+                    data: vsRecords.map(r => r.bt !== null && r.bt !== undefined ? r.bt : null),
+                    borderColor: '#8b5cf6', backgroundColor: '#8b5cf6',
+                    yAxisID: 'yBT', hidden: !vsVisibility.bt, tension: 0.2, spanGaps: true
+                },
+                {
+                    label: '호흡 (회/분)',
+                    data: vsRecords.map(r => r.rr !== null && r.rr !== undefined ? r.rr : null),
+                    borderColor: '#10b981', backgroundColor: '#10b981',
+                    yAxisID: 'yRR', hidden: !vsVisibility.rr, tension: 0.2, spanGaps: true
+                },
+                {
+                    label: '맥박 (bpm)',
+                    data: vsRecords.map(r => r.hr !== null && r.hr !== undefined ? r.hr : null),
+                    borderColor: '#3b82f6', backgroundColor: '#3b82f6',
+                    yAxisID: 'yHR', hidden: !vsVisibility.hr, tension: 0.2, spanGaps: true
+                },
+                {
                     label: '수축기 혈압 (mmHg)',
                     data: vsRecords.map(r => parseBP(r.bp).sys), // 수축기 혈압 데이터만 추출
                     borderColor: '#ef4444', backgroundColor: '#ef4444',
@@ -6322,24 +6354,6 @@ if (!note) return alert("처방 내역을 입력하세요.");
                     borderColor: '#f97316', backgroundColor: '#f97316',
                     borderDash: [4, 4], // 선을 점선으로 표시합니다.
                     yAxisID: 'yBP', hidden: !vsVisibility.bp, tension: 0.2, spanGaps: true
-                },
-                {
-                    label: '맥박 (bpm)',
-                    data: vsRecords.map(r => r.hr !== null && r.hr !== undefined ? r.hr : null),
-                    borderColor: '#3b82f6', backgroundColor: '#3b82f6',
-                    yAxisID: 'yHR', hidden: !vsVisibility.hr, tension: 0.2, spanGaps: true
-                },
-                {
-                    label: '호흡 (회/분)',
-                    data: vsRecords.map(r => r.rr !== null && r.rr !== undefined ? r.rr : null),
-                    borderColor: '#10b981', backgroundColor: '#10b981',
-                    yAxisID: 'yRR', hidden: !vsVisibility.rr, tension: 0.2, spanGaps: true
-                },
-                {
-                    label: '체온 (°C)',
-                    data: vsRecords.map(r => r.bt !== null && r.bt !== undefined ? r.bt : null),
-                    borderColor: '#8b5cf6', backgroundColor: '#8b5cf6',
-                    yAxisID: 'yBT', hidden: !vsVisibility.bt, tension: 0.2, spanGaps: true
                 },
                 {
                     label: '산소포화도 (SpO2 %)',
@@ -6357,18 +6371,20 @@ if (!note) return alert("처방 내역을 입력하세요.");
                     responsive: true, maintainAspectRatio: false, // 화면 크기에 맞춰 유연하게 변합니다.
                     plugins: {
                         legend: { position: 'top', labels: { boxWidth: 12, font: { size: 10 } } },
-                        tooltip: { mode: 'index', intersect: false } // 마우스를 올렸을 때 정보가 나오는 방식
+                        tooltip: { mode: 'index', intersect: false }, // 마우스를 올렸을 때 정보가 나오는 방식
+                        customVsAxisTitles: { enabled: true }
                     },
                     scales: {
                         // 각 축(혈압, 맥박, 호흡, 체온)의 디자인과 최대/최소 범위를 세밀하게 지정합니다.
                         x: { ticks: { font: { size: 9 } } },
-                        yBT: { type: 'linear', display: vsVisibility.bt, position: 'left', weight: 4, suggestedMin: minBT, suggestedMax: maxBT, title: { display: true, text: '체온', rotation: 90, color: '#8b5cf6', font: { size: 10, weight: 'bold' } }, ticks: { color: '#8b5cf6', font: { size: 9 } } },
-                        yRR: { type: 'linear', display: vsVisibility.rr, position: 'left', weight: 3, min: 0, suggestedMax: maxRR, title: { display: true, text: '호흡', rotation: 90, color: '#10b981', font: { size: 10, weight: 'bold' } }, ticks: { color: '#10b981', font: { size: 9 } } },
-                        yHR: { type: 'linear', display: vsVisibility.hr, position: 'left', weight: 2, min: 0, suggestedMax: maxHR, title: { display: true, text: '맥박', rotation: 90, color: '#3b82f6', font: { size: 10, weight: 'bold' } }, ticks: { color: '#3b82f6', font: { size: 9 } } },
-                        yBP: { type: 'linear', display: vsVisibility.bp, position: 'left', weight: 1, min: 0, suggestedMax: maxBP, title: { display: true, text: '혈압', rotation: 90, color: '#ef4444', font: { size: 10, weight: 'bold' } }, ticks: { color: '#ef4444', font: { size: 9 } } },
-                        ySpO2: { type: 'linear', display: vsVisibility.spo2, position: 'right', weight: 1, min: 60, suggestedMax: maxSpO2, title: { display: true, text: 'SpO2', color: '#14b8a6', font: { size: 10, weight: 'bold' } }, ticks: { color: '#14b8a6', font: { size: 9 } } }
+                        yBT: { type: 'linear', display: vsVisibility.bt, position: 'left', weight: 4, suggestedMin: minBT, suggestedMax: maxBT, title: { display: false }, ticks: { color: '#8b5cf6', font: { size: 9 } } },
+                        yRR: { type: 'linear', display: vsVisibility.rr, position: 'left', weight: 3, min: 0, suggestedMax: maxRR, title: { display: false }, ticks: { color: '#10b981', font: { size: 9 } } },
+                        yHR: { type: 'linear', display: vsVisibility.hr, position: 'left', weight: 2, min: 0, suggestedMax: maxHR, title: { display: false }, ticks: { color: '#3b82f6', font: { size: 9 } } },
+                        yBP: { type: 'linear', display: vsVisibility.bp, position: 'left', weight: 1, min: 0, suggestedMax: maxBP, title: { display: false }, ticks: { color: '#ef4444', font: { size: 9 } } },
+                        ySpO2: { type: 'linear', display: vsVisibility.spo2, position: 'right', weight: 1, min: 60, suggestedMax: maxSpO2, title: { display: false }, ticks: { color: '#14b8a6', font: { size: 9 } } }
                     }
-                }
+                },
+                plugins: [customVsAxisTitlesPlugin]
             });
         }
 
