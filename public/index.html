@@ -1491,7 +1491,8 @@
                                         </select>
                                         <textarea id="nurseNote" class="auto-expand-textarea" placeholder="간호 처치 내역 및 관찰소견/투약 메모 입력" rows="1" style="flex:1;" oninput="autoExpandTextarea(this)"></textarea>
                                         <input type="text" id="nurseName" placeholder="간호사 이름" style="width:80px;" value="이다은">
-                                        <button class="btn-blue" onclick="addRecord('nurse')">입력</button>
+                                        <button class="btn-blue" id="btnNurseSave" onclick="addRecord('nurse')">입력</button>
+                                        <button class="btn-slate" id="btnNurseCancel" onclick="cancelNurseEdit()" style="display:none;">취소</button>
                                     </div>
                                 </div>
 
@@ -1780,6 +1781,7 @@
         let editingPatientIndex = null; // 수정 중인 환자가 누구인지 기억
         let editingOriginalChartNo = null; // 수정 시작 시점의 원래 등록번호
         let editingPrescIndex = null;   // 수정 중인 처방전 기록 기억
+        let editingNurseIndex = null;   // 수정 중인 간호기록 기억
         let activeIoEditSlot = null;     // I/O 탭에서 현재 수정 중인 시간대 컬럼
         let targetPrescModalIndex = null;
         let currentBodySide = 'front';  // 마네킹이 앞모습인지 뒷모습인지 기억
@@ -5210,9 +5212,17 @@ if (!note) return alert("처방 내역을 입력하세요.");
                 const note = nurseNoteEl.value.trim();
                 const nurseName = document.getElementById('nurseName').value.trim() || '간호사';
                 if(!note) return alert("간호/투약 수행 내역을 입력하세요.");
-                p.records.nurse.push({ time, note, nurse: nurseName });
+
+                const newNurseRecord = { time, note, nurse: nurseName };
+                if (editingNurseIndex !== null) {
+                    p.records.nurse[editingNurseIndex] = { ...p.records.nurse[editingNurseIndex], ...newNurseRecord };
+                    editingNurseIndex = null;
+                } else {
+                    p.records.nurse.push(newNurseRecord);
+                }
+
                 sortRecordsByTime(p.records.nurse);
-                nurseNoteEl.value = ''; // 작성 후 입력칸 비우기
+                cancelNurseEdit();
                 nurseNoteEl.style.height = '28px';
                 
             } else if (type === 'lab_img') {
@@ -5284,6 +5294,33 @@ if (!note) return alert("처방 내역을 입력하세요.");
             document.getElementById('btnPrescCancel').style.display = 'inline-block';
         }
 
+        function cancelNurseEdit() {
+            editingNurseIndex = null;
+            document.getElementById('nurseTime').value = '';
+            document.getElementById('nurseNote').value = '';
+            document.getElementById('nurseName').value = '이다은';
+            document.getElementById('nurseTemplateSelect').value = '';
+            document.getElementById('btnNurseSave').innerText = '입력';
+            document.getElementById('btnNurseCancel').style.display = 'none';
+        }
+
+        function editNurseRecord(idx) {
+            const p = patients[currentPatientIndex];
+            if (!p || !p.records?.nurse) return;
+            const item = p.records.nurse[idx];
+            if (!item) return;
+
+            editingNurseIndex = idx;
+            document.getElementById('nurseTime').value = item.time ? item.time.replace(' ', 'T') : '';
+            const nurseNote = document.getElementById('nurseNote');
+            nurseNote.value = item.note || '';
+            autoExpandTextarea(nurseNote);
+            document.getElementById('nurseName').value = item.nurse || '간호사';
+            document.getElementById('nurseTemplateSelect').value = '';
+            document.getElementById('btnNurseSave').innerText = '수정 완료';
+            document.getElementById('btnNurseCancel').style.display = 'inline-block';
+        }
+
         // 처방 수행완료 처리(간호사 입력)를 위한 모달창을 띄우는 함수입니다.
         function openNurseInputModal(idx) {
             const p = patients[currentPatientIndex];
@@ -5350,8 +5387,8 @@ if (!note) return alert("처방 내역을 입력하세요.");
         // 기록(처방, 간호, 수술 등)을 삭제하는 공통 비동기 함수입니다.
         async function deleteRecord(type, idx) {
             if (currentPatientIndex === null) return;
-            if (isStudentUser()) {
-                alert('학생용 계정에서는 삭제 기능이 비활성화됩니다.');
+            if (isStudentUser() && type !== 'nurse') {
+                alert('학생용 계정에서는 간호기록 외의 삭제 기능이 비활성화됩니다.');
                 return;
             }
             // 정말 삭제할 것인지 사용자에게 한 번 더 물어봅니다. '취소'를 누르면 함수가 종료됩니다.
@@ -6091,7 +6128,8 @@ if (!note) return alert("처방 내역을 입력하세요.");
                 const studentMode = isStudentUser();
 
                 // 기록된 데이터 개수만큼 반복하면서 오른쪽으로 칸(td)을 덧붙여 나갑니다.
-                vsRecords.forEach((r, idx) => {
+                vsRecords.forEach((r) => {
+                    const actualIndex = p.records.vs.findIndex(item => item === r);
                     headerRow += `<th class="vs-header-time">${formatDisplayTime(r.time)}</th>`;
                     bpRow += `<td class="vs-val">${r.bp || '-'}</td>`;
                     hrRow += `<td class="vs-val">${r.hr || '-'}</td>`;
@@ -6099,8 +6137,8 @@ if (!note) return alert("처방 내역을 입력하세요.");
                     btRow += `<td class="vs-val">${r.bt || '-'}</td>`;
                     spo2Row += `<td class="vs-val">${r.spo2 !== null && r.spo2 !== undefined ? r.spo2 : '-'}</td>`;
                     delRow += `<td class="vs-val" style="white-space:nowrap;">
-                        <button class="btn-slate" style="padding:1px 4px; font-size:10px; margin-right:3px; ${studentMode ? 'opacity:0.55; cursor:not-allowed;' : ''}" onclick="editVsRecord(${idx})" ${studentMode ? 'disabled title="학생용 계정에서는 비활성화됩니다."' : ''}>수정</button>
-                        <button class="btn-red" style="padding:1px 4px; font-size:10px; ${studentMode ? 'opacity:0.55; cursor:not-allowed;' : ''}" onclick="deleteRecord('vs', ${idx})" ${studentMode ? 'disabled title="학생용 계정에서는 비활성화됩니다."' : ''}>삭제</button>
+                        <button class="btn-slate" style="padding:1px 4px; font-size:10px; margin-right:3px; ${studentMode ? 'opacity:0.55; cursor:not-allowed;' : ''}" onclick="editVsRecord(${actualIndex})" ${studentMode ? 'disabled title="학생용 계정에서는 비활성화됩니다."' : ''}>수정</button>
+                        <button class="btn-red" style="padding:1px 4px; font-size:10px; ${studentMode ? 'opacity:0.55; cursor:not-allowed;' : ''}" onclick="deleteRecord('vs', ${actualIndex})" ${studentMode ? 'disabled title="학생용 계정에서는 비활성화됩니다."' : ''}>삭제</button>
                     </td>`;
                 });
 
@@ -7043,14 +7081,20 @@ function editPresc(index) {
                 return;
             }
 
-            tbody.innerHTML = records.map((r, idx) => `
-                <tr>
-                    <td>${formatDisplayTime(r.time)}</td>
-                    <td style="text-align:left;">${r.note}</td>
-                    <td><b>${r.nurse || '-'}</b></td>
-                    <td><button class="btn-red" style="padding:1px 4px; font-size:10px; ${studentMode ? 'opacity:0.55; cursor:not-allowed;' : ''}" onclick="deleteRecord('nurse', ${idx})" ${studentMode ? 'disabled title="학생용 계정에서는 비활성화됩니다."' : ''}>삭제</button></td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = records.map((r) => {
+                const actualIndex = p.records.nurse.findIndex(item => item === r);
+                return `
+                    <tr>
+                        <td>${formatDisplayTime(r.time)}</td>
+                        <td style="text-align:left;">${r.note}</td>
+                        <td><b>${r.nurse || '-'}</b></td>
+                        <td>
+                            <button class="btn-slate" style="padding:1px 4px; font-size:10px; margin-right:3px;" onclick="editNurseRecord(${actualIndex})">수정</button>
+                            <button class="btn-red" style="padding:1px 4px; font-size:10px;" onclick="deleteRecord('nurse', ${actualIndex})">삭제</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         function getLabRangeStatus(result, refRange) {
