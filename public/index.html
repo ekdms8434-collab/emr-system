@@ -645,7 +645,8 @@
             #view-login {
                 position: relative;
                 overflow: hidden;
-                background: #615f63;
+                background:
+                    linear-gradient(120deg, #020d1e 0%, #071d36 22%, #0a2d52 48%, #0d3f6f 100%);
             }
 
             #view-login::before {
@@ -656,14 +657,332 @@
                 background-size: cover;
                 background-position: center;
                 background-repeat: no-repeat;
-                opacity: 0.40;
+                opacity: 0.18;
                 z-index: 0;
+                filter: saturate(1.15) contrast(1.05);
             }
 
             #loginView {
                 position: relative;
                 z-index: 1;
-                backdrop-filter: blur(2px);
+                width: min(980px, 90vw);
+                min-height: 600px;
+                display: grid;
+                grid-template-columns: 1.18fr 0.82fr;
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(148, 163, 184, 0.35);
+                border-radius: 30px;
+                box-shadow: 0 30px 80px rgba(15, 23, 42, 0.38);
+                backdrop-filter: blur(8px);
+                overflow: hidden;
+            }
+
+            .login-brand {
+                position: relative;
+                background: linear-gradient(135deg, rgba(2, 14, 28, 0.98), rgba(8, 35, 62, 0.97) 35%, rgba(10, 62, 100, 0.96) 68%, rgba(17, 94, 152, 0.92));
+                color: #ecfeff;
+                padding: 42px 34px 32px;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                min-height: 100%;
+            }
+
+            .brand-badge {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 12px 18px;
+                border-radius: 12px;
+                background: rgba(255, 255, 255, 0.12);
+                border: 1px solid rgba(255, 255, 255, 0.24);
+                font-size: 22px;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+                box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 12px 25px rgba(15, 23, 42, 0.16);
+                width: fit-content;
+                min-width: 150px;
+            }
+
+            .brand-kicker {
+                margin: 18px 0 8px;
+                font-size: 11px;
+                letter-spacing: 0.18em;
+                text-transform: uppercase;
+                opacity: 0.8;
+            }
+
+            .brand-title {
+                margin: 0;
+                font-size: clamp(2rem, 2.3vw, 3rem);
+                line-height: 1.06;
+                font-weight: 800;
+                letter-spacing: -0.05em;
+            }
+
+            .brand-copy {
+                margin: 18px 0 0;
+                font-size: 15px;
+                line-height: 1.75;
+                color: rgba(236, 254, 255, 0.82);
+                max-width: 30ch;
+                word-break: keep-all;
+                white-space: normal;
+            }
+
+            .brand-copy .line {
+                display: block;
+            }
+
+            .login-brand::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent 45%, rgba(255,255,255,0.04));
+                pointer-events: none;
+            }
+
+            .brand-stats {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 12px;
+                margin-top: 26px;
+                position: relative;
+                z-index: 1;
+            }
+
+            .brand-stat {
+                padding: 12px 10px 10px;
+                border-radius: 12px;
+                background: rgba(255, 255, 255, 0.06);
+                border: 1px solid rgba(255,255,255,0.12);
+                backdrop-filter: blur(4px);
+                box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+                min-height: 76px;
+            }
+
+            .brand-stat .stat-label {
+                display: block;
+                font-size: 9px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: rgba(236, 254, 255, 0.7);
+                margin-bottom: 6px;
+            }
+
+            .brand-stat strong {
+                display: block;
+                font-size: 18px;
+                line-height: 1.2;
+                color: #f8fafc;
+                letter-spacing: -0.04em;
+            }
+
+            .brand-status-bar {
+                position: relative;
+                z-index: 1;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 7px 12px;
+                border-radius: 999px;
+                background: rgba(148, 163, 184, 0.14);
+                border: 1px solid rgba(191, 219, 254, 0.38);
+                color: #dbeafe;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                margin-top: 18px;
+                margin-bottom: 14px;
+            }
+
+            .brand-status-bar::before {
+                content: '';
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: #93c5fd;
+                box-shadow: 0 0 0 5px rgba(147, 197, 253, 0.18);
+            }
+
+            .login-form-panel {
+                background: rgba(255, 255, 255, 0.96);
+                padding: 38px 36px 30px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+
+            .login-header {
+                margin-bottom: 26px;
+            }
+
+            .login-badge {
+                display: inline-block;
+                margin-bottom: 14px;
+                padding: 5px 10px;
+                border-radius: 999px;
+                background: #dbeafe;
+                color: #1d4ed8;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.12);
+            }
+
+            .login-form-panel h2 {
+                margin: 0;
+                color: #0f172a;
+                font-size: 32px;
+                font-weight: 800;
+                letter-spacing: -0.04em;
+            }
+
+            .login-subtitle {
+                margin: 8px 0 0;
+                color: #64748b;
+                font-size: 13px;
+                line-height: 1.6;
+            }
+
+            .login-form-panel label {
+                display: block;
+                margin: 18px 0 8px;
+                color: #334155;
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.02em;
+            }
+
+            .login-form-panel input {
+                width: 100%;
+                height: 50px;
+                border: 1px solid #cbd5e1;
+                border-radius: 12px;
+                background: #f8fafc;
+                color: #0f172a;
+                font-size: 15px;
+                padding: 0 14px;
+                transition: all 0.2s ease;
+                box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
+            }
+
+            .login-form-panel input:focus {
+                border-color: #1d4ed8;
+                box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+                background: #fff;
+            }
+
+            .login-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin: 14px 0 22px;
+                color: #475569;
+                font-size: 12px;
+            }
+
+            .login-row .remember-wrap {
+                color: #475569;
+            }
+
+            .remember-wrap {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+            }
+
+            .remember-wrap input {
+                width: 14px;
+                height: 14px;
+                accent-color: #0f766e;
+                margin: 0;
+            }
+
+            .login-link {
+                color: #1d4ed8;
+                font-weight: 700;
+                text-decoration: none;
+            }
+
+            .login-form-panel button {
+                width: 100%;
+                height: 52px;
+                border-radius: 12px;
+                background: linear-gradient(135deg, #020d1e 0%, #0a2141 25%, #0c3f6e 70%, #0f5fa6 100%);
+                color: white;
+                font-size: 16px;
+                font-weight: 800;
+                letter-spacing: 0.02em;
+                box-shadow: 0 14px 30px rgba(7, 20, 39, 0.38);
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+                border: none;
+            }
+
+            .login-form-panel button:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 18px 34px rgba(21, 78, 143, 0.32);
+            }
+
+            .login-security {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                margin-top: 18px;
+                padding-top: 16px;
+                border-top: 1px solid #e2e8f0;
+                color: #64748b;
+                font-size: 11px;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+            }
+
+            .login-security .shield {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                color: #0f766e;
+                font-weight: 700;
+            }
+
+            .login-security .shield {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                color: #0f766e;
+                font-weight: 700;
+            }
+
+            .login-footer {
+                margin-top: 18px;
+                text-align: center;
+                font-size: 11px;
+                color: #64748b;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+
+            @media (max-width: 768px) {
+                #loginView {
+                    grid-template-columns: 1fr;
+                    min-height: auto;
+                }
+
+                .login-brand {
+                    padding: 28px 24px 20px;
+                }
+
+                .login-form-panel {
+                    padding: 24px 20px 28px;
+                }
+
+                .brand-copy {
+                    max-width: none;
+                }
             }
     </style>
 </head>
@@ -716,12 +1035,55 @@
 
     <!-- 로그인 화면. 시스템에 접속할 때 가장 먼저 보이는 페이지입니다. -->
     <div id="view-login" class="flex items-center justify-center min-h-screen">
-        <div id="loginView" class="max-w-md w-full mx-auto bg-white p-6 rounded shadow">
-            <h2 class="text-xl font-bold mb-4 text-center text-slate-900">EMR 시스템 로그인</h2>
-            <input type="text" id="uid" class="w-full border p-2 mb-2 rounded" placeholder="아이디" autocomplete="username">
-            <input type="password" id="upw" class="w-full border p-2 mb-4 rounded" placeholder="비밀번호" autocomplete="current-password">
-            <!-- 버튼을 누르면 login() 자바스크립트 함수가 실행됩니다. -->
-            <button onclick="login()" class="w-full bg-slate-900 text-white p-2 rounded font-bold hover:bg-slate-800">로그인</button>
+        <div id="loginView">
+            <div class="login-brand">
+                <div>
+                    <div class="brand-badge">KBU NEC</div>
+                    <p class="brand-kicker">경복대학교 간호교육센터</p>
+                    <div class="brand-status-bar">System Online</div>
+                    <h1 class="brand-title">Smart EMR</h1>
+                    <p class="brand-copy">
+                        <span class="line">환자 안전 중심의</span>
+                        <span class="line">임상 기록, 간호 기록,</span>
+                        <span class="line">처방 관리가 통합된</span>
+                        <span class="line">교육용 스마트 의료정보</span>
+                        <span class="line">시스템입니다.</span>
+                    </p>
+                </div>
+
+            </div>
+
+            <div class="login-form-panel">
+                <div class="login-header">
+                    <div class="login-badge">Secure Access</div>
+                    <h2>로그인</h2>
+                    <p class="login-subtitle">교육용 전자의무기록 시스템에 접속하려면 계정 정보를 입력해 주세요.</p>
+                </div>
+
+                <label for="uid">아이디</label>
+                <input type="text" id="uid" placeholder="아이디를 입력하세요" autocomplete="username">
+
+                <label for="upw">비밀번호</label>
+                <input type="password" id="upw" placeholder="비밀번호를 입력하세요" autocomplete="current-password">
+
+                <div class="login-row">
+                    <label class="remember-wrap">
+                        <input type="checkbox">
+                        <span>로그인 상태 유지</span>
+                    </label>
+                    <a href="#" class="login-link">비밀번호 찾기</a>
+                </div>
+
+                <!-- 버튼을 누르면 login() 자바스크립트 함수가 실행됩니다. -->
+                <button onclick="login()">로그인</button>
+
+                <div class="login-security">
+                    <span class="shield">● 보안 연결</span>
+                    <span>SSL / HIPAA-ready</span>
+                </div>
+
+                <div class="login-footer">KBU Nursing Education Center</div>
+            </div>
         </div>
     </div>
 
