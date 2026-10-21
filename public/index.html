@@ -1288,6 +1288,7 @@
         <!-- 오른쪽 액션 영역입니다. -->
         <div class="flex items-center justify-end gap-2 ml-auto flex-wrap">
             <div id="mainHeaderEmrActions" class="hidden items-center gap-2 flex-wrap">
+                <button type="button" class="btn-slate emr-top-action-btn" onclick="openDrugCalculatorModal()" style="padding:6px 10px; font-size:11px; font-weight:700;">mL/hr → gtt/min 변환기</button>
                 <button class="btn-blue emr-top-action-btn" onclick="downloadEmrTxt()">📄 EMR 요약 TXT 다운로드</button>
                 <button class="btn-blue emr-top-action-btn" onclick="window.print()">🖨️ 차트 인쇄</button>
                 <button class="btn-purple emr-top-action-btn" onclick="openN8nChatbot()" title="n8n 챗봇">🤖 n8n 챗봇</button>
@@ -3466,6 +3467,77 @@
             if (group) {
                 group.style.display = 'flex';
             }
+        }
+
+        function openDrugCalculatorModal() {
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.inset = '0';
+            overlay.style.background = 'rgba(15, 23, 42, 0.45)';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.zIndex = '9999';
+            overlay.style.padding = '12px';
+
+            const modal = document.createElement('div');
+            modal.style.width = '520px';
+            modal.style.maxWidth = '92vw';
+            modal.style.maxHeight = '88vh';
+            modal.style.overflowY = 'auto';
+            modal.style.background = '#fff';
+            modal.style.borderRadius = '16px';
+            modal.style.boxShadow = '0 20px 50px rgba(15, 23, 42, 0.25)';
+            modal.style.padding = '18px';
+            modal.style.boxSizing = 'border-box';
+
+            const fieldStyle = 'width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px 10px; font-size:12px; box-sizing:border-box;';
+
+            modal.innerHTML = `
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px;">
+                    <div style="font-size:17px; font-weight:800; color:#0f172a;">mL/hr → gtt/min 변환기</div>
+                    <button type="button" id="drugCalcClose" style="border:none; background:none; font-size:24px; color:#64748b; cursor:pointer;">×</button>
+                </div>
+
+                <div style="display:grid; gap:12px; margin-bottom:14px;">
+                    <div style="border:1px solid #dbeafe; border-radius:10px; background:#f8fafc; padding:12px;">
+                        <div style="font-size:12px; font-weight:800; color:#0f172a; margin-bottom:8px;">연속 변환</div>
+                        <div style="display:grid; gap:8px;">
+                            <div>
+                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">mL/hr</div>
+                                <input id="drugCalcMlPerHour" type="number" step="0.1" value="600" style="${fieldStyle}">
+                            </div>
+                            <div style="margin-top:6px; padding:10px; border:1px solid #dbeafe; border-radius:8px; background:#ffffff;">
+                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:6px;">gtt/min</div>
+                                <div id="drugCalcResult" style="font-size:22px; font-weight:900; color:#0f172a; line-height:1.2; min-height:28px;">200.0</div>
+                                <div id="drugCalcFormula" style="font-size:9px; color:#64748b; margin-top:6px; line-height:1.4;">gtt/min = (mL/hr × 20) ÷ 60</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            `;
+
+            const close = () => overlay.remove();
+            modal.querySelector('#drugCalcClose').addEventListener('click', close);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+            const calculate = () => {
+                const mlPerHour = Number(modal.querySelector('#drugCalcMlPerHour').value || 0);
+                const dropFactor = 20;
+                const gttPerMin = mlPerHour > 0 ? (mlPerHour * dropFactor) / 60 : 0;
+
+                modal.querySelector('#drugCalcResult').textContent = `${gttPerMin.toFixed(1)}`;
+                modal.querySelector('#drugCalcFormula').textContent = `gtt/min = (mL/hr × 20) ÷ 60`;
+                return { mlPerHour, dropFactor, gttPerMin };
+            };
+
+            const updateOnInput = () => calculate();
+            modal.querySelector('#drugCalcMlPerHour').addEventListener('input', updateOnInput);
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            calculate();
         }
 
         const bottomPaneResizeState = {
