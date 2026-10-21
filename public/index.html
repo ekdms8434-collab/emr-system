@@ -71,6 +71,15 @@
         /* 헤더 안의 제목(h1) 글씨 크기와 간격 설정입니다. */
         .header-bar h1 { margin: 0; font-size: 15px; color: var(--primary-navy); display: flex; align-items: center; gap: 6px; }
 
+        .emr-top-action-btn {
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 800;
+            white-space: nowrap;
+            color: #ffffff !important;
+        }
+
         /* 글자를 입력하거나 선택하는 칸(input, select, textarea)들의 기본 모양입니다. */
         input, select, textarea { padding: 4px 6px; border: 1px solid var(--border-color); border-radius: 3px; font-size: 11px; outline: none; }
         /* 입력 칸을 마우스로 클릭(focus)했을 때 테두리 색상이 네이비로 변하게 합니다. */
@@ -519,6 +528,87 @@
             text-overflow: ellipsis; /* 너무 길면 ...으로 표시 */
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             position: relative;
+        }
+        .risk-assessment-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .risk-card {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #f8fafc;
+            overflow: hidden;
+        }
+        .risk-card-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+            color: #fff;
+            padding: 8px 10px;
+            font-size: 11px;
+            font-weight: 800;
+        }
+        .risk-card-body {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .domain-row {
+            display: grid;
+            grid-template-columns: 1.1fr 0.8fr;
+            align-items: center;
+            gap: 8px;
+            font-size: 10.5px;
+            color: #334155;
+        }
+        .domain-row select, .domain-row input, .domain-row textarea {
+            width: 100%;
+            font-size: 10.5px;
+            padding: 3px 6px;
+            box-sizing: border-box;
+        }
+        .risk-summary-box {
+            border: 1px solid #dbeafe;
+            border-radius: 6px;
+            background: #eff6ff;
+            padding: 8px;
+            min-height: 62px;
+        }
+        .risk-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            padding: 3px 8px;
+            font-size: 10px;
+            font-weight: 800;
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .risk-badge.high { background: #fee2e2; color: #b91c1c; }
+        .risk-badge.medium { background: #fef3c7; color: #92400e; }
+        .risk-badge.low { background: #dcfce7; color: #166534; }
+        .score-pill {
+            display: inline-flex;
+            min-width: 56px;
+            justify-content: center;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 800;
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+        .assessment-note {
+            font-size: 10.5px;
+            line-height: 1.5;
+            color: #475569;
+            border-top: 1px dashed #cbd5e1;
+            padding-top: 8px;
+        }
+        .pain-slider {
+            width: 100%;
         }
         /* 말풍선 아래의 뾰족한 화살표 꼬리 모양을 만듭니다. */
         .speech-bubble::after {
@@ -1071,6 +1161,67 @@
         </div>
     </div>
 
+    <div id="woundDetailModal" class="fixed inset-0 bg-black bg-opacity-40 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-[700px] max-w-[92vw]">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">🩹 욕창 위치/상처 상세</h3>
+                <button type="button" onclick="closeWoundDetailModal()" class="text-2xl font-bold text-slate-500">×</button>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">위치</label>
+                    <input type="text" id="woundLocationInput" class="w-full border rounded px-2 py-2 text-sm" placeholder="예: 오른쪽 견갑골, 천골">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">상처 단계</label>
+                    <select id="woundStageInput" class="w-full border rounded px-2 py-2 text-sm">
+                        <option value="Stage 1">Stage 1</option>
+                        <option value="Stage 2">Stage 2</option>
+                        <option value="Stage 3">Stage 3</option>
+                        <option value="Stage 4">Stage 4</option>
+                        <option value="Unstageable">Unstageable</option>
+                        <option value="DTPI">DTPI</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">크기</label>
+                    <input type="text" id="woundSizeInput" class="w-full border rounded px-2 py-2 text-sm" placeholder="예: 3.5 × 4.0 cm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 mb-1">삼출물</label>
+                    <select id="woundExudateInput" class="w-full border rounded px-2 py-2 text-sm">
+                        <option value="없음">없음</option>
+                        <option value="소량">소량</option>
+                        <option value="중량">중량</option>
+                        <option value="다량">다량</option>
+                        <option value="혈성">혈성</option>
+                    </select>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-xs font-bold text-gray-700 mb-1">추가 특성</label>
+                    <textarea id="woundDetailNote" rows="3" class="w-full border rounded px-2 py-2 text-sm" placeholder="피부 상태, 통증, 색상, 경계, 부종, 분비물 특징을 기재하세요."></textarea>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" onclick="closeWoundDetailModal()" class="px-5 py-2 bg-gray-400 text-white rounded text-sm font-bold">취소</button>
+                <button type="button" onclick="saveWoundDetailModal()" class="px-5 py-2 bg-slate-900 text-white rounded text-sm font-bold">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="assessmentPopupModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-[980px] max-w-[96vw] max-h-[92vh] overflow-y-auto p-5">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800">🩺 사정</h3>
+                    <p class="text-xs text-gray-500 mt-1">욕창 위험도 · 낙상 위험도 · 통증 사정 및 재사정</p>
+                </div>
+                <button type="button" onclick="closeAssessmentPopup()" class="text-2xl font-bold text-slate-500">×</button>
+            </div>
+            <div id="assessmentPopupContent"></div>
+        </div>
+    </div>
+
     <!-- 로그인 화면. 시스템에 접속할 때 가장 먼저 보이는 페이지입니다. -->
     <div id="view-login" class="flex items-center justify-center min-h-screen">
         <div id="loginView">
@@ -1126,23 +1277,33 @@
     </div>
 
     <!-- 메인 화면 최상단 헤더(메뉴바)입니다. 로그인 성공 시 나타납니다. -->
-    <header id="main-header" class="hidden bg-white shadow-sm border-b px-6 py-2.5 flex justify-between items-center w-full">
+    <header id="main-header" class="hidden bg-white shadow-sm border-b px-6 py-2.5 flex justify-between items-center w-full gap-3">
         <!-- 왼쪽 로고/제목 영역. 클릭하면 환자 목록 화면으로 이동합니다. -->
-        <div class="flex items-center space-x-3 cursor-pointer" onclick="showView('patients')">
+        <div class="flex items-center space-x-3 cursor-pointer min-w-0" onclick="showView('patients')">
             <img src="/logo.png" alt="KBU NEC 로고" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';" style="display:block; width: 42px; height: 42px; object-fit: contain;">
             <span style="display:none; width:42px; height:42px; align-items:center; justify-content:center; border-radius:50%; background:#dfeeff; color:#1e3a8a; font-size:10px; font-weight:900; letter-spacing:0.05em;">KBU</span>
-            <h1 class="text-lg font-bold text-slate-900">환자 관리 및 EMR 시스템</h1>
+            <h1 class="text-lg font-bold text-slate-900 whitespace-nowrap">KBU NEC EMR System</h1>
         </div>
-        <!-- 오른쪽 설정 및 로그아웃 영역입니다. -->
-        <div class="flex items-center space-x-4">
-            <button id="headerSettingsBtn" onclick="showView('settings')" class="p-2 text-gray-600 hover:text-slate-900 hover:bg-gray-100 rounded-full transition" title="설정">
-                <!-- 톱니바퀴 아이콘(SVG 이미지) 입니다. -->
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-            </button>
-            <button onclick="handleLogout()" class="text-sm text-red-500 hover:underline font-bold">로그아웃</button>
+
+        <!-- 오른쪽 액션 영역입니다. -->
+        <div class="flex items-center justify-end gap-2 ml-auto flex-wrap">
+            <div id="mainHeaderEmrActions" class="hidden items-center gap-2 flex-wrap">
+                <button class="btn-blue emr-top-action-btn" onclick="downloadEmrTxt()">📄 EMR 요약 TXT 다운로드</button>
+                <button class="btn-blue emr-top-action-btn" onclick="window.print()">🖨️ 차트 인쇄</button>
+                <button class="btn-purple emr-top-action-btn" onclick="openN8nChatbot()" title="n8n 챗봇">🤖 n8n 챗봇</button>
+                <button class="btn-slate emr-top-action-btn" onclick="showListPage()">← 환자 목록으로 돌아가기</button>
+            </div>
+
+            <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
+                <button id="headerSettingsBtn" onclick="showView('settings')" class="p-2 text-gray-600 hover:text-slate-900 hover:bg-gray-100 rounded-full transition" title="설정">
+                    <!-- 톱니바퀴 아이콘(SVG 이미지) 입니다. -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </button>
+                <button onclick="handleLogout()" class="text-sm text-red-500 hover:underline font-bold">로그아웃</button>
+            </div>
         </div>
     </header>
 
@@ -1227,15 +1388,6 @@
 
             <!-- 특정 환자를 클릭했을 때 나타나는 상세 EMR 메인 차트 페이지입니다. -->
            <div id="detailPage">
-                <div class="header-bar" style="margin-bottom: 8px;">
-                    <h1>📑 KBU NEC 전자의무기록 (EMR Chart)</h1>
-                    <div style="display: flex; gap: 6px;">
-                        <button class="btn-blue" onclick="downloadEmrTxt()">📄 EMR 요약 TXT 다운로드</button>
-                        <button class="btn-blue" onclick="window.print()">🖨️ 차트 인쇄</button>
-                        <button class="btn-purple" onclick="openN8nChatbot()" title="n8n 챗봇">🤖 n8n 챗봇</button>
-                        <button class="btn-slate" onclick="showListPage()">← 환자 목록으로 돌아가기</button>
-                    </div>
-                </div>
 
 <!-- n8n 챗봇 모달 -->
 <div id="n8n-chatbot-modal" class="n8n-chatbot-modal hidden" aria-hidden="true">
@@ -1386,10 +1538,11 @@
                                         <button type="button" id="prescriptionNextDayBtn" style="width:28px; height:28px; border:1px solid #cbd5e1; border-radius:4px; background:#f8fafc; color:#0f172a; font-size:14px; font-weight:bold; cursor:pointer;">→</button>
                                     </div>
                                     <div class="main-tab-bar" style="flex:1; padding:0; border:none; background:transparent; gap:3px; justify-content:flex-start;">
+                                        <button class="main-tab-btn" onclick="openTopTab('assessmentTab', this)">🩺 사정</button>
                                         <button class="main-tab-btn active" onclick="openTopTab('prescriptionTab', this)">📋 처방내역</button>
                                         <button class="main-tab-btn" onclick="openTopTab('nurseTab', this)">📝 간호기록</button>
-                                        <button class="main-tab-btn" onclick="openTopTab('surgeryTab', this)">🩺 수술 기록</button>
-                                        <button class="main-tab-btn" onclick="openTopTab('transfusionTab', this)">🩸 수혈 기록</button>
+                                        <button class="main-tab-btn" onclick="openTopTab('surgeryTab', this)">🩺 수술 내역</button>
+                                        <button class="main-tab-btn" onclick="openTopTab('transfusionTab', this)">🩸 수혈 내역</button>
                                         <button class="main-tab-btn" onclick="openTopTab('labTab', this)">🧪 검사 결과</button>
                                         <button class="main-tab-btn" onclick="openTopTab('documentTab', this)">📄 서류 및 동의서</button>
                                     </div>
@@ -1435,6 +1588,74 @@
     margin: 0 2px !important;
   }
 </style>
+                                <!-- 0. 사정 탭 화면 -->
+                                <div id="assessmentTab" class="tab-content">
+                                    <div class="risk-assessment-grid" style="margin-top:12px;">
+                                        <div class="risk-card">
+                                            <div class="risk-card-header" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                                                <span>🩹 욕창 위험도 사정</span>
+                                                <button type="button" class="btn-blue" onclick="saveAssessmentEntry('pressure')" style="padding:6px 12px; font-size:11px; border-radius:6px;">💾 저장</button>
+                                            </div>
+                                            <div id="pressureRiskForm" class="risk-card-body">
+                                                <div class="domain-row"><span>감각인지</span><select data-domain="sensory" onchange="calculatePressureRisk()"><option value="1">1점</option><option value="2">2점</option><option value="3">3점</option><option value="4">4점</option></select></div>
+                                                <div class="domain-row"><span>습기</span><select data-domain="moisture" onchange="calculatePressureRisk()"><option value="1">1점</option><option value="2">2점</option><option value="3">3점</option><option value="4">4점</option></select></div>
+                                                <div class="domain-row"><span>활동성</span><select data-domain="activity" onchange="calculatePressureRisk()"><option value="1">1점</option><option value="2">2점</option><option value="3">3점</option><option value="4">4점</option></select></div>
+                                                <div class="domain-row"><span>기동력</span><select data-domain="mobility" onchange="calculatePressureRisk()"><option value="1">1점</option><option value="2">2점</option><option value="3">3점</option><option value="4">4점</option></select></div>
+                                                <div class="domain-row"><span>영양상태</span><select data-domain="nutrition" onchange="calculatePressureRisk()"><option value="1">1점</option><option value="2">2점</option><option value="3">3점</option><option value="4">4점</option></select></div>
+                                                <div class="domain-row"><span>마찰력/전달력</span><select data-domain="friction" onchange="calculatePressureRisk()"><option value="1">1점</option><option value="2">2점</option><option value="3">3점</option></select></div>
+                                                <div class="risk-summary-box">
+                                                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
+                                                        <span style="font-size:10px; font-weight:800; color:#334155;">총점</span>
+                                                        <span id="pressureRiskTotal" class="score-pill">0</span>
+                                                    </div>
+                                                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                                                        <span style="font-size:10px; font-weight:800; color:#334155;">위험도</span>
+                                                        <span id="pressureRiskLevel" class="risk-badge low">저위험군</span>
+                                                    </div>
+                                                </div>
+                                                <div id="pressureRiskInstruction" class="assessment-note">점수를 입력하면 자동으로 지시사항이 생성됩니다.</div>
+                                                <button type="button" id="pressureRiskCheckBtn" onclick="openPressureRiskCheckPopup()" class="btn-slate" style="width:100%; margin-top:8px; display:none;">확인사항</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="risk-card">
+                                            <div class="risk-card-header" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                                                <span>🚶 낙상 위험도 사정</span>
+                                                <button type="button" class="btn-blue" onclick="saveAssessmentEntry('fall')" style="padding:6px 12px; font-size:11px; border-radius:6px;">💾 저장</button>
+                                            </div>
+                                            <div class="risk-card-body">
+                                                <div class="domain-row"><span>낙상 위험</span><select id="fallRiskLevel" onchange="renderFallRiskSummary()"><option value="low">저위험</option><option value="moderate">중위험</option><option value="high">고위험</option></select></div>
+                                                <div class="domain-row"><span>배설/보행</span><select id="fallRiskMobility" onchange="renderFallRiskSummary()"><option value="안정">안정</option><option value="보행보조">보행보조</option><option value="실신/어지럼">실신/어지럼</option></select></div>
+                                                <div class="domain-row"><span>인지상태</span><select id="fallRiskCognition" onchange="renderFallRiskSummary()"><option value="정상">정상</option><option value="주의요함">주의요함</option><option value="혼란">혼란</option></select></div>
+                                                <div class="risk-summary-box">
+                                                    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
+                                                        <span style="font-size:10px; font-weight:800; color:#334155;">판정</span>
+                                                        <span id="fallRiskBadge" class="risk-badge low">저위험</span>
+                                                    </div>
+                                                    <div id="fallRiskInstruction" class="assessment-note">낙상 예방 안내를 확인하세요.</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="risk-card">
+                                            <div class="risk-card-header" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                                                <span>🩺 통증 사정 및 재사정</span>
+                                                <button type="button" class="btn-blue" onclick="saveAssessmentEntry('pain')" style="padding:6px 12px; font-size:11px; border-radius:6px;">💾 저장</button>
+                                            </div>
+                                            <div class="risk-card-body">
+                                                <div class="domain-row"><span>통증 위치</span><input id="painSite" type="text" placeholder="예: 우측 허리" oninput="renderPainSummary()"></div>
+                                                <div class="domain-row"><span>통증 정도</span><span style="display:flex; align-items:center; gap:6px; width:100%;"><input id="painScore" class="pain-slider" type="range" min="0" max="10" value="0" oninput="renderPainSummary()"><strong id="painScoreValue" style="min-width:18px; font-size:11px;">0</strong></span></div>
+                                                <div class="domain-row"><span>재사정 시점</span><input id="painReassessAt" type="time" oninput="renderPainSummary()"></div>
+                                                <div class="risk-summary-box">
+                                                    <div id="painSummaryText" class="assessment-note">통증을 사정하면 재사정 필요 여부가 표시됩니다.</div>
+                                                </div>
+                                                <div class="domain-row"><span>재사정 결과</span><textarea id="painReassessNote" rows="2" placeholder="재사정 결과 및 중재 반응을 기록하세요." oninput="renderPainSummary()"></textarea></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+
                                 <!-- 1. 처방내역 탭 화면 -->
                                 <div id="prescriptionTab" class="tab-content active">
                                     <div class="table-scroll-area">
@@ -1533,7 +1754,7 @@
 
                                     <div style="margin-top:12px; border:1px solid #dfe7f1; border-radius:10px; background:#f8fafc; padding:12px;">
                                         <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
-                                            <div style="font-size:12px; font-weight:800; color:#0f172a;">수술안전체크리스트</div>
+                                            <div style="font-size:12px; font-weight:800; color:#0f172a;">KBU 수술안전 체크리스트</div>
                                             <button type="button" class="btn-slate" onclick="openSurgeryChecklistPopup()" style="padding:6px 10px; font-size:10px; font-weight:700;">작성</button>
                                         </div>
                                         <div style="display:none;">
@@ -1650,7 +1871,7 @@
                                 <!-- 3. 수혈 기록 탭 화면 -->
                                 <div id="transfusionTab" class="tab-content">
                                     <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; padding:8px 12px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc;">
-                                        <div style="font-size:12px; font-weight:800; color:#0f172a;">WHO 수혈안전 체크리스트</div>
+                                        <div style="font-size:12px; font-weight:800; color:#0f172a;">KBU 수혈안전 체크리스트</div>
                                         <button type="button" class="btn-slate" onclick="openTransfusionChecklistPopup()" style="padding:6px 10px; font-size:10px; font-weight:700;">작성 / 조회</button>
                                     </div>
                                     <div class="table-scroll-area">
@@ -1707,44 +1928,6 @@
                                         </div>
                                     </div>
 
-                                    <div style="display:none; margin-top:12px; border:1px solid #dfe7f1; border-radius:10px; background:#f8fafc; padding:12px;">
-                                        <div style="font-size:12px; font-weight:800; color:#0f172a; margin-bottom:8px;">수혈 V/S 타임라인</div>
-                                        <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
-                                            <button type="button" class="btn-slate stage-btn active" data-stage="수혈 전 (1시간 이내)" style="padding:6px 10px; font-size:10px; font-weight:700;">수혈 전</button>
-                                            <button type="button" class="btn-slate stage-btn" data-stage="수혈 시작 15분 후" style="padding:6px 10px; font-size:10px; font-weight:700;">15분 후</button>
-                                            <button type="button" class="btn-slate stage-btn" data-stage="수혈 중" style="padding:6px 10px; font-size:10px; font-weight:700;">수혈 중</button>
-                                            <button type="button" class="btn-slate stage-btn" data-stage="수혈 완료" style="padding:6px 10px; font-size:10px; font-weight:700;">수혈 완료</button>
-                                        </div>
-                                        <div style="display:grid; grid-template-columns:repeat(3, minmax(110px, 1fr)); gap:8px; align-items:end;">
-                                            <div>
-                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">BP</div>
-                                                <input id="transfusionVsBp" type="text" placeholder="120/80" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
-                                            </div>
-                                            <div>
-                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">HR</div>
-                                                <input id="transfusionVsHr" type="number" step="0.1" placeholder="/min" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
-                                            </div>
-                                            <div>
-                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">RR</div>
-                                                <input id="transfusionVsRr" type="number" step="0.1" placeholder="/min" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
-                                            </div>
-                                            <div>
-                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">BT</div>
-                                                <input id="transfusionVsBt" type="number" step="0.1" placeholder="℃" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
-                                            </div>
-                                            <div>
-                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">SpO2</div>
-                                                <input id="transfusionVsSpo2" type="number" step="0.1" placeholder="%" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
-                                            </div>
-                                            <div>
-                                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">속도</div>
-                                                <input id="transfusionVsRate" type="text" placeholder="gtt/min" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
-                                            </div>
-                                        </div>
-                                        <div style="display:flex; justify-content:flex-end; margin-top:10px;">
-                                            <button type="button" class="btn-blue" onclick="saveTransfusionVsStage()" style="padding:8px 12px; font-size:11px; font-weight:800;">현재 단계 V/S 저장</button>
-                                        </div>
-                                    </div>
 
                                     <div class="input-bar-bottom" style="display:none; margin-top:12px;">
                                         <input type="datetime-local" id="transfusionTime" style="width:140px;">
@@ -1814,6 +1997,7 @@
                                 </div>
 
                             </div>
+
 
                             <!-- 상단과 하단을 나누고 접을 수 있게 해주는 경계선 바입니다. -->
                             <div id="bottomPaneResizer" class="collapsible-resizer-bar" title="드래그로 크기 조절, 클릭으로 접기/펼치기">
@@ -3794,6 +3978,7 @@ function getCurrentPatientName() {
                 const podVal = parseInt(patientData.pod, 10);
 
                 const existingRecords = patientData.records && typeof patientData.records === 'object' ? patientData.records : {};
+                const incomingRecords = (patientData.records && typeof patientData.records === 'object') ? patientData.records : {};
                 const profile = existingRecords.profile || {};
 
                 if (patientData.height !== undefined && patientData.height !== null && patientData.height !== '') {
@@ -3803,9 +3988,14 @@ function getCurrentPatientName() {
                     profile.weight = patientData.weight;
                 }
 
+                const assessmentData = patientData.assessment || incomingRecords.assessment || existingRecords.assessment || { history: [] };
+                const nurseData = incomingRecords.nurse || existingRecords.nurse || [];
                 const recordsPayload = {
                     ...existingRecords,
-                    profile
+                    ...incomingRecords,
+                    profile,
+                    assessment: assessmentData,
+                    nurse: nurseData
                 };
 
                 const payload = {
@@ -3862,6 +4052,57 @@ function getCurrentPatientName() {
             document.getElementById(tabId).classList.add('active');
         }
 
+        function openAssessmentPopup() {
+            const modal = document.getElementById('assessmentPopupModal');
+            const content = document.getElementById('assessmentPopupContent');
+            const grid = document.getElementById('riskAssessmentGrid');
+            if (!modal || !content || !grid) return;
+
+            if (!grid.dataset.originalParent) {
+                grid.dataset.originalParent = grid.parentNode ? grid.parentNode.id || 'body' : 'body';
+            }
+            if (!grid.dataset.originalNext) {
+                grid.dataset.originalNext = String(grid.nextSibling && grid.nextSibling.nodeType === Node.ELEMENT_NODE ? grid.nextSibling.id || '' : '');
+            }
+
+            const holder = grid.parentNode;
+            if (holder && holder.id !== 'assessmentPopupContent') {
+                content.innerHTML = '';
+                content.appendChild(grid);
+            }
+            modal.classList.remove('hidden');
+            modal.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeAssessmentPopup() {
+            const modal = document.getElementById('assessmentPopupModal');
+            const content = document.getElementById('assessmentPopupContent');
+            const grid = document.getElementById('riskAssessmentGrid');
+            const anchor = document.getElementById('riskAssessmentGridAnchor');
+
+            if (modal && content) {
+                content.innerHTML = '';
+                modal.classList.add('hidden');
+                modal.setAttribute('aria-hidden', 'true');
+            }
+
+            if (modal && !content) {
+                if (document.activeElement && modal.contains(document.activeElement)) {
+                    document.activeElement.blur();
+                }
+            }
+
+            if (grid && anchor) {
+                if (document.activeElement && modal && modal.contains(document.activeElement)) {
+                    document.activeElement.blur();
+                }
+                content.innerHTML = '';
+                anchor.parentNode.insertBefore(grid, anchor.nextSibling);
+                modal.classList.add('hidden');
+                modal.setAttribute('aria-hidden', 'true');
+            }
+        }
+
         // 메인 EMR 화면의 아래쪽 탭(V/S, I/O)을 클릭했을 때 내용물을 바꿔주는 함수입니다.
         function openBottomTab(tabId, btn) {
             const pane = btn.closest('.split-pane');
@@ -3904,6 +4145,7 @@ function getCurrentPatientName() {
                 onPrescTypeChange(document.getElementById('prescType').value);
             }
 
+            updateMainHeaderEmrActions();
             applyStudentButtonDisable();
         }
 
@@ -5002,6 +5244,15 @@ function getCurrentPatientName() {
             if (index !== -1) openPatientDetail(index);
         }
 
+        function updateMainHeaderEmrActions() {
+            const actions = document.getElementById('mainHeaderEmrActions');
+            if (!actions) return;
+            const detailPage = document.getElementById('detailPage');
+            const isDetailVisible = !!detailPage && getComputedStyle(detailPage).display !== 'none';
+            actions.classList.toggle('hidden', !isDetailVisible);
+            actions.classList.toggle('flex', isDetailVisible);
+        }
+
 function openPatientDetail(index) {
     // 💡 함수의 존재 여부를 안전하게 확인 후 실행
     if (typeof closeN8nChatbotModal === 'function') {
@@ -5034,6 +5285,7 @@ function openPatientDetail(index) {
             // 나머지 다른 구역(마네킹, 목록, 기록 등)도 이 환자에 맞춰서 새로고침 합니다.
             renderQuickPatientList();
             renderBodyMarks();
+            renderAssessmentPanels();
             renderAllRecords();
             initCurrentTimeInputs();
             updateMedDbDropdown();
@@ -5043,6 +5295,7 @@ function openPatientDetail(index) {
             // 환자 목록 페이지를 숨기고, 상세 차트 페이지를 화면에 보여줍니다.
             document.getElementById('listPage').style.display = 'none';
             document.getElementById('detailPage').style.display = 'flex';
+            updateMainHeaderEmrActions();
         }
 
         // 마네킹 탭에서 '앞모습', '뒷모습' 버튼을 눌렀을 때 그림을 바꿔주는 함수입니다.
@@ -5070,38 +5323,28 @@ function openPatientDetail(index) {
 
         // 마네킹 이미지 위에 마커(핀)를 새로 추가할 때 실행되는 비동기 함수입니다.
         async function addBodyMark(event) {
-            // 클릭한 위치에 이미 다른 핀(.pin-wrapper)이 있다면 중복해서 추가되지 않도록 막아줍니다.
             if(event.target.closest('.pin-wrapper')) return;
-            
-            // 이미지를 기준으로 클릭한 위치의 X, Y 좌표를 계산합니다. (비율(%)로 계산해서 화면 크기가 변해도 위치를 유지해요.)
             const rect = event.currentTarget.getBoundingClientRect();
             const x = Math.round(((event.clientX - rect.left) / rect.width) * 100);
             const y = Math.round(((event.clientY - rect.top) / rect.height) * 100);
-            
-            // 현재 화면에 보이는 것이 앞모습인지 뒷모습인지 텍스트로 저장합니다.
-            const sideText = currentBodySide === 'front' ? '앞모습' : '뒷모습';
-            
-            // 어떤 종류의 마커를 찍는지 한글 이름으로 정해줍니다.
-            let typeName = '수술 부위';
-            if (selectedMarkType === 'SORE') typeName = '욕창 부위';
-            else if (selectedMarkType === 'DEVICE') typeName = '적용 기구';
-
-            // 사용자에게 마커에 대한 메모를 입력받는 알림창(prompt)을 띄웁니다.
-            const note = prompt(`[${sideText} - ${typeName}] 메모를 입력하세요:`);
-            if(!note) return; // 메모를 입력하지 않고 취소하면 함수를 종료합니다.
-
-            // 현재 화면에 열려있는 환자 정보를 가져옵니다.
+            const side = currentBodySide || 'front';
             const p = patients[currentPatientIndex];
-            
-            // 환자 데이터에 마커(bodyMarks)를 저장할 공간이 없다면 새 배열([])을 만들어 줍니다.
-            if(!p.bodyMarks) p.bodyMarks = [];
-            
-            // 계산한 좌표, 종류, 메모 정보를 환자의 마커 목록에 추가합니다.
-            p.bodyMarks.push({ x, y, side: currentBodySide, type: selectedMarkType, note });
-            
-            // 새롭게 추가된 마커 정보가 담긴 환자 데이터를 서버에 저장합니다.
-            await savePatientToBackend(p); 
-            // 데이터가 성공적으로 저장되었으니 화면에 핀을 다시 그려줍니다.
+            if (!p) return;
+            if (!p.bodyMarks) p.bodyMarks = [];
+
+            if (selectedMarkType === 'SORE') {
+                const index = p.bodyMarks.length;
+                openWoundDetailModal(x, y, side, index, true);
+                return;
+            }
+
+            const sideText = side === 'front' ? '앞모습' : '뒷모습';
+            let typeName = '수술 부위';
+            if (selectedMarkType === 'DEVICE') typeName = '적용 기구';
+            const note = prompt(`[${sideText} - ${typeName}] 메모를 입력하세요:`);
+            if(!note) return;
+            p.bodyMarks.push({ x, y, side, type: selectedMarkType, note });
+            await savePatientToBackend(p);
             renderBodyMarks();
         }
 
@@ -5131,15 +5374,78 @@ function openPatientDetail(index) {
             }
         }
 
+        function openWoundDetailModal(x, y, side, index = null, isNew = false) {
+            const p = patients[currentPatientIndex];
+            const mark = index !== null && p && p.bodyMarks && p.bodyMarks[index] ? p.bodyMarks[index] : null;
+            const wound = mark && mark.wound ? mark.wound : {};
+            const detailNote = mark?.detail || wound.note || '';
+
+            document.getElementById('woundLocationInput').value = mark?.location || wound.location || '';
+            document.getElementById('woundStageInput').value = wound.stage || 'Stage 1';
+            document.getElementById('woundSizeInput').value = wound.size || '';
+            document.getElementById('woundExudateInput').value = wound.exudate || '없음';
+            document.getElementById('woundDetailNote').value = detailNote;
+            document.getElementById('woundDetailModal').dataset.index = String(index ?? '');
+            document.getElementById('woundDetailModal').dataset.side = side || 'front';
+            document.getElementById('woundDetailModal').dataset.x = String(x ?? '');
+            document.getElementById('woundDetailModal').dataset.y = String(y ?? '');
+            document.getElementById('woundDetailModal').dataset.isNew = isNew ? 'true' : 'false';
+            document.getElementById('woundDetailModal').classList.remove('hidden');
+        }
+
+        function closeWoundDetailModal() {
+            document.getElementById('woundDetailModal').classList.add('hidden');
+        }
+
+        async function saveWoundDetailModal() {
+            const p = patients[currentPatientIndex];
+            if (!p) return;
+            if (!p.bodyMarks) p.bodyMarks = [];
+
+            const modal = document.getElementById('woundDetailModal');
+            const index = modal.dataset.index !== '' ? Number(modal.dataset.index) : null;
+            const x = Number(modal.dataset.x || 0);
+            const y = Number(modal.dataset.y || 0);
+            const side = modal.dataset.side || currentBodySide || 'front';
+            const location = document.getElementById('woundLocationInput').value.trim();
+            const stage = document.getElementById('woundStageInput').value;
+            const size = document.getElementById('woundSizeInput').value.trim();
+            const exudate = document.getElementById('woundExudateInput').value;
+            const note = document.getElementById('woundDetailNote').value.trim();
+            const label = [stage, size, exudate].filter(Boolean).join(' / ');
+            const woundData = { stage, size, exudate, location, note };
+            const bodyMark = {
+                x,
+                y,
+                side,
+                type: 'SORE',
+                note: label || location || '욕창부위',
+                location,
+                wound: woundData,
+                detail: note
+            };
+
+            if (index !== null && p.bodyMarks[index]) {
+                p.bodyMarks[index] = { ...p.bodyMarks[index], ...bodyMark };
+            } else {
+                p.bodyMarks.push(bodyMark);
+            }
+
+            await savePatientToBackend(p);
+            closeWoundDetailModal();
+            renderBodyMarks();
+        }
+
         // 마커의 메모를 수정할 수 있는 모달(팝업창)을 여는 함수입니다.
         function openPinEditModal(index) {
-            // 어떤 핀을 수정할 것인지 인덱스 번호를 기억해 둡니다.
-            targetPinIndex = index; 
             const p = patients[currentPatientIndex];
-            
-            // 모달창의 입력칸에 기존에 작성해 둔 메모 내용을 채워 넣습니다.
-            document.getElementById('modalPinNote').value = p.bodyMarks[index].note || '';
-            // hidden 클래스를 제거해서 숨겨져 있던 모달창을 화면에 보여줍니다.
+            const mark = p.bodyMarks[index];
+            if (mark && mark.type === 'SORE') {
+                openWoundDetailModal(mark.x, mark.y, mark.side || currentBodySide, index, false);
+                return;
+            }
+            targetPinIndex = index; 
+            document.getElementById('modalPinNote').value = mark.note || '';
             document.getElementById('pinEditModal').classList.remove('hidden');
         }
 
@@ -5153,18 +5459,327 @@ function openPatientDetail(index) {
         // 수정된 마커 메모를 최종적으로 서버에 저장하는 함수입니다.
         async function submitPinEdit() {
             if (targetPinIndex === null) return;
-            // 입력칸에서 새 메모 내용을 가져오고, 양옆의 불필요한 공백은 잘라냅니다(.trim()).
             const newNote = document.getElementById('modalPinNote').value.trim();
-            if (!newNote) return alert("메모 내용을 입력해 주세요."); // 빈칸 체크
+            if (!newNote) return alert("메모 내용을 입력해 주세요.");
 
-            // 환자 데이터 중 선택한 핀의 메모 내용을 새 내용으로 덮어씁니다.
             const p = patients[currentPatientIndex];
             p.bodyMarks[targetPinIndex].note = newNote;
-            
-            // 서버에 데이터 저장 -> 모달창 닫기 -> 바뀐 내용으로 화면 다시 그리기 순으로 진행됩니다.
             await savePatientToBackend(p); 
             closePinEditModal(); 
             renderBodyMarks();
+        }
+
+        function renderAssessmentPanels() {
+            const p = patients[currentPatientIndex];
+            if (!p) return;
+            p.assessment = p.assessment || (p.records && p.records.assessment) || {};
+            if (p.records) p.records.assessment = p.assessment;
+
+            const pressureFields = document.querySelectorAll('#pressureRiskForm [data-domain]');
+            const pressureState = p.assessment.pressureRisk || {};
+            pressureFields.forEach((input) => {
+                const domain = input.dataset.domain;
+                if (pressureState[domain] !== undefined) input.value = pressureState[domain];
+            });
+            calculatePressureRisk();
+
+            const fallState = p.assessment.fallRisk || {};
+            document.getElementById('fallRiskLevel').value = fallState.level || 'low';
+            document.getElementById('fallRiskMobility').value = fallState.mobility || '안정';
+            document.getElementById('fallRiskCognition').value = fallState.cognition || '정상';
+            renderFallRiskSummary();
+
+            const painState = p.assessment.pain || {};
+            document.getElementById('painSite').value = painState.site || '';
+            document.getElementById('painScore').value = painState.score || 0;
+            document.getElementById('painScoreValue').textContent = painState.score || 0;
+            document.getElementById('painReassessAt').value = painState.reassessAt || '';
+            document.getElementById('painReassessNote').value = painState.reassessNote || '';
+            renderPainSummary();
+            renderAssessmentHistory();
+        }
+
+        function renderAssessmentHistory() {
+            const p = patients[currentPatientIndex];
+            const listEl = document.getElementById('assessmentHistoryList');
+            if (!p || !listEl) return;
+
+            p.assessment = p.assessment || (p.records && p.records.assessment) || {};
+            const history = Array.isArray(p.assessment.history) ? p.assessment.history.filter(entry => {
+                if (!entry) return false;
+                return !!(entry.savedAt || entry.section || entry.pressureRisk || entry.fallRisk || entry.pain);
+            }) : [];
+
+            if (!history.length) {
+                listEl.innerHTML = '<div style="padding:10px; border:1px dashed #cbd5e1; border-radius:6px; color:#475569; background:#f8fafc; font-size:11px;">저장된 사정 내역이 없습니다.</div>';
+                return;
+            }
+
+            listEl.innerHTML = history.slice(0, 8).map((entry, index) => {
+                const lines = [];
+                const pressure = entry.pressureRisk || {};
+                const fall = entry.fallRisk || {};
+                const pain = entry.pain || {};
+
+                if (pressure && (pressure.total !== undefined || entry.section === 'pressure')) {
+                    const pressureText = pressure.total !== undefined ? `욕창 ${pressure.total}점 ${pressure.level || ''}`.trim() : '욕창 사정';
+                    lines.push(`• ${pressureText}`);
+                }
+                if (fall && (fall.badgeText || fall.level || entry.section === 'fall')) {
+                    const fallText = fall.badgeText ? `낙상 ${fall.badgeText}` : '낙상 사정';
+                    lines.push(`• ${fallText}`);
+                }
+                if (pain && (pain.site || pain.score !== undefined || entry.section === 'pain')) {
+                    const painText = pain.site || pain.score !== undefined ? `통증 ${pain.site || '위치미기재'} ${pain.score || 0}점` : '통증 사정';
+                    lines.push(`• ${painText}`);
+                }
+
+                return `
+                    <div style="border:1px solid #e2e8f0; border-radius:8px; padding:10px; background:#f8fafc;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
+                            <div style="font-size:10px; color:#475569;">${entry.savedAt || '저장 시간 없음'}</div>
+                            <button type="button" onclick="deleteAssessmentHistoryEntry(${index})" style="padding:2px 6px; font-size:10px; border:1px solid #ef4444; color:#b91c1c; background:#fff1f2; border-radius:4px; cursor:pointer;">삭제</button>
+                        </div>
+                        <div style="font-size:11px; line-height:1.6; color:#0f172a;">
+                            ${lines.join('<br>') || '• 사정 저장'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function deleteAssessmentHistoryEntry(index) {
+            const p = patients[currentPatientIndex];
+            if (!p || !p.assessment || !Array.isArray(p.assessment.history)) return;
+
+            const removedEntry = p.assessment.history[index];
+            p.assessment.history.splice(index, 1);
+            if (p.records) {
+                p.records.assessment = p.assessment;
+                if (Array.isArray(p.records.nurse) && removedEntry) {
+                    const targetNote = buildAssessmentNurseSummary(removedEntry);
+                    p.records.nurse = p.records.nurse.filter(record => {
+                        return !(record && record.note === targetNote && record.time && removedEntry.savedAt && record.time.includes(removedEntry.savedAt.slice(0, 10)));
+                    });
+                }
+            }
+
+            savePatientToBackend(p).catch(() => {});
+            renderAssessmentHistory();
+        }
+
+        function buildAssessmentNurseSummary(entry) {
+            const pressure = entry.pressureRisk || {};
+            const fall = entry.fallRisk || {};
+            const pain = entry.pain || {};
+
+            const summaryParts = [];
+            if (pressure && (pressure.total !== undefined || entry.section === 'pressure')) {
+                summaryParts.push(`욕창 위험도 ${pressure.total !== undefined ? `${pressure.total}점(${pressure.level || '미평가'})` : '사정'}`);
+            }
+            if (fall && (fall.badgeText || fall.level || entry.section === 'fall')) {
+                summaryParts.push(`낙상 위험도 ${fall.badgeText || fall.level || '사정'}`);
+            }
+            if (pain && (pain.site || pain.score !== undefined || entry.section === 'pain')) {
+                summaryParts.push(`통증 ${pain.site || '위치미기재'} ${pain.score || 0}점`);
+            }
+
+            return summaryParts.length ? summaryParts.join(' / ') : '사정 기록';
+        }
+
+        function addAssessmentToNurseLog(entry) {
+            const p = patients[currentPatientIndex];
+            if (!p) return;
+            if (!p.records) p.records = {};
+            if (!p.records.nurse) p.records.nurse = [];
+
+            const nurseName = document.getElementById('nurseName')?.value.trim() || '간호사';
+            const time = new Date().toISOString().replace('T', ' ').slice(0, 16);
+            p.records.nurse.push({
+                time,
+                note: buildAssessmentNurseSummary(entry),
+                nurse: nurseName
+            });
+            sortRecordsByTime(p.records.nurse);
+        }
+
+        async function saveAssessmentEntry(sectionName = 'all') {
+            const p = patients[currentPatientIndex];
+            if (!p) return;
+
+            p.assessment = p.assessment || (p.records && p.records.assessment) || {};
+            const pressureFields = document.querySelectorAll('#pressureRiskForm [data-domain]');
+            const pressureMap = {};
+            let total = 0;
+            pressureFields.forEach((field) => {
+                const value = Number(field.value || 0);
+                pressureMap[field.dataset.domain] = value;
+                total += value;
+            });
+
+            const fallLevel = document.getElementById('fallRiskLevel').value;
+            const fallMobility = document.getElementById('fallRiskMobility').value;
+            const fallCognition = document.getElementById('fallRiskCognition').value;
+            const painSite = document.getElementById('painSite').value.trim();
+            const painScore = Number(document.getElementById('painScore').value || 0);
+            const painReassessAt = document.getElementById('painReassessAt').value;
+            const painReassessNote = document.getElementById('painReassessNote').value.trim();
+
+            const pressureLevel = total >= 12 ? '고위험군' : total >= 10 ? '중등도/저위험군' : '저위험군';
+            const fallBadge = document.getElementById('fallRiskBadge').textContent || '저위험';
+            const pressureText = document.getElementById('pressureRiskInstruction').textContent || '';
+            const painText = document.getElementById('painSummaryText').textContent || '';
+
+            const newEntry = {
+                savedAt: new Date().toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
+                section: sectionName,
+                pressureRisk: ['all', 'pressure'].includes(sectionName) ? { ...pressureMap, total, level: pressureLevel, instruction: pressureText } : null,
+                fallRisk: ['all', 'fall'].includes(sectionName) ? { level: fallLevel, mobility: fallMobility, cognition: fallCognition, badgeText: fallBadge } : null,
+                pain: ['all', 'pain'].includes(sectionName) ? { site: painSite, score: painScore, reassessAt: painReassessAt, reassessNote: painReassessNote, summary: painText } : null
+            };
+
+            p.assessment.history = Array.isArray(p.assessment.history) ? p.assessment.history : [];
+            p.assessment.history.unshift(newEntry);
+            p.assessment.history = p.assessment.history.slice(0, 10);
+            if (p.records) p.records.assessment = p.assessment;
+
+            addAssessmentToNurseLog(newEntry);
+            await savePatientToBackend(p);
+            renderAssessmentHistory();
+            renderAllRecords();
+
+            const labelMap = {
+                pressure: '욕창 위험도',
+                fall: '낙상 위험도',
+                pain: '통증 사정',
+                all: '사정'
+            };
+            alert(`${labelMap[sectionName] || '사정'} 내용이 저장되었습니다.`);
+        }
+
+        function openPressureRiskCheckPopup() {
+            const modal = document.getElementById('assessmentPopupModal');
+            const content = document.getElementById('assessmentPopupContent');
+            if (!modal || !content) return;
+
+            const message = '의사 noti 필요, 공기 유동 매트리스 / 교대압력 매트리스 적용, Q2h 체위변경, 영양팀 협진 지시 확인바람';
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                        <div class="text-lg font-extrabold text-amber-800">욕창 위험도 확인사항</div>
+                        <div class="mt-2 text-base text-slate-700 leading-7">${message}</div>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" onclick="closeAssessmentPopup()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded text-base font-bold">닫기</button>
+                        <button type="button" onclick="saveAssessmentEntry('pressure'); closeAssessmentPopup();" class="px-4 py-2 bg-slate-800 text-white rounded text-base font-bold">저장</button>
+                    </div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+            modal.setAttribute('aria-hidden', 'false');
+        }
+
+        function calculatePressureRisk() {
+            const p = patients[currentPatientIndex];
+            if (!p) return;
+            p.assessment = p.assessment || (p.records && p.records.assessment) || {};
+            const fields = document.querySelectorAll('#pressureRiskForm [data-domain]');
+            let total = 0;
+            const map = {};
+            fields.forEach((field) => {
+                const value = Number(field.value || 0);
+                map[field.dataset.domain] = value;
+                total += value;
+            });
+
+            p.assessment.pressureRisk = { ...map, total };
+            if (p.records) p.records.assessment = p.assessment;
+            const totalEl = document.getElementById('pressureRiskTotal');
+            const levelEl = document.getElementById('pressureRiskLevel');
+            const instructionEl = document.getElementById('pressureRiskInstruction');
+            const checkBtn = document.getElementById('pressureRiskCheckBtn');
+            const modal = document.getElementById('assessmentPopupModal');
+            const isHigh = total >= 12;
+            const isModerate = total >= 13 && total <= 18;
+
+            let label = '저위험군';
+            let labelClass = 'low';
+            if (isHigh) {
+                label = '고위험군';
+                labelClass = 'high';
+            } else if (isModerate) {
+                label = '중등도/저위험군';
+                labelClass = 'medium';
+            }
+
+            totalEl.textContent = total;
+            levelEl.textContent = label;
+            levelEl.className = 'risk-badge ' + labelClass;
+
+            if (modal) modal.classList.add('hidden');
+            if (checkBtn) checkBtn.style.display = isHigh ? 'block' : 'none';
+
+            if (isHigh) {
+                instructionEl.textContent = '고위험군입니다. 확인사항 버튼을 눌러 확인해 주세요.';
+            } else if (isModerate) {
+                instructionEl.textContent = '피부상태 관찰 및 보호 드레싱 적용 지시';
+            } else {
+                instructionEl.textContent = '정기적 피부관찰 및 예방교육 유지';
+            }
+
+            savePatientToBackend(p);
+        }
+
+        function renderFallRiskSummary() {
+            const p = patients[currentPatientIndex];
+            if (!p) return;
+            p.assessment = p.assessment || (p.records && p.records.assessment) || {};
+            const level = document.getElementById('fallRiskLevel').value;
+            const mobility = document.getElementById('fallRiskMobility').value;
+            const cognition = document.getElementById('fallRiskCognition').value;
+            let badgeText = '저위험';
+            let badgeClass = 'low';
+            let instruction = '보행 보조 및 환경 안전 유지';
+            if (level === 'moderate' || mobility === '보행보조' || cognition === '주의요함') {
+                badgeText = '중위험';
+                badgeClass = 'medium';
+                instruction = '낙상 예방 팔찌 적용, 보행 보조, 침상난간 올리기';
+            }
+            if (level === 'high' || mobility === '실신/어지럼' || cognition === '혼란') {
+                badgeText = '고위험';
+                badgeClass = 'high';
+                instruction = '낙상 예방장치 적용, 1:1 관찰, 침상 난간/보행 보조, 안전교육 시행';
+            }
+
+            const badge = document.getElementById('fallRiskBadge');
+            badge.textContent = badgeText;
+            badge.className = 'risk-badge ' + badgeClass;
+            document.getElementById('fallRiskInstruction').textContent = instruction;
+
+            p.assessment.fallRisk = { level, mobility, cognition, badgeText, instruction };
+            if (p.records) p.records.assessment = p.assessment;
+            savePatientToBackend(p);
+        }
+
+        function renderPainSummary() {
+            const p = patients[currentPatientIndex];
+            if (!p) return;
+            p.assessment = p.assessment || (p.records && p.records.assessment) || {};
+            const site = document.getElementById('painSite').value.trim();
+            const score = Number(document.getElementById('painScore').value || 0);
+            const reassessAt = document.getElementById('painReassessAt').value;
+            const reassessNote = document.getElementById('painReassessNote').value.trim();
+            document.getElementById('painScoreValue').textContent = score;
+
+            let text = '통증을 사정하면 재사정 필요 여부가 표시됩니다.';
+            if (site || score > 0) {
+                text = `${site || '통증'} ${score}점 / ${score >= 7 ? '강한 통증으로 재사정 필요' : score >= 4 ? '중등도 통증 관찰 필요' : '통증 경감 관찰'}${reassessAt ? `, 재사정 시각: ${reassessAt}` : ''}`;
+            }
+            document.getElementById('painSummaryText').textContent = text + (reassessNote ? ` / ${reassessNote}` : '');
+
+            p.assessment.pain = { site, score, reassessAt, reassessNote };
+            if (p.records) p.records.assessment = p.assessment;
+            savePatientToBackend(p);
         }
 
         // 서버에 저장된 마커(핀) 데이터를 가져와서 화면에 실제로 그려주는 함수입니다.
@@ -5210,6 +5825,7 @@ function openPatientDetail(index) {
         function showListPage() {
             document.getElementById('detailPage').style.display = 'none';
             document.getElementById('listPage').style.display = 'block';
+            updateMainHeaderEmrActions();
             renderPatientList(); // 목록 화면을 최신 데이터로 업데이트합니다.
         }
 
@@ -5838,30 +6454,6 @@ if (!note) return alert("처방 내역을 입력하세요.");
                 return;
             }
             alert('2인 동시 승인 완료되었습니다.');
-        }
-
-        function saveTransfusionVsStage() {
-            const p = patients[currentPatientIndex];
-            if (!p) return;
-            if (!window.transfusionTimeline) window.transfusionTimeline = {};
-            const stage = window.currentTransfusionStage || '수혈 전 (1시간 이내)';
-            const payload = {
-                bp: document.getElementById('transfusionVsBp')?.value.trim() || '',
-                hr: document.getElementById('transfusionVsHr')?.value || '',
-                rr: document.getElementById('transfusionVsRr')?.value || '',
-                bt: document.getElementById('transfusionVsBt')?.value || '',
-                spo2: document.getElementById('transfusionVsSpo2')?.value || '',
-                rate: document.getElementById('transfusionVsRate')?.value.trim() || '',
-                savedAt: new Date().toISOString()
-            };
-            window.transfusionTimeline[stage] = payload;
-            if (!p.records) p.records = {};
-            if (!p.records.transfusion) p.records.transfusion = [];
-            const noteText = document.getElementById('transfusionNote');
-            if (noteText && !noteText.value.trim()) {
-                noteText.value = `${stage} V/S 기록 저장 완료`;
-            }
-            alert(`${stage} 단계 V/S가 저장되었습니다.`);
         }
 
         function openTransfusionAdverseEventPopup() {
@@ -7988,7 +8580,7 @@ function editPresc(index) {
                 </div>
 
                 <div style="margin-bottom:18px; border:1px solid #dbeafe; border-radius:10px; background:#f8fafc; padding:12px;">
-                    <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">WHO 수술안전 체크리스트</div>
+                    <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">KBU 수술안전 체크리스트</div>
                     <div style="display:grid; grid-template-columns:1fr; gap:8px;">
                         <div style="border:1px solid #dbeafe; border-radius:8px; padding:10px 12px; background:#fff;">
                             <div style="display:flex; align-items:center; justify-content:space-between; font-size:12px; font-weight:800; color:#1e293b; margin-bottom:6px;">
@@ -8383,7 +8975,7 @@ function editPresc(index) {
                 ? transfusionList[editingTransfusionIndex]
                 : [...transfusionList].sort((a, b) => (b.time || '').localeCompare(a.time || ''))[0];
             const savedChecklist = (latestTransfusion && (latestTransfusion.whoChecklist || latestTransfusion.checklist)) || p.records?.transfusionChecklist || {};
-            const savedTimeline = (latestTransfusion && (latestTransfusion.vsTimeline || latestTransfusion.timeline)) || window.transfusionTimeline || {};
+            const savedTimeline = (latestTransfusion && (latestTransfusion.vsTimeline || latestTransfusion.timeline)) || {};
             const currentValues = {
                 time: document.getElementById('transfusionTime')?.value || '',
                 type: document.getElementById('transfusionType')?.value || 'A',
@@ -8396,13 +8988,7 @@ function editPresc(index) {
                 aboRh: document.getElementById('transfusionAboRh')?.value || '',
                 crossmatch: document.getElementById('transfusionCrossmatch')?.value || '적합',
                 nurse1: document.getElementById('transfusionNurse1')?.value || '',
-                nurse2: document.getElementById('transfusionNurse2')?.value || '',
-                vsBp: document.getElementById('transfusionVsBp')?.value || '',
-                vsHr: document.getElementById('transfusionVsHr')?.value || '',
-                vsRr: document.getElementById('transfusionVsRr')?.value || '',
-                vsBt: document.getElementById('transfusionVsBt')?.value || '',
-                vsSpo2: document.getElementById('transfusionVsSpo2')?.value || '',
-                vsRate: document.getElementById('transfusionVsRate')?.value || ''
+                nurse2: document.getElementById('transfusionNurse2')?.value || ''
             };
 
             const overlay = document.createElement('div');
@@ -8434,7 +9020,7 @@ function editPresc(index) {
 
                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:12px; align-items:start; margin-bottom:12px;">
                     <div style="border:1px solid #dbeafe; border-radius:10px; background:#f8fafc; padding:12px;">
-                        <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">WHO 수혈안전 체크리스트</div>
+                        <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">KBU 수혈안전 체크리스트</div>
                         <div style="border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; margin-bottom:10px;">
                             <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); background:#f8fafc; border-bottom:1px solid #e2e8f0;">
                                 <div style="padding:10px; font-size:12px; font-weight:800; color:#475569; border-right:1px solid #e2e8f0;">단계</div>
@@ -8454,26 +9040,6 @@ function editPresc(index) {
                                 <div style="padding:12px; border-right:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0; text-align:center;"><input type="checkbox" id="transfusionChecklistPatientMatch" ${savedChecklist.patientMatch ? 'checked' : ''}></div>
                                 <div style="padding:12px; border-bottom:1px solid #e2e8f0; text-align:center;"><input type="checkbox" id="transfusionChecklistPatientMismatch" ${savedChecklist.patientMismatch ? 'checked' : ''}></div>
                          </div>
-                        </div>
-                        <div style="display:grid; grid-template-columns:repeat(2, minmax(160px, 1fr)); gap:8px;">
-                            <div>
-                                <div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">V/S 단계</div>
-                                <select id="popupTransfusionVsStage" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;">
-                                    <option value="수혈 전 (1시간 이내)">수혈 전</option>
-                                    <option value="수혈 시작 15분 후">15분 후</option>
-                                    <option value="수혈 중">수혈 중</option>
-                                    <option value="수혈 완료">수혈 완료</option>
-                                </select>
-                            </div>
-                            <div style="display:flex; align-items:end;">
-                                <button type="button" id="popupTransfusionSaveVs" class="btn-blue" style="width:100%; padding:8px 10px; font-size:11px; color:#ffffff; font-weight:800;">현재 단계 V/S 저장</button>
-                            </div>
-                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">BP</div><input id="popupTransfusionVsBp" type="text" value="${currentValues.vsBp}" placeholder="120/80" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
-                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">HR</div><input id="popupTransfusionVsHr" type="number" step="0.1" value="${currentValues.vsHr}" placeholder="/min" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
-                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">RR</div><input id="popupTransfusionVsRr" type="number" step="0.1" value="${currentValues.vsRr}" placeholder="/min" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
-                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">BT</div><input id="popupTransfusionVsBt" type="number" step="0.1" value="${currentValues.vsBt}" placeholder="℃" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
-                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">SpO2</div><input id="popupTransfusionVsSpo2" type="number" step="0.1" value="${currentValues.vsSpo2}" placeholder="%" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
-                            <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">속도</div><input id="popupTransfusionVsRate" type="text" value="${currentValues.vsRate}" placeholder="gtt/min" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; box-sizing:border-box;"></div>
                         </div>
                     </div>
 
@@ -8533,21 +9099,6 @@ function editPresc(index) {
                 }
                 alert(`2인 승인 완료: ${n1} / ${n2}`);
             });
-            modal.querySelector('#popupTransfusionSaveVs').addEventListener('click', () => {
-                const stage = modal.querySelector('#popupTransfusionVsStage').value;
-                const snapshot = {
-                    bp: modal.querySelector('#popupTransfusionVsBp').value.trim(),
-                    hr: modal.querySelector('#popupTransfusionVsHr').value.trim(),
-                    rr: modal.querySelector('#popupTransfusionVsRr').value.trim(),
-                    bt: modal.querySelector('#popupTransfusionVsBt').value.trim(),
-                    spo2: modal.querySelector('#popupTransfusionVsSpo2').value.trim(),
-                    rate: modal.querySelector('#popupTransfusionVsRate').value.trim(),
-                    savedAt: new Date().toISOString().slice(0, 19).replace('T', ' ')
-                };
-                if (!window.transfusionTimeline) window.transfusionTimeline = {};
-                window.transfusionTimeline[stage] = snapshot;
-                alert(`${stage} V/S가 저장되었습니다.`);
-            });
             modal.querySelector('#transfusionChecklistSave').addEventListener('click', async () => {
                 const popupTime = modal.querySelector('#popupTransfusionTime').value;
                 const popupProduct = modal.querySelector('#popupTransfusionProduct').value.trim();
@@ -8589,7 +9140,6 @@ function editPresc(index) {
                     const nurse1 = modal.querySelector('#popupTransfusionNurse1').value.trim();
                     const nurse2 = modal.querySelector('#popupTransfusionNurse2').value.trim();
 
-                    const timeline = window.transfusionTimeline || savedTimeline || {};
                     const newTransfusionRecord = {
                         time: popupTime.replace('T', ' '),
                         type: bloodType,
@@ -8602,7 +9152,6 @@ function editPresc(index) {
                         aboRh,
                         crossmatch,
                         coSign: { nurse1, nurse2, approved: !!(nurse1 && nurse2) },
-                        vsTimeline: timeline,
                         bloodBagId: bagId,
                         bloodType: aboRh || bloodType,
                         productType: popupProduct,
@@ -8610,12 +9159,6 @@ function editPresc(index) {
                         nurse2,
                         cosignTime: nurse1 && nurse2 ? new Date().toISOString().slice(0, 19).replace('T', ' ') : '',
                         status: '완료',
-                        timeline: {
-                            preVS: timeline['수혈 전 (1시간 이내)'] || '',
-                            min15VS: timeline['수혈 시작 15분 후'] || '',
-                            duringVS: timeline['수혈 중'] ? [timeline['수혈 중']] : [],
-                            postVS: timeline['수혈 완료'] || ''
-                        },
                         reactionOccurred: /반응|알레르기|발열|호흡곤란|부작용/i.test(popupNote),
                         reactionNote: popupNote,
                         whoChecklist: checklist,
@@ -8634,7 +9177,6 @@ function editPresc(index) {
                     p.records.transfusion = transfusionList;
                     p.records.transfusionChecklist = checklist;
                     sortRecordsByTime(transfusionList);
-                    upsertTransfusionTimelineToVsRecords(p, newTransfusionRecord);
 
                     await savePatientToBackend(p);
                     renderAllRecords();
@@ -8676,7 +9218,6 @@ function editPresc(index) {
             tbody.innerHTML = records.map((r) => {
                 const actualIndex = transfusionList.findIndex(item => item === r);
                 const coSignText = r.coSign && r.coSign.nurse1 && r.coSign.nurse2 ? `${r.coSign.nurse1}/${r.coSign.nurse2}` : (r.nurse1 && r.nurse2 ? `${r.nurse1}/${r.nurse2}` : '미승인');
-                const timelineText = r.vsTimeline ? Object.keys(r.vsTimeline).join(', ') : (r.timeline ? Object.keys(r.timeline).filter(k => r.timeline[k]).join(', ') : '-');
                 return `
                     <tr>
                         <td>${formatDisplayTime(r.time)}</td>
@@ -8689,7 +9230,6 @@ function editPresc(index) {
                                 <div style="flex:1; min-width:0; text-align:left; line-height:1.2; white-space:normal;">
                                     <div style="text-align:left; margin:0;">${r.note || r.reactionNote || '-'}</div>
                                     <div style="text-align:left; margin-top:2px; color:#64748b;">[Bag: ${r.bagId || r.bloodBagId || '-'} / ${r.aboRh || r.bloodType || '-'} / ${r.crossmatch || '-'} / ${coSignText}]</div>
-                                    <div style="text-align:left; margin-top:1px; color:#475569;">V/S: ${timelineText}</div>
                                 </div>
                                 <div style="display:flex; align-items:center; justify-content:center;">
                                     <button class="btn-slate" style="padding:1px 6px; font-size:10px;" onclick="openTransfusionDetailPopup(${actualIndex})">상세보기</button>
@@ -8720,7 +9260,6 @@ function editPresc(index) {
                 if (mismatchValue) return '미확인';
                 return '미작성';
             };
-            const timeline = item.vsTimeline || item.timeline || {};
 
             const overlay = document.createElement('div');
             overlay.style.position = 'fixed';
@@ -8750,7 +9289,7 @@ function editPresc(index) {
                 </div>
                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:12px; align-items:start; margin-bottom:12px;">
                     <div style="border:1px solid #dbeafe; border-radius:10px; background:#f8fafc; padding:12px;">
-                        <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">WHO 수혈안전 체크리스트</div>
+                        <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">KBU 수혈안전 체크리스트</div>
                         <div style="display:grid; gap:6px; font-size:12px;">
                             <div><b>혈액제제 확인:</b> ${singleChecklistStatus(!!checklist.beforeMatch, !!checklist.beforeMismatch)}</div>
                             <div><b>혈액형 확인:</b> ${singleChecklistStatus(!!checklist.typeMatch, !!checklist.typeMismatch)}</div>
@@ -8773,10 +9312,6 @@ function editPresc(index) {
                             <div><div style="font-size:10px; color:#64748b; font-weight:700; margin-bottom:4px;">교차시험 적합</div><div style="border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:11px; background:#f8fafc; min-height:30px;">${safe(item.crossmatch || '-')}</div></div>
                         </div>
                     </div>
-                </div>
-                <div style="margin-bottom:10px; border:1px solid #dfe7f1; border-radius:10px; background:#fff; padding:12px;">
-                    <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:8px;">수혈 V/S 타임라인</div>
-                    <div style="border:1px solid #cbd5e1; border-radius:8px; padding:10px; font-size:11px; color:#334155; white-space:pre-wrap; background:#f8fafc;">${safe(JSON.stringify(timeline, null, 2))}</div>
                 </div>
                 <div style="margin-bottom:8px; border:1px solid #dfe7f1; border-radius:10px; background:#fff; padding:12px;">
                     <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:8px;">수혈 반응/소견</div>
