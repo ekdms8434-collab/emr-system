@@ -3794,16 +3794,19 @@
 
             // 아이디/비밀번호 조합으로 역할을 결정합니다.
             let roleFromCredential = null;
-            if (uidInput === 'necadmin' && upw === '1192') roleFromCredential = 'admin';
-            if (uidInput === 'nurse' && upw === '1234') roleFromCredential = 'student';
+            if (uidInput === 'necadmin' && upw === '123456') roleFromCredential = 'admin';
+            if (uidInput === 'nurse' && upw === '123456') roleFromCredential = 'student';
             if (!roleFromCredential) {
                 alert('아이디 또는 비밀번호가 올바르지 않습니다.');
                 return;
             }
             currentUserRole = roleFromCredential;
 
-            // Supabase Auth와 연동할 때 사용할 이메일을 고정 매핑합니다.
-            const mappedAuthEmail = uidInput === 'necadmin' ? 'necadmin@example.com' : 'nurse@example.com';
+            // Supabase Auth와 연동할 때 사용할 이메일 후보를 매핑합니다.
+            // 기존 프로젝트에 admin@example.com 계정만 있는 경우도 폴백으로 지원합니다.
+            const mappedAuthEmails = uidInput === 'necadmin'
+                ? ['necadmin@example.com', 'admin@example.com']
+                : ['nurse@example.com'];
 
             try {
                 if (!window.supabase || !supabase.auth) {
@@ -3812,9 +3815,17 @@
                 }
 
                 // Supabase Auth 로그인은 시도하되, 실패해도 앱 로그인은 허용합니다.
-                const { error } = await supabase.auth.signInWithPassword({ email: mappedAuthEmail, password: upw });
-                if (error) {
-                    console.warn('Supabase 로그인 실패(앱 로그인은 계속 진행):', error.message || error);
+                let authError = null;
+                for (const email of mappedAuthEmails) {
+                    const { error } = await supabase.auth.signInWithPassword({ email, password: upw });
+                    if (!error) {
+                        authError = null;
+                        break;
+                    }
+                    authError = error;
+                }
+                if (authError) {
+                    console.warn('Supabase 로그인 실패(앱 로그인은 계속 진행):', authError.message || authError);
                 }
 
                 // 로그인 성공: 데이터 로드 및 화면 전환
